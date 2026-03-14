@@ -1,18 +1,21 @@
-# Sign-Sync: Real-time Bi-Directional Sign Language Translator
+# Explainable-Med: Transparency & Interpretability in Medical AI Diagnostics
 
-**Problem Statement ID:** HVAI-02  
+**Problem Statement ID:** HVAI-03  
 **Hackathon:** Hackverse 2.0
 
 ## 📝 Project Overview
-Sign-Sync is a high-speed, low-latency communication bridge designed to break the barrier between the hearing/speech-impaired and the rest of society. By leveraging advanced Computer Vision and Deep Learning, the system provides a seamless bi-directional translation experience:
-1. **Sign-to-Text/Speech:** Real-time recognition of hand gestures and motion sequences translated into fluent text and audio.
-2. **Text/Speech-to-Sign:** Reverse translation where input text is converted into a visual sequence or animated sign language avatar for truly natural conversation.
+Current AI diagnostic models often operate as "Black Boxes", providing accurate results without explaining the underlying reasoning. This lack of transparency leads to hesitation among medical professionals to trust AI-generated outcomes in critical clinical settings.
+
+**Explainable-Med** is a diagnostic tool that implements **Explainable AI (XAI)** to bridge this trust gap. The system classifies chest X-ray images for conditions like **Pneumonia** while simultaneously providing a multi-layered justification for its decisions:
+1. **Visual Heatmaps (Grad-CAM):** Identifying the critical pixels and anatomical regions that influenced the model's prediction.
+2. **Radiology Feature Detection:** A heuristic-driven analysis that cross-references saliency with clinical features like Lung Opacity, Consolidation, and Pleural Effusion.
+3. **Natural Language Explanation:** Summarizing the detected clinical features to provide a human-readable justification for the diagnosis.
 
 ## 👥 Team Members & Roles
-- **Deepkumar Pandey** - [Insert Role, e.g., Frontend Developer & UI/UX]
-- **Shrushti Pandey** - [Insert Role, e.g., Backend Developer & Integration]
-- **Bhushan Acharekar** - [Insert Role, e.g., AI/ML Engineer & Model Optimization]
-- **Kalpesh Dandekar** - [Insert Role, e.g., DevOps & Deployment]
+* **Deepkumar Pandey** – AI/ML Engineer ([GitHub](https://github.com/deeperzz8356))
+* **Shrushti Pandey** – Frontend Developer ([GitHub](https://github.com/Shrushti211))
+* **Bhushan Acharekar** – AI/ML Engineer ([GitHub](https://github.com/B-Acharekar))
+* **Kalpesh Dandekar** – Backend Developer ([GitHub](https://github.com/Kalpesh-Dandekar))
 
 ## 🛠️ Tech Stack
 - **Frontend:** Next.js, React.js, Tailwind CSS, Framer Motion, Lucide Icons
@@ -50,28 +53,27 @@ cd backend
 python -m pip install -r requirements.txt
 python -m uvicorn main:app --port 8000 --reload
 ```
-
-#### 4. Model Server Setup
-```bash
-cd model
-python -m pip install -r requirements.txt # (Add dependencies like tensorflow, opencv-python)
-python -m uvicorn app:app --port 8005 --reload
-```
+The backend now includes the AI/ML model, so no separate model server is needed.
+The gateway API (including model endpoints) will be available at: http://localhost:8000
 
 ## 📊 Dataset Reference
-- **Dataset Name:** [Insert Dataset Name, e.g., ASL Alphabet Dataset]
-- **Link:** [Insert Link to Dataset on Kaggle/Google Drive/HuggingFace]
+- **Dataset Name:** Chest X-Ray Images (Pneumonia)
+- **Link:** [Kaggle - Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia)
+- **Link:**[Kaggle - Skin Cancer MNIST: HAM10000 (Skin)](https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000)
 
 ## 🔗 Project Links
-- **Frontend URL:** [Insert Vercel/Netlify Link]
-- **Backend API:** [Insert Backend Deployment Link]
 - **Screen Recording:** [Insert YouTube/Loom Link]
 - **Presentation Video:** [Insert Video Link]
 
 ## 🏗️ Architecture
-- **Recognition Engine:** Robust CV model for complex sequence identification.
-- **Bi-Directional Interface:** Dashboard featuring live sign translation and reverse avatar animations.
-- **Performance Pipeline:** Optimized for minimal lag to maintain natural conversation flow.
+- **Agentic Workflow:
+    Analysis: Input medical images are analyzed by the model to predict disease likelihood.
+    Heatmap Generation: Visual explanations (e.g., Grad-CAM) highlight affected areas for interpretability.
+    Dataset Feedback (Reverser): Insights from the heatmap are fed back into the dataset to refine model understanding or augment training.
+    Explainability Loop: Once feedback conditions are satisfied, the system reverses the process to generate final explainable outputs for clinicians.
+- **XAI Engine:** Grad-CAM generator that produces heatmaps to highlight pathological regions.
+- **Explainability Layer:** Post-processed analysis that translates heatmaps and pixel intensity into clinical features (Opacity, Nodules, etc.).
+- **Bi-Directional Interface:** Dashboard featuring live diagnosis result along with interpretability modules.
 
 ---
 *Built with ❤️ by Team HackMatrix for Hackverse 2.0*
