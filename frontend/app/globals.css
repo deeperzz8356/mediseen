@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:root {
+  /* Flo-inspired Healthcare UI Theme - Darkened & Refined */
+  --background: #FDF4F5; /* Slightly warmer, darker background */
+  --surface: #FFFFFF;
+  --foreground: #000000;
+  
+  --accent-pink: #FCA5B0;   /* Darker pastel pink */
+  --accent-violet: #C084FC; /* Darker pastel violet */
+  --accent-green: #86EFAC;  /* Darker pastel green */
+  --accent-blue: #93C5FD;   /* Darker pastel blue */
+  --accent-yellow: #FDE047; /* Darker pastel yellow */
+  --accent-peach: #FDBA74;  /* Darker pastel peach */
+  
+  --primary-gradient: linear-gradient(145deg, #FCA5B0 0%, #C084FC 100%);
+  --surface-gradient: linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  
+  --color-pastel-pink: var(--accent-pink);
+  --color-pastel-violet: var(--accent-violet);
+  --color-pastel-green: var(--accent-green);
+  --color-pastel-blue: var(--accent-blue);
+  --color-pastel-yellow: var(--accent-yellow);
+  --color-pastel-peach: var(--accent-peach);
+  
+  --font-sans: "Outfit", var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px; /* Boxier scrollbar */
+  border: 2px solid var(--background);
+}
+
+/* Boxy Card Helper with Gradient */
+.flo-card {
+  background: var(--surface-gradient);
+  border-radius: 1rem; /* More boxy than 2rem */
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.flo-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 15px 35px -10px rgba(0,0,0,0.1);
+}
