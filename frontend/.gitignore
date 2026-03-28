@@ -20,7 +20,7 @@
 
 # Production builds
 
-/build
+build/
 /dist
 
 # Environment variables
@@ -61,5 +61,5 @@ next-env.d.ts
 
 android/keystore/
 android/signing.properties
-android/local.properties
+local.properties
 .keystore-credentials.local

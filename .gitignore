@@ -1,1 +1,16 @@
 uploads
+
+# Editor and local tooling
+/.idea/
+/.vscode/
+/.kiro/
+
+# Root npm lockfile is not used in this repo (frontend has its own)
+/package-lock.json
+
+# Secrets
+.env
+**/.env
+firebase_admin.json
+**/firebase_admin.json
+temp_password.txt
