@@ -10,6 +10,7 @@ class AgentState(TypedDict, total=False):
     # -------------------------
     # User Input
     # -------------------------
+    uid: str
     request_id: str
     user_symptoms: str
     image_path: str
@@ -21,6 +22,7 @@ class AgentState(TypedDict, total=False):
     confidence_score: Optional[float]
     confidence: Optional[str]
     explanation: Optional[str]
+    bounding_box: Optional[list]
 
     # -------------------------
     # Medical Knowledge Context

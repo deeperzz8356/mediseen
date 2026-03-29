@@ -1,7 +1,8 @@
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 import random
 import os
+from datetime import datetime, timezone, timedelta
 
 # Global DB instance
 _db = None
@@ -9,7 +10,7 @@ _db = None
 
 def init_firebase(cred_path: str = "firebase_admin.json"):
     """
-    Initialize Firebase only once.
+    Initialize Firebase only once with storage support.
     """
     global _db
 
@@ -17,17 +18,17 @@ def init_firebase(cred_path: str = "firebase_admin.json"):
         return _db
 
     try:
-
         if not firebase_admin._apps:
             cred = credentials.Certificate(cred_path)
-            firebase_admin.initialize_app(cred)
+            bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")
+            firebase_admin.initialize_app(cred, {
+                'storageBucket': bucket_name
+            })
 
         _db = firestore.client()
-
-        print("✅ Firestore connected")
+        print("✅ Firestore & Storage connected")
 
     except Exception as e:
-
         print(f"❌ Firebase initialization failed: {e}")
         _db = None
 
@@ -39,10 +40,8 @@ def get_db():
     Get Firestore client instance.
     """
     global _db
-
     if _db is None:
         _db = init_firebase()
-
     return _db
 
 
@@ -51,83 +50,228 @@ def get_db():
 # ---------------------------------------------------
 
 def fetch_medical_context(prediction: str) -> str:
-
     db = get_db()
-
     if db is None:
         return "Database unavailable. Using general clinical reasoning."
 
     collection_ref = db.collection("medical_knowledge")
-
     db_context = None
 
     try:
-
-        # -------------------------
-        # Exact disease match
-        # -------------------------
-
-        query = (
-            collection_ref
-            .where("disease_name", "==", prediction)
-            .limit(1)
-        )
-
+        query = collection_ref.where("disease_name", "==", prediction).limit(1)
         results = query.get()
 
         if results:
-
             doc = results[0].to_dict()
-
             db_context = (
                 f"Protocol: {doc.get('description','Standard treatment recommended.')}\n"
                 f"Indicators: {doc.get('visual_indicators','Not specified.')}"
             )
-
             print(f"✅ Exact DB match for {prediction}")
 
     except Exception as e:
-
         print(f"⚠️ Firestore query error: {e}")
 
-    # -------------------------
-    # Fallback by category
-    # -------------------------
-
     if not db_context:
-
         try:
-
             target_label = 0 if "Normal" in prediction else 1
-
-            query = (
-                collection_ref
-                .where("label", "==", target_label)
-                .limit(3)
-            )
-
+            query = collection_ref.where("label", "==", target_label).limit(3)
             results = query.get()
 
             if results:
-
                 doc = random.choice(results).to_dict()
-
                 db_context = (
                     f"Protocol: {doc.get('description','Consult clinical guidelines.')}\n"
                     f"Indicators: {doc.get('visual_indicators','N/A')}"
                 )
-
                 print(f"ℹ️ Fallback DB match via label {target_label}")
 
         except Exception as e:
-
             print(f"⚠️ Firestore fallback error: {e}")
-
-    # -------------------------
-    # Final fallback
-    # -------------------------
 
     if not db_context:
         db_context = "No database reference found. Use general diagnostic reasoning."
 
     return db_context
+
+
+# ---------------------------------------------------
+# Firebase Storage Utilities
+# ---------------------------------------------------
+
+def upload_image(local_path: str, destination_blob_name: str) -> str:
+    """
+    Uploads a file to Firebase Storage and returns a short-lived signed URL.
+    """
+    try:
+        init_firebase() # Ensure app is initialized
+        bucket = storage.bucket()
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_filename(local_path)
+        signed_url_ttl_seconds = int(os.getenv("SIGNED_URL_TTL_SECONDS", "3600"))
+        return blob.generate_signed_url(
+            expiration=timedelta(seconds=signed_url_ttl_seconds),
+            method="GET",
+        )
+
+    except Exception as e:
+        print(f"❌ Storage upload error: {e}")
+        return ""
+
+
+# ---------------------------------------------------
+# Rate Limiting (2 diagnoses per user per day)
+# ---------------------------------------------------
+
+DAILY_LIMIT = 2
+
+
+@firestore.transactional
+def _increment_daily_rate_limit(transaction, doc_ref, uid: str, today: str) -> dict:
+    snapshot = doc_ref.get(transaction=transaction)
+    count = snapshot.to_dict().get("count", 0) if snapshot.exists else 0
+
+    if count >= DAILY_LIMIT:
+        return {"allowed": False, "used": count, "limit": DAILY_LIMIT}
+
+    next_count = count + 1
+    transaction.set(
+        doc_ref,
+        {
+            "uid": uid,
+            "date": today,
+            "count": next_count,
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        },
+        merge=True,
+    )
+    return {"allowed": True, "used": next_count, "limit": DAILY_LIMIT}
+
+
+def check_and_increment_rate_limit(uid: str) -> dict:
+    """
+    Check if user has exceeded daily diagnosis limit.
+    Returns {"allowed": bool, "used": int, "limit": int}
+    Atomically increments count if allowed.
+    """
+    db = get_db()
+    if db is None:
+        # Fail closed when DB is unavailable so limits cannot be bypassed.
+        return {"allowed": False, "used": 0, "limit": DAILY_LIMIT}
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    doc_ref = db.collection("rate_limits").document(f"{uid}_{today}")
+
+    try:
+        transaction = db.transaction()
+        return _increment_daily_rate_limit(transaction, doc_ref, uid, today)
+
+    except Exception as e:
+        print(f"⚠️ Rate limit check error: {e}")
+        # Fail closed to avoid bypass during Firestore issues.
+        return {"allowed": False, "used": 0, "limit": DAILY_LIMIT}
+
+
+# ---------------------------------------------------
+# Diagnosis Cache (by image hash)
+# ---------------------------------------------------
+
+import hashlib
+
+
+def get_image_hash(image_bytes: bytes) -> str:
+    """SHA-256 hash of image bytes for cache key."""
+    return hashlib.sha256(image_bytes).hexdigest()
+
+
+def get_cached_diagnosis(image_hash: str) -> dict | None:
+    """
+    Look up a cached diagnosis result by image hash.
+    Returns the cached result dict or None if not found.
+    """
+    db = get_db()
+    if db is None:
+        return None
+
+    try:
+        doc = db.collection("diagnosis_cache").document(image_hash).get()
+        if doc.exists:
+            data = doc.to_dict()
+            print(f"✅ Cache hit for image hash {image_hash[:12]}...")
+            return data.get("result")
+    except Exception as e:
+        print(f"⚠️ Cache lookup error: {e}")
+
+    return None
+
+
+def save_diagnosis_cache(image_hash: str, result: dict):
+    """
+    Save a diagnosis result to cache keyed by image hash.
+    """
+    db = get_db()
+    if db is None:
+        return
+
+    try:
+        db.collection("diagnosis_cache").document(image_hash).set({
+            "result": result,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "hit_count": 1
+        })
+        print(f"✅ Cached diagnosis for hash {image_hash[:12]}...")
+    except Exception as e:
+        print(f"⚠️ Cache save error: {e}")
+
+
+def increment_cache_hit(image_hash: str):
+    """Track how many times a cached result was served."""
+    db = get_db()
+    if db is None:
+        return
+    try:
+        doc_ref = db.collection("diagnosis_cache").document(image_hash)
+        doc = doc_ref.get()
+        if doc.exists:
+            current = doc.to_dict().get("hit_count", 1)
+            doc_ref.update({"hit_count": current + 1, "last_hit": datetime.now(timezone.utc).isoformat()})
+    except Exception as e:
+        print(f"⚠️ Cache hit increment error: {e}")
+
+
+# ---------------------------------------------------
+# Data Collection (save every diagnosis for knowledge)
+# ---------------------------------------------------
+
+def save_diagnosis_record(
+    uid: str,
+    session_id: str,
+    symptoms: str,
+    result: dict,
+    image_url: str,
+    platform: str = "unknown",
+):
+    """
+    Save every diagnosis to Firestore for data collection.
+    This builds your medical knowledge dataset over time.
+    """
+    db = get_db()
+    if db is None:
+        return
+
+    try:
+        db.collection("diagnosis_records").document(session_id).set({
+            "uid": uid,
+            "session_id": session_id,
+            "symptoms": symptoms,
+            "diagnosis": result.get("diagnosis"),
+            "confidence": result.get("confidence"),
+            "image_url": image_url,
+            "heatmap_url": result.get("heatmap_url"),
+            "report_url": result.get("report_url"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "platform": platform or "unknown",
+        })
+        print(f"✅ Diagnosis record saved for session {session_id}")
+    except Exception as e:
+        print(f"⚠️ Data collection save error: {e}")

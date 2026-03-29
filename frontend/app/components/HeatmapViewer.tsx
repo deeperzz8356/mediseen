@@ -11,6 +11,7 @@ import {
   Info,
   Maximize2
 } from "lucide-react"
+import { API_BASE_URL } from "../config"
 
 interface HeatmapViewerProps {
   originalImage: string
@@ -32,7 +33,8 @@ export default function HeatmapViewer({
     if (path?.startsWith("http://") || path?.startsWith("https://")) {
       return path;
     }
-    return `http://127.0.0.1:8000${path}`;
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`
+    return `${API_BASE_URL}${normalizedPath}`
   };
 
   const severityColor =

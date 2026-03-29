@@ -4,6 +4,8 @@ import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { UploadCloud, Image as ImageIcon, Loader2, Sparkles, X, CheckCircle2, MessageSquare } from "lucide-react"
 import { DiagnosisResult } from "./ResultPanel"
+import { API_BASE_URL } from "../config"
+import { auth } from "@/lib/firebase"
 
 interface UploadPanelProps {
   onAnalysisComplete?: (result: DiagnosisResult) => void
@@ -44,10 +46,30 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload }: Uploa
       formData.append("image", file)
       formData.append("symptoms", symptoms || "No symptoms provided")
 
-      const response = await fetch("http://127.0.0.1:8000/diagnose", {
+      const user = auth.currentUser
+      if (!user) {
+        throw new Error("Please sign in before running diagnosis")
+      }
+
+      const token = await user.getIdToken()
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+      const response = await fetch(`${API_BASE_URL}/diagnose`, {
         method: "POST",
-        body: formData
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Client-Platform": "web",
+        },
+        body: formData,
+        signal: controller.signal
       })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || "Diagnosis request failed")
+      }
 
       const apiResult = await response.json()
       const res: DiagnosisResult = {
@@ -69,7 +91,13 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload }: Uploa
       if (onAnalysisComplete) onAnalysisComplete(res)
     } catch (error) {
       console.error("Backend fetch failed:", error)
-      setResult("Diagnosis failed. Please check backend connection.")
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setResult("Diagnosis timed out. Please try again.")
+      } else if (error instanceof Error) {
+        setResult(error.message)
+      } else {
+        setResult("Diagnosis failed. Please check backend connection.")
+      }
     } finally {
       setIsAnalyzing(false)
     }

@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { useState } from "react"
+import { API_BASE_URL } from "../config"
 import {
   Activity,
   AlertCircle,
@@ -50,7 +51,8 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
 
   const { badge, icon } = getSeverityStyles(result.severity)
   const confidencePercent = Math.round(result.confidence * 100)
-  const fullReportUrl = result.reportUrl?.startsWith('http') ? result.reportUrl : `http://127.0.0.1:8000${result.reportUrl}`;
+  const normalizedReportPath = result.reportUrl?.startsWith("/") ? result.reportUrl : `/${result.reportUrl ?? ""}`
+  const fullReportUrl = result.reportUrl?.startsWith("http") ? result.reportUrl : `${API_BASE_URL}${normalizedReportPath}`;
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -164,7 +166,12 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
 
               {/* Iframe Viewport */}
               <div className="flex-1 bg-white relative">
-                <iframe src={fullReportUrl} className="w-full h-full border-none" title="AI Clinical Asset" />
+                <iframe
+                  src={fullReportUrl}
+                  className="w-full h-full border-none"
+                  title="AI Clinical Asset"
+                  sandbox="allow-same-origin allow-popups"
+                />
               </div>
 
               {/* Modal Footer (Controls) */}

@@ -1,19 +1,29 @@
 import os
 import uuid
 import traceback
+from io import BytesIO
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles  # <--- Added for URL access
-from pydantic import BaseModel
 from dotenv import load_dotenv
 from pathlib import Path
+from PIL import Image, UnidentifiedImageError
 
 
 # Firebase
-import firebase_admin
-from firebase_admin import credentials, auth
+from services.firebase_svc import (
+    init_firebase,
+    upload_image,
+    check_and_increment_rate_limit,
+    get_image_hash,
+    get_cached_diagnosis,
+    save_diagnosis_cache,
+    increment_cache_hit,
+    save_diagnosis_record,
+)
+from firebase_admin import auth
 
 # Graph Pipeline
 import sys
@@ -40,60 +50,152 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 # ---------------------------------------------------
 graph = build_graph()
 
+# Restrict CORS to explicit origins from env instead of wildcard.
+_allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+_app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+if not _allowed_origins_raw:
+    if _app_env == "production":
+        raise RuntimeError("ALLOWED_ORIGINS must be set in production")
+    _allowed_origins_raw = "http://127.0.0.1:3000,http://localhost:3000"
+
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in _allowed_origins_raw.split(",")
+    if origin.strip()
+]
+ALLOWED_UPLOAD_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
+ALLOWED_IMAGE_EXTENSIONS = {
+    "jpeg": ".jpg",
+    "png": ".png",
+    "webp": ".webp",
+}
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+MAX_SYMPTOMS_LENGTH = int(os.getenv("MAX_SYMPTOMS_LENGTH", "2000"))
+MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "50000000"))
+
 # 1️⃣ CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # 2️⃣ Firebase Init
-if not firebase_admin._apps:
-    cred = credentials.Certificate("firebase_admin.json")
-    firebase_admin.initialize_app(cred)
+init_firebase() # Centralized check-and-init
 
 # 3️⃣ Request Models
-class TokenRequest(BaseModel):
-    token: str
+def verify_bearer_token(authorization: str = Header(default="")):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    token = authorization[len("Bearer "):].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing Firebase token")
+
+    try:
+        return auth.verify_id_token(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
 # 4️⃣ Health Check
 @app.get("/")
 def root():
-    return {"status": "Mediseen API running", "upload_dir": UPLOAD_DIR}
+    return {"status": "Mediseen API running"}
 
 # 5️⃣ Verify Firebase Token
 @app.post("/auth/verify")
-async def verify_token(data: TokenRequest):
-    try:
-        decoded = auth.verify_id_token(data.token)
-        return {"status": "verified", "uid": decoded["uid"]}
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid Firebase token")
+async def verify_token(_decoded_token: dict = Depends(verify_bearer_token)):
+    return {"status": "verified"}
 
 # ---------------------------------------------------
-# 6️⃣ AI Diagnosis Endpoint (Updated Paths)
+# 6️⃣ AI Diagnosis Endpoint
 # ---------------------------------------------------
 @app.post("/diagnose")
 async def diagnose(
     image: UploadFile = File(...),
-    symptoms: str = Form(...)
+    symptoms: str = Form(...),
+    client_platform: str = Header(default="web", alias="X-Client-Platform"),
+    _decoded_token: dict = Depends(verify_bearer_token),
 ):
     try:
+        uid = _decoded_token.get("uid", "unknown")
         session_id = str(uuid.uuid4())
-        
-        # 1. Save to UPLOAD_DIR with absolute path
-        image_filename = f"{session_id}_{image.filename}"
+
+        # ── 1. Validate file ──────────────────────────────────────────────
+        if image.content_type not in ALLOWED_UPLOAD_MIME_TYPES:
+            raise HTTPException(status_code=400, detail="Unsupported image format")
+
+        symptoms = (symptoms or "").strip()
+        if len(symptoms) > MAX_SYMPTOMS_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Symptoms text too long. Max length is {MAX_SYMPTOMS_LENGTH} characters",
+            )
+
+        image_bytes = await image.read()
+        if not image_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+        if len(image_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Max size is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB"
+            )
+
+        # Validate file signature and bound image dimensions to limit decompression bombs.
+        try:
+            with Image.open(BytesIO(image_bytes)) as pil_img:
+                detected_format = (pil_img.format or "").lower()
+                width, height = pil_img.size
+        except UnidentifiedImageError:
+            raise HTTPException(status_code=400, detail="File content does not match a supported image format")
+
+        if detected_format not in ALLOWED_IMAGE_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Unsupported image content format")
+
+        if width * height > MAX_IMAGE_PIXELS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Image dimensions too large. Max pixel count is {MAX_IMAGE_PIXELS}",
+            )
+
+        # ── 2. Rate limit check (2 per user per day) ──────────────────────
+        rate = check_and_increment_rate_limit(uid)
+        if not rate["allowed"]:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Daily limit reached. You can run {rate['limit']} diagnoses per day. Try again tomorrow."
+            )
+
+        # ── 3. Cache check (same image = instant result) ──────────────────
+        image_hash = get_image_hash(image_bytes)
+        cache_key = f"{uid}_{image_hash}"
+        cached = get_cached_diagnosis(cache_key)
+        if cached:
+            increment_cache_hit(cache_key)
+            # Still save the record for data collection
+            save_diagnosis_record(uid, session_id, symptoms, cached, cached.get("image_url", ""), platform=client_platform)
+            return {**cached, "session_id": session_id, "cached": True}
+
+        # ── 4. Save image locally ─────────────────────────────────────────
+        extension = ALLOWED_IMAGE_EXTENSIONS[detected_format]
+
+        image_filename = f"{session_id}_input{extension}"
         image_path = os.path.join(UPLOAD_DIR, image_filename)
 
         with open(image_path, "wb") as buffer:
-            buffer.write(await image.read())
+            buffer.write(image_bytes)
 
-        # 2. Prepare Graph State
+        # ── 5. Upload original to Firebase Storage ────────────────────────
+        image_url = upload_image(image_path, f"uploads/{session_id}/original{extension}")
+
+        # ── 6. Run AI pipeline ────────────────────────────────────────────
         state = {
             "session_id": session_id,
             "image_path": image_path,
+            "image_url": image_url,
             "user_symptoms": symptoms,
             "prediction": "",
             "confidence_score": 0.0,
@@ -101,50 +203,89 @@ async def diagnose(
             "db_context": "",
             "final_report": "",
             "heatmap_path": "",
-            "report_path": ""
+            "report_path": "",
+            "report_url": ""
         }
 
-        # 3. Run AI pipeline
         result = graph.invoke(state)
 
-        # 4. Generate Public URLs (instead of just local paths)
-        # Note: result["heatmap_path"] is an absolute local path. 
-        # We extract just the filename to give the frontend a URL.
         heatmap_file = os.path.basename(result["heatmap_path"])
         report_file = os.path.basename(result["report_path"])
 
-        # 5. Cleanup the ORIGINAL uploaded image to save space
-        # (Only do this if your report_node has already finished using it)
+        # ── 7. Cleanup original upload ────────────────────────────────────
         try:
             os.remove(image_path)
-        except:
-            pass
+        except OSError as cleanup_error:
+            print(f"⚠️ Could not remove temporary file {image_path}: {cleanup_error}")
 
-        return {
+        # ── 8. Build response ─────────────────────────────────────────────
+        response = {
             "session_id": session_id,
             "diagnosis": result["prediction"],
             "confidence": result["confidence_score"],
             "explanation": result["final_report"],
-            "heatmap_url": f"/uploads/{heatmap_file}",
-            "report_url": f"/uploads/{report_file}"
+            "heatmap_url": result.get("heatmap_url", f"/uploads/{heatmap_file}"),
+            "report_url": result.get("report_url", f"/uploads/{report_file}"),
+            "image_url": image_url,
+            "cached": False
         }
 
+        # ── 9. Save to cache + data collection ───────────────────────────
+        save_diagnosis_cache(cache_key, response)
+        save_diagnosis_record(uid, session_id, symptoms, response, image_url, platform=client_platform)
+
+        return response
+
+    except HTTPException:
+        raise
     except Exception as e:
         print("❌ DIAGNOSIS ERROR")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Diagnosis pipeline failed")
 
-# 7️⃣ Download Local Report
+# 7️⃣ Usage endpoint — how many diagnoses left today
+@app.get("/diagnose/usage")
+def get_usage(_decoded_token: dict = Depends(verify_bearer_token)):
+    from services.firebase_svc import get_db, DAILY_LIMIT
+    from datetime import datetime, timezone
+    uid = _decoded_token.get("uid", "unknown")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    db = get_db()
+    used = 0
+    if db:
+        try:
+            doc = db.collection("rate_limits").document(f"{uid}_{today}").get()
+            if doc.exists:
+                used = doc.to_dict().get("count", 0)
+        except Exception:
+            pass
+    return {"used": used, "limit": DAILY_LIMIT, "remaining": max(0, DAILY_LIMIT - used)}
+
+
+# 8️⃣ Download Local Report
 @app.get("/report")
 def download_report(filename: str):
-    # Security: Only allow files from the UPLOAD_DIR
-    file_path = os.path.join(UPLOAD_DIR, filename)
+    # Block traversal attempts and limit access to files inside uploads root.
+    safe_filename = os.path.basename(filename)
+    if not safe_filename or safe_filename != filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
 
-    if not os.path.exists(file_path):
+    uploads_root = Path(UPLOAD_DIR).resolve()
+    file_path = (uploads_root / safe_filename).resolve()
+
+    if uploads_root not in file_path.parents:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
+    if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(
-        file_path,
+        str(file_path),
         media_type="application/octet-stream",
-        filename=filename
+        filename=safe_filename
     )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

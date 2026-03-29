@@ -1,16 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { MessageCircle, Send, User, Bot, Phone, Video, MoreHorizontal, Paperclip, Smile } from "lucide-react"
-
-const initialMessages = [
-  { id: 1, text: "Hello Dr. Sarah, I've reviewed the latest X-ray from patient #HACK-2024-001. The AI insights look consistent with a bacterial infection.", sender: "bot", time: "10:15 AM" },
-  { id: 2, text: "Thank you for the update. Should we proceed with the standard antibiotic protocol?", sender: "user", time: "10:18 AM" },
-  { id: 3, text: "Yes, based on the high confidence score (94%), amoxicillin is the recommended first-line treatment. Detailed guidelines are in the Education tab.", sender: "bot", time: "10:20 AM" },
-]
+import { useLocale } from "../i18n/LocaleContext"
 
 export default function CommunicationPage() {
+  const { t } = useLocale()
+
+  const initialMessages = [
+    { id: 1, text: t.communication.initialMessages.msg1, sender: "bot", time: "10:15 AM" },
+    { id: 2, text: t.communication.initialMessages.msg2, sender: "user", time: "10:18 AM" },
+    { id: 3, text: t.communication.initialMessages.msg3, sender: "bot", time: "10:20 AM" },
+  ]
+
   const [messages, setMessages] = useState(initialMessages)
   const [input, setInput] = useState("")
 
@@ -20,25 +23,26 @@ export default function CommunicationPage() {
     setMessages([...messages, newMsg])
     setInput("")
     
-    // Auto reply
     setTimeout(() => {
-      const reply = { id: Date.now() + 1, text: "Acknowledged. I've updated the patient records with your notes.", sender: "bot", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      const reply = { id: Date.now() + 1, text: t.communication.initialMessages.autoReply, sender: "bot", time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
       setMessages(prev => [...prev, reply])
     }, 1500)
   }
+
+  const contacts = [
+    { name: t.communication.contacts.aiBot, last: t.communication.contacts.aiBotLast, active: true, icon: <Bot /> },
+    { name: t.communication.contacts.radiologist, last: t.communication.contacts.radiologistLast, active: false, icon: <User /> },
+    { name: t.communication.contacts.patient, last: t.communication.contacts.patientLast, active: false, icon: <User /> },
+  ]
 
   return (
     <div className="max-w-6xl mx-auto px-6 h-[calc(100vh-140px)] flex gap-8">
       
       {/* Contact List (Desktop Mock) */}
       <div className="hidden lg:flex flex-col w-80 space-y-4">
-        <h2 className="text-2xl font-black text-black px-4">Consultations</h2>
+        <h2 className="text-2xl font-black text-black px-4">{t.communication.consultations}</h2>
         <div className="space-y-2 overflow-y-auto">
-          {[
-            { name: "AI Diagnostic Bot", last: "I've updated the record...", active: true, icon: <Bot /> },
-            { name: "Radiologist Dept", last: "Standard protocol looks...", active: false, icon: <User /> },
-            { name: "Patient #2918", last: "Thank you for the help!", active: false, icon: <User /> },
-          ].map((contact, i) => (
+          {contacts.map((contact, i) => (
             <div 
               key={i} 
               className={`p-4 rounded-[2rem] flex items-center gap-4 transition-all cursor-pointer ${
@@ -67,10 +71,10 @@ export default function CommunicationPage() {
               <Bot className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-black text-black">AI Diagnostic Bot</h3>
+              <h3 className="font-black text-black">{t.communication.contacts.aiBot}</h3>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-                <span className="text-[10px] font-black text-black uppercase tracking-widest">Active Consultant</span>
+                <span className="text-[10px] font-black text-black uppercase tracking-widest">{t.communication.activeConsultant}</span>
               </div>
             </div>
           </div>
@@ -118,7 +122,7 @@ export default function CommunicationPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask the AI specialized clinical questions..."
+              placeholder={t.communication.placeholder}
               className="w-full pl-24 pr-24 py-5 bg-slate-50 border border-slate-100 rounded-[2.5rem] focus:outline-none focus:ring-4 focus:ring-pastel-violet/5 focus:bg-white transition-all font-bold text-black shadow-inner"
             />
             <button 
@@ -126,7 +130,7 @@ export default function CommunicationPage() {
               disabled={!input.trim()}
               className="absolute right-3 top-3 bottom-3 px-8 bg-gradient-to-r from-pastel-pink to-pastel-violet rounded-full text-black font-black text-sm flex items-center gap-2 hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 shadow-lg shadow-pastel-violet/20"
             >
-              <span>SEND</span>
+              <span>{t.communication.send}</span>
               <Send className="w-4 h-4" />
             </button>
           </div>

@@ -10,31 +10,20 @@ import {
   Smile
 } from "lucide-react"
 
-export const conditions = [
-  { id: "pneumonia", name: "Pneumonia", icon: <Activity />, color: "bg-pastel-blue" },
-  { id: "eczema", name: "Eczema (Atopic Dermatitis)", icon: <Smile />, color: "bg-pastel-pink" },
-  { id: "psoriasis", name: "Psoriasis", icon: <Shield />, color: "bg-pastel-violet" },
-  { id: "melanoma", name: "Melanoma", icon: <Sun />, color: "bg-pastel-yellow" },
-  { id: "ringworm", name: "Ringworm", icon: <HeartPulse />, color: "bg-pastel-green" },
-  { id: "warts", name: "Warts", icon: <Shield />, color: "bg-pastel-blue" },
-  { id: "molluscum-contagiosum", name: "Molluscum Contagiosum", icon: <Smile />, color: "bg-pastel-pink" },
-  { id: "acne", name: "Acne", icon: <Smile />, color: "bg-pastel-violet" },
-  { id: "rosacea", name: "Rosacea", icon: <Smile />, color: "bg-pastel-yellow" },
-  { id: "vitiligo", name: "Vitiligo", icon: <Sun />, color: "bg-pastel-green" },
-  { id: "impetigo", name: "Impetigo", icon: <Shield />, color: "bg-pastel-blue" },
-  { id: "contact-dermatitis", name: "Contact Dermatitis", icon: <Smile />, color: "bg-pastel-pink" },
-]
+import { conditions } from "./data"
+import { useLocale } from "../i18n/LocaleContext"
 
 export default function WellnessPage() {
+  const { t } = useLocale()
   return (
     <div className="max-w-7xl mx-auto px-6 space-y-16 pb-32 pt-12">
       {/* Page Header */}
       <header className="space-y-4">
-        <h1 className="text-4xl md:text-6xl font-black text-black tracking-tight uppercase">
-          Recovery & <span className="text-pastel-green underline decoration-black/10">Wellness</span> Guide
+        <h1 className="text-4xl md:text-6xl font-black text-slate-800 tracking-tight uppercase">
+          {t.wellness.title} <span className="text-pastel-green underline decoration-pastel-green/10">{t.wellness.titleHighlight}</span>
         </h1>
-        <p className="text-xl text-black font-bold max-w-3xl opacity-80">
-          Evidence-based lifestyle and diet support for skin and respiratory health.
+        <p className="text-xl text-slate-500 font-bold max-w-3xl leading-relaxed">
+          {t.wellness.subtitle}
         </p>
       </header>
 

@@ -1,4 +1,6 @@
-const API_URL = "http://127.0.0.1:8000"
+import { API_BASE_URL } from "../config"
+
+const API_URL = API_BASE_URL
 
 export interface DiagnoseResponse {
   session_id: string
@@ -11,16 +13,19 @@ export interface DiagnoseResponse {
 
 export async function diagnoseImage(
   image: File,
-  symptoms: string
+  symptoms: string,
+  token: string,
 ): Promise<DiagnoseResponse> {
 
   const formData = new FormData()
   formData.append("image", image)
   formData.append("symptoms", symptoms)
 
-  // FIX: Use backticks (`) and the correct variable name (API_URL)
-  const res = await fetch(`${API_URL}/diagonse`, {
+  const res = await fetch(`${API_URL}/diagnose`, {
     method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
     body: formData
   })
 

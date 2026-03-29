@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Mediseen</string>
+    <string name="title_activity_main">Mediseen</string>
+    <string name="package_name">com.mediseen.app</string>
+    <string name="custom_url_scheme">com.mediseen.app</string>
+    <string name="default_web_client_id">1234567890-abcdefg.apps.googleusercontent.com</string>
+</resources>

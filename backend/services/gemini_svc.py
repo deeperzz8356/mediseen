@@ -1,28 +1,16 @@
-import google.generativeai as genai
+from google import genai
 from backend.config import GEMINI_API_KEY
 
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-genai.configure(api_key=GEMINI_API_KEY)
+def get_client():
+    return client
 
-
-def get_flash_model():
-    return genai.GenerativeModel("gemini-2.5-flash-lite")
-
-
-def call_gemini(model, content, retries=3):
-
-    delay = 3
-
-    for i in range(retries):
-
-        try:
-            return model.generate_content(content)
-
-        except Exception:
-
-            if i == retries - 1:
-                raise
-
-            import time
-            time.sleep(delay)
-            delay *= 2
+def call_gemini(contents, model_id="gemini-1.5-flash"):
+    """
+    Unified call for Gemini using the new google-genai SDK.
+    """
+    return client.models.generate_content(
+        model=model_id,
+        contents=contents
+    )

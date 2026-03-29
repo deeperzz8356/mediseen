@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion as fm, AnimatePresence } from "framer-motion"
 import {
   Wind,
@@ -12,11 +12,11 @@ import {
   Stethoscope,
   Microscope,
   ArrowRight,
-  ChevronDown,
   X
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useLocale } from "../i18n/LocaleContext"
 
 const skinConditions = [
   {
@@ -92,6 +92,7 @@ const otherConditions = [
 
 export default function EducationPage() {
   const [selectedCondition, setSelectedCondition] = useState<typeof skinConditions[0] | null>(null)
+  const { t } = useLocale()
 
   return (
     <div className="max-w-7xl mx-auto px-6 space-y-24 pb-40">
@@ -101,12 +102,12 @@ export default function EducationPage() {
         <fm.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-6xl md:text-8xl font-black text-black tracking-tight"
+          className="text-6xl md:text-8xl font-black text-slate-800 tracking-tight"
         >
-          Clinical <span className="text-pastel-violet underline decoration-black/10">Education</span>
+          {t.diseaseInfo.title} <span className="text-pastel-violet underline decoration-pastel-violet/10">{t.diseaseInfo.titleHighlight}</span>
         </fm.h1>
-        <p className="text-xl text-black font-bold max-w-2xl mx-auto leading-relaxed">
-          MediSeen's curated clinical guides for respiratory and dermatological conditions.
+        <p className="text-xl text-slate-500 font-bold max-w-2xl mx-auto leading-relaxed">
+          {t.diseaseInfo.subtitle}
         </p>
       </section>
 
@@ -118,31 +119,31 @@ export default function EducationPage() {
           <div className="space-y-10">
             <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-pastel-blue/10 text-pastel-blue text-xs font-black uppercase tracking-widest border border-pastel-blue/20">
               <Wind className="w-4 h-4" />
-              Respiratory Disease Guide
+              {t.diseaseInfo.pneumonia.badge}
             </div>
 
             <div className="space-y-6">
-              <h2 className="text-5xl font-black text-black leading-tight">Understanding <br /> Pneumonia</h2>
+              <h2 className="text-5xl font-black text-black leading-tight whitespace-pre-line">{t.diseaseInfo.pneumonia.title}</h2>
               <p className="text-lg text-black font-bold leading-relaxed">
-                Pneumonia is an infection that inflathes the air sacs in one or both lungs. The air sacs may fill with fluid or pus, causing cough with phlegm or pus, fever, chills, and difficulty breathing.
+                {t.diseaseInfo.pneumonia.description}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="p-6 rounded-2xl bg-white border border-black/5 shadow-sm space-y-3">
                 <Thermometer className="w-6 h-6 text-pastel-pink" />
-                <h4 className="font-black text-black">Key Symptoms</h4>
+                <h4 className="font-black text-black">{t.diseaseInfo.pneumonia.symptoms.title}</h4>
                 <ul className="text-sm text-black font-bold space-y-1.5">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> High Fever</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> Chest Pain</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> Short Breath</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> {t.diseaseInfo.pneumonia.symptoms.highFever}</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> {t.diseaseInfo.pneumonia.symptoms.chestPain}</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5" /> {t.diseaseInfo.pneumonia.symptoms.shortBreath}</li>
                 </ul>
               </div>
               <div className="p-6 rounded-2xl bg-white border border-black/5 shadow-sm space-y-3">
                 <Stethoscope className="w-6 h-6 text-pastel-green" />
-                <h4 className="font-black text-black">AI Logic</h4>
+                <h4 className="font-black text-black">{t.diseaseInfo.pneumonia.howWeCheck.title}</h4>
                 <p className="text-xs text-black font-bold leading-relaxed">
-                  Detection based on opacities, consolidation patterns, and pleural effusion marking.
+                  {t.diseaseInfo.pneumonia.howWeCheck.desc}
                 </p>
               </div>
             </div>
@@ -166,14 +167,14 @@ export default function EducationPage() {
       <section id="skin-problems" className="space-y-16">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-4">
           <div className="space-y-2">
-            <h2 className="text-5xl font-black text-black">Skin Problems</h2>
-            <p className="text-xl text-black font-bold">Comprehensive guide to common dermatological conditions</p>
+            <h2 className="text-5xl font-black text-slate-800">{t.diseaseInfo.skinHealth.title}</h2>
+            <p className="text-xl text-slate-500 font-bold">{t.diseaseInfo.skinHealth.subtitle}</p>
           </div>
           <div className="bg-white px-8 py-4 rounded-xl shadow-sm border border-black/5 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-pastel-pink/20 flex items-center justify-center text-pastel-pink">
               <Microscope className="w-5 h-5" />
             </div>
-            <span className="text-sm font-black text-black uppercase tracking-widest">Clinical Visuals</span>
+            <span className="text-sm font-black text-black uppercase tracking-widest">{t.diseaseInfo.skinHealth.clinicalVisuals}</span>
           </div>
         </div>
 
@@ -190,7 +191,7 @@ export default function EducationPage() {
               <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/20 rounded-full group-hover:scale-110 transition-transform"></div>
               <h3 className="text-3xl font-black leading-tight relative z-10">{condition.name}</h3>
               <div className="flex items-center gap-2 font-black text-xs uppercase tracking-widest opacity-80 relative z-10 bg-white/30 w-fit px-6 py-3 rounded-lg backdrop-blur-sm mt-4 border border-white/20 shadow-sm">
-                View Details <ArrowRight className="w-4 h-4" />
+                {t.diseaseInfo.skinHealth.viewDetails} <ArrowRight className="w-4 h-4" />
               </div>
             </fm.button>
           ))}
@@ -198,7 +199,7 @@ export default function EducationPage() {
 
         {/* Other Similar Skin Conditions quick grid */}
         <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-12 md:p-16 space-y-10 border border-black/5 shadow-sm">
-          <h3 className="text-3xl font-black text-black font-black uppercase tracking-tight">Other Clinical Conditions</h3>
+          <h3 className="text-3xl font-black text-black font-black uppercase tracking-tight">{t.diseaseInfo.skinHealth.otherConditions}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {otherConditions.map((item) => (
               <div key={item.name} className="bg-white p-8 rounded-xl border border-black/5 shadow-sm space-y-2 hover:shadow-md transition-all">
@@ -256,7 +257,7 @@ export default function EducationPage() {
                   <div className="p-12 md:p-20 space-y-12 bg-white text-black">
                     {selectedCondition.symptoms && (
                       <div className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-black">Primary Symptoms</h4>
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{t.diseaseInfo.overlay.whatItFeels}</h4>
                         <div className="flex flex-wrap gap-3">
                           {selectedCondition.symptoms.map(s => (
                             <span key={s} className="px-5 py-2 rounded-lg bg-white border border-black/5 shadow-sm text-sm font-bold text-black flex items-center gap-2">
@@ -269,7 +270,7 @@ export default function EducationPage() {
 
                     {selectedCondition.causes && (
                       <div className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-black">Causes / Triggers</h4>
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{t.diseaseInfo.overlay.whyItHappens}</h4>
                         <div className="grid grid-cols-1 gap-3">
                           {selectedCondition.causes.map(c => (
                             <div key={c} className="flex items-start gap-4 p-5 rounded-xl bg-pastel-yellow/5 border border-pastel-yellow/20 shadow-sm">
@@ -283,7 +284,7 @@ export default function EducationPage() {
 
                     {selectedCondition.types && (
                       <div className="space-y-4">
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-black">Condition Types</h4>
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-black">{t.diseaseInfo.overlay.conditionTypes}</h4>
                         <div className="flex flex-wrap gap-3">
                           {selectedCondition.types.map(t => (
                             <span key={t} className="px-5 py-2 rounded-lg bg-pastel-blue/20 text-black text-xs font-black border border-pastel-blue/30 shadow-sm">
@@ -295,7 +296,7 @@ export default function EducationPage() {
                     )}
 
                     <div className="space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-black">Treatment Plan</h4>
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{t.diseaseInfo.overlay.howToBetter}</h4>
                       <div className="grid grid-cols-1 gap-3">
                         {selectedCondition.treatment.map(t => (
                           <div key={t} className="flex items-center gap-4 p-5 rounded-xl bg-pastel-green/5 border border-pastel-green/20 shadow-sm">
@@ -311,9 +312,9 @@ export default function EducationPage() {
 
               {/* Footer CTA */}
               <div className="p-8 border-t border-black/5 flex items-center justify-between bg-slate-50/30">
-                <p className="text-xs text-black/60 font-black max-w-sm uppercase tracking-wider">Clinical Awareness Guide • Consult specialists for diagnosis.</p>
+                <p className="text-xs text-black/60 font-black max-w-sm uppercase tracking-wider">{t.diseaseInfo.overlay.disclaimer}</p>
                 <Link href="/diagnose" className="flex items-center gap-3 px-10 py-4 bg-black text-white rounded-xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-transform shadow-xl">
-                  Start Diagnosis <ArrowRight className="w-4 h-4" />
+                  {t.diseaseInfo.overlay.startDiagnosis} <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </fm.div>

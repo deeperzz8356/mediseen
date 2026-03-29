@@ -39,6 +39,13 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+main {
+  padding-bottom: max(env(safe-area-inset-bottom), 12px);
 }
 
 /* Custom Scrollbar */
