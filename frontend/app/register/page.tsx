@@ -4,6 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { createUserWithEmailAndPassword } from "firebase/auth"
+import type { FirebaseError } from "firebase/app"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { User, Mail, Lock, Stethoscope, ChevronRight } from "lucide-react"
@@ -28,6 +29,11 @@ export default function RegisterPage() {
       return
     }
 
+    if (!auth) {
+      setError("Authentication is not configured.")
+      return
+    }
+
     try {
       setLoading(true)
 
@@ -48,11 +54,11 @@ export default function RegisterPage() {
       if (!verifyResponse.ok) throw new Error("Failed to verify authentication token")
 
       router.push("/home")
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
         setError(t.register.errors.timedOut)
       } else {
-        setError(err.message)
+        setError(err instanceof Error ? err.message : (err as FirebaseError).message)
       }
     } finally {
       setLoading(false)

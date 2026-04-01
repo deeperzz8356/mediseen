@@ -1,6 +1,40 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 
+def signingCredentialsFile = rootProject.file('../.keystore-credentials.local')
+def signingPropertiesFile = rootProject.file('signing.properties')
+
+def readCredential = { File file, String prefix ->
+    if (!file.exists()) {
+        return ''
+    }
+
+    def line = file.readLines().find { it.startsWith("${prefix}:") }
+    line ? line.split(':', 2)[1].trim() : ''
+}
+
+def readProperty = { File file, String key ->
+    if (!file.exists()) {
+        return ''
+    }
+
+    def properties = new java.util.Properties()
+    file.withInputStream { input -> properties.load(input) }
+    def value = properties.getProperty(key)?.trim()
+    if (!value || value.startsWith('${')) {
+        return ''
+    }
+
+    value
+}
+
+def resolveSigningValue = { String... values ->
+    values.find { it?.trim() && !it.trim().startsWith('${') }?.trim() ?: ''
+}
+
+def localStorePassword = readCredential(signingCredentialsFile, 'Keystore Password')
+def localKeyPassword = readCredential(signingCredentialsFile, 'Key Password')
+
 android {
     namespace = "com.mediseen.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -19,10 +53,10 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("../keystore/mediseen.keystore")
-            storePassword System.getenv('KEYSTORE_PASSWORD') ?: ''
-            keyAlias System.getenv('KEY_ALIAS') ?: 'mediseen-key'
-            keyPassword System.getenv('KEY_PASSWORD') ?: System.getenv('KEYSTORE_PASSWORD') ?: ''
+            storeFile rootProject.file('keystore/mediseen.keystore')
+            storePassword resolveSigningValue(System.getenv('KEYSTORE_PASSWORD'), readProperty(signingPropertiesFile, 'storePassword'), localStorePassword)
+            keyAlias resolveSigningValue(System.getenv('KEY_ALIAS'), readProperty(signingPropertiesFile, 'keyAlias'), 'mediseen-key')
+            keyPassword resolveSigningValue(System.getenv('KEY_PASSWORD'), System.getenv('KEYSTORE_PASSWORD'), readProperty(signingPropertiesFile, 'keyPassword'), localKeyPassword, localStorePassword)
         }
     }
     compileOptions {
@@ -36,7 +70,7 @@ android {
         compose true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = composeVersion
+        kotlinCompilerExtensionVersion = composeCompilerVersion
     }
     buildTypes {
         release {
@@ -59,13 +93,14 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation "com.google.android.material:material:1.12.0"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     implementation "androidx.activity:activity-compose:$androidxActivityVersion"
-    implementation "androidx.compose.ui:ui:$composeVersion"
-    implementation "androidx.compose.material3:material3:$composeVersion"
-    implementation "androidx.compose.material3:material3-window-size-class:$composeVersion"
-    implementation "androidx.compose.ui:ui-tooling-preview:$composeVersion"
-    implementation "androidx.compose.foundation:foundation:$composeVersion"
+    implementation "androidx.compose.ui:ui:$composeUiVersion"
+    implementation "androidx.compose.material3:material3:$composeMaterial3Version"
+    implementation "androidx.compose.material3:material3-window-size-class:$composeMaterial3Version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$composeUiVersion"
+    implementation "androidx.compose.foundation:foundation:$composeUiVersion"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleRuntimeKtxVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleViewModelComposeVersion"
     implementation "androidx.navigation:navigation-compose:$navigationComposeVersion"

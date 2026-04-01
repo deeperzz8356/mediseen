@@ -1,7 +1,7 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { UploadCloud, Image as ImageIcon, Loader2, Sparkles, X, CheckCircle2, MessageSquare } from "lucide-react"
 import { DiagnosisResult } from "./ResultPanel"
 import { API_BASE_URL } from "../config"
@@ -45,6 +45,10 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload }: Uploa
       const formData = new FormData()
       formData.append("image", file)
       formData.append("symptoms", symptoms || "No symptoms provided")
+
+      if (!auth) {
+        throw new Error("Authentication is not configured")
+      }
 
       const user = auth.currentUser
       if (!user) {
@@ -131,7 +135,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload }: Uploa
             {preview ? (
               <div className="relative w-full h-full flex flex-col items-center p-6 bg-slate-50">
                 <div className="relative group/img max-w-full">
-                  <img src={preview} alt="Scan preview" className="max-h-[180px] rounded-xl shadow-2xl object-contain border-4 border-white transition-transform group-hover/img:scale-105" />
+                  <Image src={preview} alt="Scan preview" width={320} height={180} unoptimized className="max-h-[180px] rounded-xl shadow-2xl object-contain border-4 border-white transition-transform group-hover/img:scale-105" />
                   <button onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); }} className="absolute -top-3 -right-3 p-2.5 bg-black text-white rounded-full hover:bg-slate-800 transition shadow-2xl opacity-0 group-hover/img:opacity-100 scale-90 group-hover/img:scale-100">
                     <X className="w-4 h-4" />
                   </button>
@@ -189,6 +193,9 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload }: Uploa
               </>
             )}
           </button>
+          {result && (
+            <p className="mt-4 text-sm font-bold text-black/70">{result}</p>
+          )}
         </div>
       </div>
     </div>

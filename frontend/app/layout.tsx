@@ -1,19 +1,8 @@
 import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
 import NavbarWrapper from "./components/NavbarWrapper"
 import AgentFAB from "./components/AgentFAB"
 import { LocaleProvider } from "./i18n/LocaleContext"
 import "./globals.css"
-
-const geistSans = Geist({
-variable: "--font-geist-sans",
-subsets: ["latin"],
-})
-
-const geistMono = Geist_Mono({
-variable: "--font-geist-mono",
-subsets: ["latin"],
-})
 
 export const metadata: Metadata = {
 title: "MediSeen Clinical Studio",
@@ -33,7 +22,7 @@ children: React.ReactNode
 }) {
 return ( <html lang="en">
 <body
-className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
+className="antialiased bg-background text-foreground min-h-screen flex flex-col"
 >
   <LocaleProvider>
     <NavbarWrapper />

@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -16,7 +17,7 @@ import { onAuthStateChanged } from "firebase/auth"
 // Flow: splash → language → get-started → auth → /home
 type AppState = 'splash' | 'language' | 'get-started' | 'auth' | 'landing'
 
-function AuthStep({ onSuccess }: { onSuccess: () => void }) {
+function AuthStep() {
   const { t } = useLocale()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -37,7 +38,7 @@ function AuthStep({ onSuccess }: { onSuccess: () => void }) {
         setError("Verification failed. Please try again.")
       }
     })
-  }, [])
+  }, [router])
 
   const handleGoogleSignIn = async () => {
     setError("")
@@ -53,7 +54,7 @@ function AuthStep({ onSuccess }: { onSuccess: () => void }) {
       })
       if (!res.ok) throw new Error("Verification failed")
       router.push("/home")
-    } catch (err: any) {
+    } catch {
       setError(t.login.errors.googleFailed)
       setLoading(false)
     }
@@ -86,8 +87,8 @@ function AuthStep({ onSuccess }: { onSuccess: () => void }) {
             {loading ? (
               <div className="w-6 h-6 border-2 border-slate-300 border-t-pastel-violet rounded-full animate-spin" />
             ) : (
-              <img src="/logo2.png" className="w-6 h-6" alt="google" />
-            )}
+               <Image src="/logo2.png" className="w-6 h-6" alt="google" width={24} height={24} />
+             )}
             {loading ? "Signing in..." : t.auth.signInGoogle}
           </motion.button>
 
@@ -129,11 +130,13 @@ export default function LandingPage() {
 
   // If already signed in, skip to home
   useEffect(() => {
+    if (!auth) return
+
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) router.push('/home')
     })
     return () => unsub()
-  }, [])
+  }, [router])
 
   return (
     <div className="min-h-screen bg-white">
@@ -154,7 +157,7 @@ export default function LandingPage() {
 
         {/* PHASE 4: AUTH */}
         {appState === 'auth' && (
-          <AuthStep key="auth" onSuccess={() => router.push('/home')} />
+          <AuthStep key="auth" />
         )}
 
         {/* PHASE 5: LANDING (fallback for non-auth users browsing) */}

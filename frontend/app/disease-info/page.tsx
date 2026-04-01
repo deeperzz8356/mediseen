@@ -7,7 +7,6 @@ import {
   Thermometer,
   AlertCircle,
   CheckCircle2,
-  ChevronRight,
   Info,
   Stethoscope,
   Microscope,

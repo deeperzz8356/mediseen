@@ -1,15 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import Image from "next/image"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { signInWithEmailAndPassword } from "firebase/auth"
+import type { FirebaseError } from "firebase/app"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { HeartPulse, Mail, Lock, ChevronRight } from "lucide-react"
 import { signInWithGoogle, handleGoogleRedirectResult } from "@/lib/firebase"
 import { useLocale } from "../i18n/LocaleContext"
-import { useEffect } from "react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -35,7 +36,7 @@ export default function LoginPage() {
         setError(t.login.errors.googleFailed)
       }
     })
-  }, [])
+  }, [router, t.login.errors.googleFailed])
 
   const handleGoogleLogin = async () => {
     try {
@@ -67,6 +68,11 @@ export default function LoginPage() {
       return
     }
 
+    if (!auth) {
+      setError(t.login.errors.loginFailed)
+      return
+    }
+
     try {
       setLoading(true)
 
@@ -87,10 +93,12 @@ export default function LoginPage() {
       if (!verifyResponse.ok) throw new Error("Failed to verify authentication token")
 
       router.push("/home")
-    } catch (err: any) {
-      if (err.code === "auth/user-not-found") setError(t.login.errors.accountNotFound)
-      else if (err.code === "auth/wrong-password") setError(t.login.errors.incorrectPassword)
-      else if (err.code === "auth/invalid-email") setError(t.login.errors.invalidEmail)
+    } catch (err: unknown) {
+      const code = (err as FirebaseError).code
+
+      if (code === "auth/user-not-found") setError(t.login.errors.accountNotFound)
+      else if (code === "auth/wrong-password") setError(t.login.errors.incorrectPassword)
+      else if (code === "auth/invalid-email") setError(t.login.errors.invalidEmail)
       else setError(t.login.errors.loginFailed)
     } finally {
       setLoading(false)
@@ -175,7 +183,7 @@ export default function LoginPage() {
             {loading ? (
               <div className="w-5 h-5 border-2 border-slate-300 border-t-pastel-violet rounded-full animate-spin" />
             ) : (
-              <img src="/logo2.png" className="w-5 h-5" alt="google" />
+              <Image src="/logo2.png" className="w-5 h-5" alt="google" width={20} height={20} />
             )}
             {t.auth.signInGoogle}
           </motion.button>

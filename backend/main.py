@@ -56,7 +56,7 @@ _app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
 if not _allowed_origins_raw:
     if _app_env == "production":
         raise RuntimeError("ALLOWED_ORIGINS must be set in production")
-    _allowed_origins_raw = "http://127.0.0.1:3000,http://localhost:3000"
+    _allowed_origins_raw = "http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:3001,http://localhost:3001,http://localhost,capacitor://localhost"
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -95,7 +95,7 @@ def verify_bearer_token(authorization: str = Header(default="")):
         raise HTTPException(status_code=401, detail="Missing Firebase token")
 
     try:
-        return auth.verify_id_token(token)
+        return auth.verify_id_token(token, check_revoked=True)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
@@ -108,6 +108,20 @@ def root():
 @app.post("/auth/verify")
 async def verify_token(_decoded_token: dict = Depends(verify_bearer_token)):
     return {"status": "verified"}
+
+
+@app.post("/auth/disable-account")
+async def disable_account(_decoded_token: dict = Depends(verify_bearer_token)):
+    uid = _decoded_token.get("uid")
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing user id in token")
+
+    try:
+        auth.update_user(uid, disabled=True)
+        auth.revoke_refresh_tokens(uid)
+        return {"status": "disabled"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to disable account")
 
 # ---------------------------------------------------
 # 6️⃣ AI Diagnosis Endpoint
@@ -288,4 +302,6 @@ def download_report(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    reload = os.environ.get("ENV", "development").lower() == "development"
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload)

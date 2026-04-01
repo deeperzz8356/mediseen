@@ -1,6 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
 import { User, Calendar, Fingerprint, Activity, ClipboardList } from "lucide-react"
 
 export default function PatientForm() {

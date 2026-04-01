@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import { createContext, useContext, useState, ReactNode } from "react"
 import { Locale, Translations, getTranslations, getSavedLocale, saveLocale, LOCALES } from "./index"
 
 interface LocaleContextValue {
@@ -18,12 +18,7 @@ const LocaleContext = createContext<LocaleContextValue>({
 })
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("en")
-
-  useEffect(() => {
-    const saved = getSavedLocale()
-    setLocaleState(saved)
-  }, [])
+  const [locale, setLocaleState] = useState<Locale>(() => getSavedLocale())
 
   const setLocale = (l: Locale) => {
     saveLocale(l)

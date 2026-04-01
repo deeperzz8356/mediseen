@@ -4,7 +4,7 @@ pydantic
 python-dotenv
 firebase-admin
 google-genai
-opencv-python
+opencv-python-headless
 numpy
 pdfkit
 Pillow

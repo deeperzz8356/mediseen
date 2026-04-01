@@ -111,11 +111,11 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
           </div>
           
           <div className="relative">
-            <div className="absolute -left-6 -top-2 text-6xl font-serif text-black opacity-5">"</div>
+            <div className="absolute -left-6 -top-2 text-6xl font-serif text-black opacity-5">&quot;</div>
             <p className="text-black text-base md:text-lg font-bold leading-relaxed opacity-80 italic px-4">
               {result.explanation}
             </p>
-            <div className="absolute -right-6 -bottom-8 text-6xl font-serif text-black opacity-5">"</div>
+            <div className="absolute -right-6 -bottom-8 text-6xl font-serif text-black opacity-5">&quot;</div>
           </div>
         </div>
 

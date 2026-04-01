@@ -2,13 +2,6 @@
 
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { 
-  HeartPulse, 
-  Sun, 
-  Activity, 
-  Shield, 
-  Smile
-} from "lucide-react"
 
 import { conditions } from "./data"
 import { useLocale } from "../i18n/LocaleContext"

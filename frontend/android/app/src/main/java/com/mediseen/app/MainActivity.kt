@@ -6,8 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
-import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
@@ -34,15 +32,13 @@ class MainActivity : ComponentActivity() {
             .build()
 
         googleSignInClient = GoogleSignIn.getClient(this, gso)
-        val windowSizeClass = calculateWindowSizeClass(this)
 
         setContent {
             MediseenTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     MainNav(
                         googleSignInClient = googleSignInClient,
-                        firebaseAuth = firebaseAuth,
-                        windowSizeClass = windowSizeClass
+                        firebaseAuth = firebaseAuth
                     )
                 }
             }
@@ -53,8 +49,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainNav(
     googleSignInClient: GoogleSignInClient,
-    firebaseAuth: FirebaseAuth,
-    windowSizeClass: WindowSizeClass
+    firebaseAuth: FirebaseAuth
 ) {
     val navController = rememberNavController()
     val context = navController.context
@@ -88,7 +83,7 @@ fun MainNav(
             )
         }
         composable("dashboard") {
-            DashboardScreen(windowSizeClass)
+            DashboardScreen()
         }
     }
 }

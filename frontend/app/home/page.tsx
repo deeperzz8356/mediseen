@@ -22,11 +22,11 @@ import { useLocale } from "../i18n/LocaleContext"
 
 export default function Home() {
   const [username, setUsername] = useState("")
-  const [mounted, setMounted] = useState(false)
   const { t } = useLocale()
 
   useEffect(() => {
-    setMounted(true)
+    if (!auth) return
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         const name = user.displayName || user.email?.split("@")[0] || "there"
@@ -35,10 +35,6 @@ export default function Home() {
     })
     return () => unsubscribe()
   }, [])
-
-  if (!mounted) {
-    return <div className="min-h-screen bg-background" />
-  }
 
   const quickActions = [
     {

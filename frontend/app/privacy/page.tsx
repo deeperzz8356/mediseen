@@ -107,7 +107,7 @@ export default function PrivacyPage() {
         </p>
         <p className="text-slate-500 font-medium leading-relaxed">
           This privacy policy applies to the <span className="font-bold text-slate-700">Mediseen</span> app for mobile devices,
-          created as a free service. This service is intended for use "AS IS".
+          created as a free service. This service is intended for use &quot;AS IS&quot;.
         </p>
       </motion.div>
 

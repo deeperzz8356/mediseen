@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronDown, Cpu, Zap, Target, BarChart3, BrainCircuit, ShieldCheck } from "lucide-react"
+import { ChevronDown, Zap, Target, BarChart3, BrainCircuit, ShieldCheck } from "lucide-react"
 
 const models = [
   { id: "densenet", name: "Highest Accuracy", tag: "DenseNet121", icon: <Target className="w-5 h-5" />, color: "text-pastel-pink", border: "border-pastel-pink", bg: "bg-pastel-pink/5" },

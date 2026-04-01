@@ -1,9 +1,9 @@
 apply from: "variables.gradle"
 
 ext {
-    compileSdkVersion = 35
+    compileSdkVersion = 36
     minSdkVersion = 24
-    targetSdkVersion = 35
+    targetSdkVersion = 36
     androidxAppCompatVersion = "1.7.0"
 }
 

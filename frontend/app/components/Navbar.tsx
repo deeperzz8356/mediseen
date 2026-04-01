@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Activity, Heart, BookOpen, Menu, X, Languages } from "lucide-react"
+import { Home, Activity, Heart, BookOpen, Menu, X, Languages, Settings } from "lucide-react"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
@@ -19,6 +19,8 @@ export default function Navbar() {
   const { t, locale, setLocale } = useLocale()
 
   useEffect(() => {
+    if (!auth) return
+
     const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u))
     return () => unsubscribe()
   }, [])
@@ -37,6 +39,7 @@ export default function Navbar() {
     { name: t.navbar.checkup, href: "/diagnose", icon: <Activity className="w-4 h-4" /> },
     { name: t.navbar.health, href: "/wellness", icon: <Heart className="w-4 h-4" /> },
     { name: t.navbar.library, href: "/disease-info", icon: <BookOpen className="w-4 h-4" /> },
+    { name: "Profile", href: "/profile", icon: <Settings className="w-4 h-4" /> },
   ]
 
   return (

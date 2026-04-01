@@ -1,10 +1,11 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import { 
-  HeartPulse, Salad, Moon, Droplets, Sun, Activity, Shield, Smile, BrainCircuit,
+  Salad, Moon, Droplets, Sun, Activity, Shield, Smile, BrainCircuit,
   ArrowLeft, UploadCloud, Stethoscope
 } from "lucide-react"
 
@@ -117,7 +118,48 @@ interface DietPlan {
   mealPlan: { meal: string; idea: string; }[];
 }
 
-export default function WellnessDetail({ condition, id }: { condition: any, id: string }) {
+interface WellnessCondition {
+  name: string
+  icon: ReactNode
+  color: string
+}
+
+function InputLabel({ txt }: { txt: string }) {
+  return (
+    <label className="block text-[10px] font-black uppercase tracking-widest text-black/60 mb-2">{txt}</label>
+  )
+}
+
+const InputStyle = "w-full px-4 py-3 bg-white border border-black/10 rounded-xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-pastel-violet/50 shadow-inner block"
+
+function CheckboxLabel({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="sr-only"
+      />
+      <div className={`w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all ${
+        checked ? "bg-black border-black text-white" : "bg-white border-black/20 group-hover:border-black/40"
+      }`}>
+        {checked && <Shield className="w-3 h-3" />}
+      </div>
+      <span className="text-sm font-bold text-black">{label}</span>
+    </label>
+  )
+}
+
+export default function WellnessDetail({ condition, id }: { condition: WellnessCondition, id: string }) {
   const diets = dietRecommendations[id] || dietRecommendations.acne
 
   const [formData, setFormData] = useState({
@@ -153,21 +195,6 @@ export default function WellnessDetail({ condition, id }: { condition: any, id: 
       setGenerating(false)
     }, 2000)
   }
-
-  const InputLabel = ({ txt }: { txt: string }) => (
-    <label className="block text-[10px] font-black uppercase tracking-widest text-black/60 mb-2">{txt}</label>
-  )
-  const InputStyle = "w-full px-4 py-3 bg-white border border-black/10 rounded-xl font-bold text-sm focus:outline-none focus:ring-2 focus:ring-pastel-violet/50 shadow-inner block"
-  const CheckboxLabel = ({ label, checked, onChange }: { label: string, checked: boolean, onChange: (v: boolean) => void }) => (
-    <label className="flex items-center gap-3 cursor-pointer group">
-      <div className={`w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all ${
-        checked ? 'bg-black border-black text-white' : 'bg-white border-black/20 group-hover:border-black/40'
-      }`}>
-        {checked && <Shield className="w-3 h-3" />}
-      </div>
-      <span className="text-sm font-bold text-black">{label}</span>
-    </label>
-  )
 
   return (
     <div className="max-w-4xl mx-auto px-6 space-y-16 pb-32 pt-12">

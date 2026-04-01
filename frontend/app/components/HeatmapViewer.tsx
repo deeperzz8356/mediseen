@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { useState } from "react"
 import {
@@ -41,10 +42,10 @@ export default function HeatmapViewer({
     severity === "high"
       ? "bg-rose-500"
       : severity === "medium"
-      ? "bg-amber-400"
-      : severity === "low"
-      ? "bg-emerald-400"
-      : "bg-slate-500"
+        ? "bg-amber-400"
+        : severity === "low"
+          ? "bg-emerald-400"
+          : "bg-slate-500"
 
   const fullHeatmapUrl = heatmapImage ? getAbsoluteUrl(heatmapImage) : null;
 
@@ -111,7 +112,7 @@ export default function HeatmapViewer({
         <div className="xl:col-span-9">
           <div className="relative group bg-slate-100 rounded-[2rem] overflow-hidden border border-black/5 shadow-2xl aspect-[16/10] w-full flex items-center justify-center">
             {/* Layer 1: Base Clinical Image */}
-            <img src={originalImage} alt="Clinical scan" className="w-full h-full object-contain" />
+            <Image src={originalImage} alt="Clinical scan" fill unoptimized className="object-contain" />
 
             {/* Layer 2: AI Heatmap Overlay */}
             <AnimatePresence>
@@ -172,14 +173,22 @@ export default function HeatmapViewer({
 
               <div className="space-y-4 border-t border-black/5 pt-10">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black opacity-30">Urgency Assessment</p>
-                <div className={`text-4xl font-black uppercase tracking-tighter leading-none ${
-                  severity === 'high' ? 'text-rose-500' : severity === 'medium' ? 'text-amber-500' : 'text-emerald-500'
-                }`}>
-                  {severity || "N/A"}
+                <div className="flex items-center gap-3">
+                  <span className={`w-3 h-3 rounded-full ${severityColor}`} />
+                  <div className={`text-4xl font-black uppercase tracking-tighter leading-none ${
+                    severity === "high" ? "text-rose-500" : severity === "medium" ? "text-amber-500" : "text-emerald-500"
+                  }`}>
+                    {severity || "N/A"}
+                  </div>
                 </div>
                 <p className="text-[10px] font-bold text-black opacity-40 leading-relaxed italic uppercase tracking-tight">
                   Derived from neural variance indexing against clinical control datasets.
                 </p>
+                {typeof affectedArea === "number" && (
+                  <p className="text-xs font-bold text-black/60">
+                    Estimated affected area: {affectedArea}%
+                  </p>
+                )}
               </div>
             </div>
 

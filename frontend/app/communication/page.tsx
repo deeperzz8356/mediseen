@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { MessageCircle, Send, User, Bot, Phone, Video, MoreHorizontal, Paperclip, Smile } from "lucide-react"
+import { Send, User, Bot, Phone, Video, MoreHorizontal, Paperclip, Smile } from "lucide-react"
 import { useLocale } from "../i18n/LocaleContext"
 
 export default function CommunicationPage() {
