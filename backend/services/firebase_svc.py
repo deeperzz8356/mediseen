@@ -3,6 +3,7 @@ from firebase_admin import credentials, firestore, storage
 import random
 import os
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 # Global DB instance
 _db = None
@@ -19,7 +20,12 @@ def init_firebase(cred_path: str = "firebase_admin.json"):
 
     try:
         if not firebase_admin._apps:
-            cred = credentials.Certificate(cred_path)
+            # Support both backend cwd and project-root cwd deployments.
+            resolved_cred_path = Path(cred_path)
+            if not resolved_cred_path.is_absolute() and not resolved_cred_path.exists():
+                resolved_cred_path = Path(__file__).resolve().parents[1] / cred_path
+
+            cred = credentials.Certificate(str(resolved_cred_path))
             bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")
             firebase_admin.initialize_app(cred, {
                 'storageBucket': bucket_name

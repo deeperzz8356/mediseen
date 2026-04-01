@@ -1,3 +1,13 @@
+---
+title: MediSeen
+emoji: 🩺
+colorFrom: blue
+colorTo: teal
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Explainable-Med: Transparency & Interpretability in Medical AI Diagnostics
 
 **Problem Statement ID:** HVAI-03  
@@ -25,6 +35,32 @@ Current AI diagnostic models often operate as "Black Boxes", providing accurate 
 - **Environment Management:** Python-Dotenv
 
 ## 🚀 Getting Started
+
+## 🤗 Hugging Face Docker Space Deployment
+
+This repository is configured to run on Hugging Face Docker Spaces with a single container:
+- Nginx serves the static frontend on port `7860`
+- FastAPI backend runs internally on `127.0.0.1:8000`
+- `/api/*` is reverse-proxied to backend endpoints
+
+### Required Space secrets
+
+Set these in your Space settings before first run:
+- `GOOGLE_API_KEY`
+- `FIREBASE_STORAGE_BUCKET`
+
+If you prefer not to commit service credentials, store Firebase service account JSON in a Space Secret and load it at runtime.
+
+### Push to Space
+
+```bash
+git clone https://huggingface.co/spaces/meediseen/meediseen
+cd meediseen
+# copy project files, then:
+git add .
+git commit -m "Configure full-stack Docker Space runtime"
+git push
+```
 
 ### Prerequisites
 - Node.js (v18+)
