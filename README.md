@@ -43,11 +43,24 @@ This repository is configured to run on Hugging Face Docker Spaces with a single
 - FastAPI backend runs internally on `127.0.0.1:8000`
 - `/api/*` is reverse-proxied to backend endpoints
 
-### Required Space secrets
+### Required Space environment settings
 
-Set these in your Space settings before first run:
-- `GOOGLE_API_KEY`
+Set these in your Space settings before first run.
+
+Space Secrets (private):
+- `GEMINI_API_KEY`
 - `FIREBASE_STORAGE_BUCKET`
+
+Space Variables (public frontend config; required at build time for static Next export):
+- `NEXT_PUBLIC_API_URL` (set to `/api`)
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+
+Important: this frontend is built with static export, so `NEXT_PUBLIC_*` values must be present during image build. After changing Variables/Secrets, rebuild/restart the Space.
 
 If you prefer not to commit service credentials, store Firebase service account JSON in a Space Secret and load it at runtime.
 

@@ -1,11 +1,19 @@
 uploads
+node_modules
+.venv
+.next
+out
+
+# Folders to exclude from HF Push
+/frontend-kotlin/
+/android/
 
 # Editor and local tooling
 /.idea/
 /.vscode/
 /.kiro/
 
-# Root npm lockfile is not used in this repo (frontend has its own)
+# Root npm lockfile
 /package-lock.json
 
 # Secrets
@@ -14,3 +22,4 @@ uploads
 firebase_admin.json
 **/firebase_admin.json
 temp_password.txt
+*.log

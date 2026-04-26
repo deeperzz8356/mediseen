@@ -1,16 +1,5 @@
-apply from: "variables.gradle"
-
-ext {
-    compileSdkVersion = 36
-    minSdkVersion = 24
-    targetSdkVersion = 36
-    androidxAppCompatVersion = "1.7.0"
-}
-
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
-
 buildscript {
-    
+    apply from: "variables.gradle"
     repositories {
         google()
         mavenCentral()
@@ -18,12 +7,15 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.2'
         classpath 'com.google.gms:google-services:4.4.4'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.10"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$kotlinVersion"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
 }
+
+apply from: "variables.gradle"
 
 allprojects {
     repositories {
@@ -32,6 +24,6 @@ allprojects {
     }
 }
 
-task clean(type: Delete) {
+tasks.register('clean', Delete) {
     delete rootProject.buildDir
 }

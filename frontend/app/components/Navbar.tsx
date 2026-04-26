@@ -1,215 +1,209 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Activity, Heart, BookOpen, Menu, X, Languages, Settings } from "lucide-react"
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import Image from "next/image"
+import { useEffect, useState } from "react"
 import { onAuthStateChanged, User } from "firebase/auth"
+import { motion, AnimatePresence } from "framer-motion"
+import { Activity, BookOpen, Heart, Home, Settings, Menu, X } from "lucide-react"
+
 import { auth } from "../../lib/firebase"
 import { useLocale } from "../i18n/LocaleContext"
-import { LOCALES, Locale } from "../i18n"
+
+type NavItem = {
+	name: string
+	shortName: string
+	href: string
+	icon: typeof Home
+}
 
 export default function Navbar() {
-  const pathname = usePathname()
-  const [isOpen, setIsOpen] = useState(false)
-  const [langOpen, setLangOpen] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-  const { t, locale, setLocale } = useLocale()
+	const pathname = usePathname()
+	const [user, setUser] = useState<User | null>(null)
+	const [isMenuOpen, setIsMenuOpen] = useState(false)
+	const { t } = useLocale()
 
-  useEffect(() => {
-    if (!auth) return
+	useEffect(() => {
+		if (!auth) return
 
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u))
-    return () => unsubscribe()
-  }, [])
+		const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser))
+		return () => unsubscribe()
+	}, [])
 
-  const getInitials = (u: User) => {
-    if (u.displayName) {
-      return u.displayName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    }
-    return u.email ? u.email[0].toUpperCase() : "?"
-  }
+	const navItems: NavItem[] = [
+		{ name: t.navbar.home, shortName: "Home", href: "/home", icon: Home },
+		{ name: t.navbar.checkup, shortName: "Scan", href: "/diagnose", icon: Activity },
+		{ name: t.navbar.health, shortName: "Health", href: "/wellness", icon: Heart },
+		{ name: t.navbar.library, shortName: "Library", href: "/disease-info", icon: BookOpen },
+		{ name: "Profile", shortName: "Profile", href: "/profile", icon: Settings },
+	]
 
-  const displayName = user?.displayName || user?.email?.split("@")[0] || "Guest"
+	const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+	const currentUserName = user?.displayName || user?.email?.split("@")[0] || "Guest"
 
-  const navItems = [
-    { name: t.navbar.home, href: "/home", icon: <Home className="w-4 h-4" /> },
-    { name: t.navbar.checkup, href: "/diagnose", icon: <Activity className="w-4 h-4" /> },
-    { name: t.navbar.health, href: "/wellness", icon: <Heart className="w-4 h-4" /> },
-    { name: t.navbar.library, href: "/disease-info", icon: <BookOpen className="w-4 h-4" /> },
-    { name: "Profile", href: "/profile", icon: <Settings className="w-4 h-4" /> },
-  ]
+	const getInitials = (currentUser: User) => {
+		if (currentUser.displayName) {
+			return currentUser.displayName
+				.split(" ")
+				.map((name) => name[0])
+				.join("")
+				.toUpperCase()
+				.slice(0, 2)
+		}
 
-  return (
-    <div className="sticky top-4 md:top-6 z-50 flex justify-center px-4">
-      <div className="w-full max-w-6xl py-3 md:h-[72px] flex items-center justify-between px-6 md:px-8 bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-black/5">
-        
-        {/* LOGO */}
-        <Link href="/home" className="flex items-center gap-3 font-black text-lg">
-          <Image src="/logo2.png" alt="MediSeen Logo" width={60} height={60} className="rounded-xl" />
-          <span>MediSeen</span>
-        </Link>
+		return currentUser.email ? currentUser.email[0].toUpperCase() : "?"
+	}
 
-        {/* DESKTOP NAVIGATION */}
-        <div className="hidden md:flex items-center gap-6 lg:gap-8">
-          {navItems.map((item) => {
-            const active = pathname === item.href
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2 text-sm font-bold tracking-wide transition-all
-                ${
-                  active
-                    ? "text-black bg-pastel-violet/10 px-4 py-2 rounded-xl shadow-sm"
-                    : "text-black/50 hover:text-black"
-                }`}
-              >
-                {item.icon}
-                {item.name}
-              </Link>
-            )
-          })}
-        </div>
+	return (
+		<>
+			{/* Mobile Menu Button - Top Left */}
+			<button
+				onClick={() => setIsMenuOpen(true)}
+				className="fixed top-4 left-4 z-[80] md:hidden w-11 h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg flex items-center justify-center text-slate-700 active:scale-95"
+				aria-label="Open menu"
+			>
+				<Menu className="w-5 h-5" />
+			</button>
 
-        {/* RIGHT SECTION */}
-        <div className="flex items-center gap-3">
-          {/* Language Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setLangOpen(!langOpen)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-500 hover:text-slate-800 transition text-xs font-black uppercase tracking-widest"
-            >
-              <Languages className="w-3.5 h-3.5" />
-              {LOCALES.find(l => l.code === locale)?.flag}
-            </button>
-            <AnimatePresence>
-              {langOpen && (
-                <>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[80]"
-                    onClick={() => setLangOpen(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                    className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-[90] min-w-[160px]"
-                  >
-                    {LOCALES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => { setLocale(lang.code as Locale); setLangOpen(false) }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all
-                          ${locale === lang.code ? 'bg-pastel-violet/10 text-pastel-violet' : 'text-slate-600 hover:bg-slate-50'}`}
-                      >
-                        <span className="text-lg">{lang.flag}</span>
-                        {lang.name}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
+			<Link
+				href="/profile"
+				className="fixed top-4 right-4 md:top-6 md:right-6 z-[70] w-11 h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg shadow-slate-900/10 flex items-center justify-center overflow-hidden"
+				aria-label="Open profile"
+				title={currentUserName}
+			>
+				{user ? (
+					<div className="w-full h-full bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-sm">
+						{getInitials(user)}
+					</div>
+				) : (
+					<Image src="/logo2.png" alt="MediSeen account" width={44} height={44} className="rounded-2xl" />
+				)}
+			</Link>
 
-          <div className="w-10 h-10 rounded-xl bg-blue-200 flex items-center justify-center font-bold text-sm" title={displayName}>
-            {user ? getInitials(user) : "?"}
-          </div>
-          
-          <button 
-            className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
+			{/* Left Side Drawer - Mobile Only */}
+			<AnimatePresence>
+				{isMenuOpen && (
+					<>
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							onClick={() => setIsMenuOpen(false)}
+							className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm md:hidden"
+						/>
+						<motion.aside
+							initial={{ x: "-100%" }}
+							animate={{ x: 0 }}
+							exit={{ x: "-100%" }}
+							transition={{ type: "spring", damping: 25, stiffness: 200 }}
+							className="fixed top-0 left-0 bottom-0 z-[110] w-[280px] bg-white shadow-2xl border-r border-slate-100 md:hidden flex flex-col"
+						>
+							<div className="p-6 border-b border-slate-50 flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+										<Image src="/logo2.png" alt="MediSeen" width={24} height={24} />
+									</div>
+									<span className="font-black text-lg tracking-tighter uppercase italic text-black">MediSeen</span>
+								</div>
+								<button 
+									onClick={() => setIsMenuOpen(false)}
+									className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
+								>
+									<X className="w-5 h-5 text-slate-400" />
+								</button>
+							</div>
 
-      {/* MOBILE MENU SIDEBAR */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] md:hidden"
-            />
+							<nav className="flex-1 p-4 space-y-2">
+								{navItems.map((item) => {
+									const active = isActiveRoute(item.href)
+									const Icon = item.icon
 
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-[280px] bg-white/90 backdrop-blur-2xl shadow-2xl z-[70] md:hidden flex flex-col p-6"
-            >
-              <div className="flex items-center justify-between mb-10">
-                <Link href="/home" className="flex items-center gap-3 font-black text-lg" onClick={() => setIsOpen(false)}>
-                  <Image src="/logo2.png" alt="MediSeen Logo" width={40} height={40} className="rounded-xl" />
-                  <span>MediSeen</span>
-                </Link>
-                <button 
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
+									return (
+										<Link
+											key={item.href}
+											href={item.href}
+											onClick={() => setIsMenuOpen(false)}
+											className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${
+												active 
+													? "bg-slate-900 text-white shadow-lg" 
+													: "text-slate-500 hover:bg-slate-50"
+											}`}
+										>
+											<Icon className={`w-5 h-5 ${active ? "scale-110" : ""}`} />
+											<span className="font-bold text-sm tracking-tight">{item.name}</span>
+										</Link>
+									)
+								})}
+							</nav>
 
-              <div className="flex flex-col gap-3">
-                {navItems.map((item) => {
-                  const active = pathname === item.href
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsOpen(false)}
-                      className={`flex items-center gap-4 p-4 rounded-2xl text-base font-bold transition-all
-                      ${
-                        active
-                          ? "bg-pastel-violet text-white shadow-lg shadow-pastel-violet/20"
-                          : "text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span className={`${active ? "text-white" : "text-pastel-violet"}`}>
-                        {item.icon}
-                      </span>
-                      {item.name}
-                    </Link>
-                  )
-                })}
-              </div>
+							<div className="p-6 border-t border-slate-50 bg-slate-50/50">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-xs">
+										{user ? getInitials(user) : "G"}
+									</div>
+									<div className="flex-1 min-w-0">
+										<p className="text-sm font-black text-slate-800 truncate">{currentUserName}</p>
+										<p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{user ? "Active Professional" : "Guest Mode"}</p>
+									</div>
+								</div>
+							</div>
+						</motion.aside>
+					</>
+				)}
+			</AnimatePresence>
 
-              <div className="mt-auto pt-6 border-t border-slate-100">
-                <div className="flex items-center gap-3 p-2">
-                  <div className="w-10 h-10 rounded-xl bg-blue-200 flex items-center justify-center font-bold text-sm">
-                    {user ? getInitials(user) : "?"}
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm">{displayName}</p>
-                    <p className="text-xs text-slate-500">{user?.email || t.navbar.notSignedIn}</p>
-                  </div>
-                </div>
-                <a
-                  href="https://sites.google.com/view/sapappsolutionmediseenpolicy/home"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-center text-[11px] text-slate-300 hover:text-slate-400 transition-colors mt-3"
-                >
-                  Privacy Policy
-                </a>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
-  )
+			{/* Desktop Sidebar */}
+			<nav className="fixed hidden md:flex left-3 bottom-3 top-3 w-20 z-[70] app-glass rounded-3xl shadow-2xl shadow-slate-900/20 py-8 border border-white/70 flex-col items-center justify-between">
+				<div className="flex flex-col gap-6">
+					<div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center mb-4">
+						<Image src="/logo2.png" alt="MediSeen" width={32} height={32} />
+					</div>
+					{navItems.map((item) => {
+						const active = isActiveRoute(item.href)
+						const Icon = item.icon
+
+						return (
+							<Link
+								key={item.href}
+								href={item.href}
+								title={item.name}
+								className={`flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all ${
+									active ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:bg-white"
+								}`}
+							>
+								<Icon className={`w-5 h-5 ${active ? "scale-110" : ""}`} />
+							</Link>
+						)
+					})}
+				</div>
+				<Link href="/profile" className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all">
+					<Settings className="w-5 h-5" />
+				</Link>
+			</nav>
+
+			{/* Mobile Bottom Bar (Fallback/Alternative) */}
+			<nav className="fixed md:hidden left-3 right-3 bottom-3 z-[70] app-glass rounded-2xl shadow-2xl shadow-slate-900/20 px-2 py-2 border border-white/70">
+				<div className="grid grid-cols-5 gap-1">
+					{navItems.map((item) => {
+						const active = isActiveRoute(item.href)
+						const Icon = item.icon
+
+						return (
+							<Link
+								key={item.href}
+								href={item.href}
+								className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 transition-all ${
+									active ? "bg-gradient-to-r from-pastel-pink to-pastel-violet text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
+								}`}
+							>
+								<Icon className={`w-4 h-4 ${active ? "scale-110" : ""}`} />
+								<span className="text-[10px] font-bold leading-none tracking-tight">{item.shortName}</span>
+							</Link>
+						)
+					})}
+				</div>
+			</nav>
+		</>
+	)
 }

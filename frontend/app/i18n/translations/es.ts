@@ -101,8 +101,7 @@ const es: Translations = {
     alreadyRegistered: "¿Ya registrado?",
     signIn: "Iniciar sesión",
     errors: {
-      emailPasswordRequired: "Correo y contraseña requeridos",
-      timedOut: "La solicitud expiró. Por favor intenta de nuevo.",
+      emailPasswordRequired: "Correo y contraseña requeridos",      nameRequired: "Se requiere nombre completo",      timedOut: "La solicitud expiró. Por favor intenta de nuevo.",
     },
   },
   diagnose: {

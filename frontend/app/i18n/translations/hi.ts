@@ -101,8 +101,7 @@ const hi: Translations = {
     alreadyRegistered: "पहले से पंजीकृत हैं?",
     signIn: "साइन इन करें",
     errors: {
-      emailPasswordRequired: "ईमेल और पासवर्ड आवश्यक है",
-      timedOut: "अनुरोध समय समाप्त। कृपया पुनः प्रयास करें।",
+      emailPasswordRequired: "ईमेल और पासवर्ड आवश्यक है",      nameRequired: "पूरा नाम आवश्यक है",      timedOut: "अनुरोध समय समाप्त। कृपया पुनः प्रयास करें।",
     },
   },
   diagnose: {

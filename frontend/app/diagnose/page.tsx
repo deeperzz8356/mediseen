@@ -2,18 +2,19 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera"
+import { FileText, Eye, ClipboardCheck, ChevronRight, Activity, Sparkles, Camera as CameraIcon, X } from "lucide-react"
+import { useLocale } from "../i18n/LocaleContext"
 import UploadPanel from "../components/UploadPanel"
 import ResultPanel, { DiagnosisResult } from "../components/ResultPanel"
 import HeatmapViewer from "../components/HeatmapViewer"
-import { FileText, Eye, ClipboardCheck, ChevronRight, Activity, Sparkles, Camera, X } from "lucide-react"
-import { useLocale } from "../i18n/LocaleContext"
 
 export default function DiagnosePage() {
   const [analysisResult, setAnalysisResult] = useState<DiagnosisResult | null>(null)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [showReport, setShowReport] = useState(false)
-  const [isCameraOpen, setIsCameraOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
   const { t } = useLocale()
 
   const handleReset = () => {
@@ -21,6 +22,25 @@ export default function DiagnosePage() {
     setUploadedImage(null)
     setShowHeatmap(false)
     setShowReport(false)
+  }
+
+  const takePhoto = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera
+      })
+
+      if (image.base64String) {
+        setUploadedImage(`data:image/jpeg;base64,${image.base64String}`)
+        // We'll let the UploadPanel handle the actual upload once the image is set
+        // But for direct camera, we might need a way to trigger analysis
+      }
+    } catch (error) {
+      console.error("Camera error:", error)
+    }
   }
 
   const handleAnalysisComplete = (res: DiagnosisResult) => {
@@ -31,9 +51,9 @@ export default function DiagnosePage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 space-y-12 pb-32 pt-12">
+    <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-8 md:space-y-12 pb-32 pt-8 md:pt-12">
       {/* --- PAGE HEADER --- */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-10 border-b border-black/5 pb-12">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 md:gap-10 border-b border-black/5 pb-8 md:pb-12">
         <div className="space-y-4">
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
@@ -42,69 +62,27 @@ export default function DiagnosePage() {
           >
             <Sparkles className="w-3 h-3" /> {t.diagnose.badge}
           </motion.div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-800 tracking-tighter uppercase leading-none">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-slate-800 tracking-tighter uppercase leading-tight md:leading-none">
             {t.diagnose.title} <span className="text-pastel-pink">{t.diagnose.titleHighlight}</span>
           </h1>
-          <p className="text-base md:text-lg text-slate-500 font-bold max-w-xl leading-tight">
+          <p className="text-sm md:text-lg text-slate-500 font-bold max-w-xl leading-snug md:leading-tight">
             {t.diagnose.subtitle}
           </p>
-          <div className="pt-4 flex flex-wrap gap-4">
+          <div className="pt-2 md:pt-4 flex flex-wrap gap-3 md:gap-4">
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setIsCameraOpen(true)}
-              className="px-8 py-4 rounded-2xl bg-black text-white font-black text-xs uppercase tracking-widest flex items-center gap-3 shadow-xl"
+              onClick={takePhoto}
+              className="flex-1 md:flex-none px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-black text-white font-black text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-xl"
             >
-              <Camera className="w-4 h-4" />
+              <CameraIcon className="w-4 h-4" />
               {t.diagnose.scanReport}
             </motion.button>
-            <button className="px-8 py-4 rounded-2xl border border-black/10 font-black text-xs uppercase tracking-widest text-slate-400">
+            <button className="flex-1 md:flex-none px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl border border-black/10 font-black text-[10px] md:text-xs uppercase tracking-widest text-slate-400">
               {t.diagnose.browseHistory}
             </button>
           </div>
         </div>
-
-        {/* Camera Modal Simulation */}
-        <AnimatePresence>
-          {isCameraOpen && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center p-6"
-            >
-              <div className="relative w-full max-w-lg aspect-[3/4] bg-slate-900 rounded-[3rem] overflow-hidden border-4 border-white/20 shadow-2xl">
-                {/* Mock Camera View */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-64 border-2 border-dashed border-white/30 rounded-3xl" />
-                  <p className="absolute bottom-20 text-white/50 font-bold text-xs uppercase tracking-[0.2em]">{t.diagnose.camera.alignFrame}</p>
-                </div>
-                
-                {/* HUD */}
-                <div className="absolute top-8 left-8 right-8 flex justify-between items-center">
-                  <button onClick={() => setIsCameraOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white">
-                    <X className="w-6 h-6" />
-                  </button>
-                  <div className="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest">
-                    {t.diagnose.camera.aiScanning}
-                  </div>
-                </div>
-
-                <div className="absolute bottom-12 left-0 right-0 flex justify-center">
-                  <button 
-                    onClick={() => {
-                      setIsCameraOpen(false)
-                      // Simulate a scan result logic here
-                    }}
-                    className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center group"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-white group-active:scale-90 transition-transform" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Dynamic Workflow Tracker */}
         <div className="flex items-center gap-4 bg-slate-50 p-5 rounded-2xl border border-black/5 shadow-sm">
@@ -136,6 +114,7 @@ export default function DiagnosePage() {
           <UploadPanel
             onAnalysisComplete={handleAnalysisComplete}
             onImageUpload={(img) => setUploadedImage(img)}
+            externalPreview={uploadedImage}
           />
         </div>
 

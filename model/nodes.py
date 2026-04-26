@@ -4,18 +4,21 @@ import cv2
 import random
 import numpy as np
 import html
-from google import genai
 from PIL import Image
 from pydantic import BaseModel, Field, ValidationError
 from .state import AgentState
-from services.firebase_svc import get_db, upload_image
+
+try:
+    from backend.services.firebase_svc import get_db, upload_image
+    from backend.services.llm_svc import call_llm
+except ModuleNotFoundError:
+    from services.firebase_svc import get_db, upload_image
+    from services.llm_svc import call_llm
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-from services.gemini_svc import call_gemini, get_client
 
 
 class GeminiDiagnosisResponse(BaseModel):
@@ -43,8 +46,8 @@ def analysis_node(state: AgentState):
     )
 
     try:
-        response = call_gemini([prompt, img], model_id="gemini-1.5-flash")
-        clean_text = response.text.strip().replace('```json', '').replace('```', '')
+        response_text = call_llm(prompt, image=img)
+        clean_text = response_text.strip().replace('```json', '').replace('```', '')
         data = GeminiDiagnosisResponse.model_validate_json(clean_text)
     except Exception as e:
         print(f"❌ Vision Error: {e}")
@@ -132,8 +135,7 @@ def explanation_node(state: AgentState):
     )
 
     try:
-        response = call_gemini(prompt, model_id="gemini-1.5-flash")
-        final_report = response.text.strip()
+        final_report = call_llm(prompt).strip()
     except Exception as e:
         print(f"⚠️ API Error: {e}")
         final_report = (

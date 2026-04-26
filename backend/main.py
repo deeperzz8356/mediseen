@@ -13,17 +13,31 @@ from PIL import Image, UnidentifiedImageError
 
 
 # Firebase
-from services.firebase_svc import (
-    init_firebase,
-    upload_image,
-    check_and_increment_rate_limit,
-    get_image_hash,
-    get_cached_diagnosis,
-    save_diagnosis_cache,
-    increment_cache_hit,
-    save_diagnosis_record,
-)
-from firebase_admin import auth
+try:
+    from backend.services.firebase_svc import (
+        init_firebase,
+        upload_image,
+        check_and_increment_rate_limit,
+        get_image_hash,
+        get_cached_diagnosis,
+        save_diagnosis_cache,
+        increment_cache_hit,
+        save_diagnosis_record,
+        get_db,
+    )
+except ModuleNotFoundError:
+    from services.firebase_svc import (
+        init_firebase,
+        upload_image,
+        check_and_increment_rate_limit,
+        get_image_hash,
+        get_cached_diagnosis,
+        save_diagnosis_cache,
+        increment_cache_hit,
+        save_diagnosis_record,
+        get_db,
+    )
+from firebase_admin import auth, firestore
 
 # Graph Pipeline
 import sys
@@ -107,7 +121,72 @@ def root():
 # 5️⃣ Verify Firebase Token
 @app.post("/auth/verify")
 async def verify_token(_decoded_token: dict = Depends(verify_bearer_token)):
-    return {"status": "verified"}
+    uid = _decoded_token.get("uid")
+    db = get_db()
+    has_profile = False
+    profile_data = {}
+    
+    if db:
+        user_doc = db.collection("users").document(uid).get()
+        if user_doc.exists:
+            has_profile = True
+            profile_data = user_doc.to_dict()
+            profile_data.pop("created_at", None) # Timestamp not serializable easily
+            profile_data.pop("updated_at", None)
+
+    return {
+        "status": "verified", 
+        "has_profile": has_profile,
+        "uid": uid,
+        "profile": profile_data
+    }
+
+
+@app.post("/auth/register")
+async def register_user(
+    request: dict,
+    _decoded_token: dict = Depends(verify_bearer_token),
+):
+    """Save user profile data to Firestore after Firebase signup."""
+    uid = _decoded_token.get("uid")
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing user id in token")
+
+    email = _decoded_token.get("email")
+    name = request.get("name", "").strip()
+    role = request.get("role", "patient").lower()
+
+    if not name:
+        raise HTTPException(status_code=400, detail="User name is required")
+    
+    if role not in ["doctor", "patient"]:
+        raise HTTPException(status_code=400, detail="Role must be 'doctor' or 'patient'")
+
+    try:
+        db = get_db()
+        if not db:
+            raise HTTPException(status_code=500, detail="Database connection failed")
+
+        # Save user profile to Firestore
+        db.collection("users").document(uid).set(
+            {
+                "uid": uid,
+                "name": name,
+                "email": email,
+                "role": role,
+                "created_at": firestore.SERVER_TIMESTAMP,
+                "updated_at": firestore.SERVER_TIMESTAMP,
+            },
+            merge=True
+        )
+
+        # Set custom claims for role-based access
+        auth.set_custom_user_claims(uid, {"role": role})
+
+        return {"status": "registered", "uid": uid, "name": name, "role": role}
+    except Exception as e:
+        print(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save user profile")
 
 
 @app.post("/auth/disable-account")
@@ -260,7 +339,10 @@ async def diagnose(
 # 7️⃣ Usage endpoint — how many diagnoses left today
 @app.get("/diagnose/usage")
 def get_usage(_decoded_token: dict = Depends(verify_bearer_token)):
-    from services.firebase_svc import get_db, DAILY_LIMIT
+    try:
+        from backend.services.firebase_svc import get_db, DAILY_LIMIT
+    except ModuleNotFoundError:
+        from services.firebase_svc import get_db, DAILY_LIMIT
     from datetime import datetime, timezone
     uid = _decoded_token.get("uid", "unknown")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")

@@ -12,7 +12,7 @@ import {
   Info,
   Maximize2
 } from "lucide-react"
-import { API_BASE_URL } from "../config"
+import { resolveBackendAssetUrl } from "../config"
 
 interface HeatmapViewerProps {
   originalImage: string
@@ -30,14 +30,6 @@ export default function HeatmapViewer({
   const [opacity, setOpacity] = useState(70)
   const [showHeatmap, setShowHeatmap] = useState(true)
 
-  const getAbsoluteUrl = (path: string) => {
-    if (path?.startsWith("http://") || path?.startsWith("https://")) {
-      return path;
-    }
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`
-    return `${API_BASE_URL}${normalizedPath}`
-  };
-
   const severityColor =
     severity === "high"
       ? "bg-rose-500"
@@ -47,7 +39,7 @@ export default function HeatmapViewer({
           ? "bg-emerald-400"
           : "bg-slate-500"
 
-  const fullHeatmapUrl = heatmapImage ? getAbsoluteUrl(heatmapImage) : null;
+  const fullHeatmapUrl = heatmapImage ? resolveBackendAssetUrl(heatmapImage) : null;
 
   return (
     <motion.div

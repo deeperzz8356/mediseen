@@ -1,11 +1,12 @@
 "use client"
 
+import Image from "next/image"
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { createUserWithEmailAndPassword } from "firebase/auth"
+import { createUserWithEmailAndPassword, onAuthStateChanged } from "firebase/auth"
 import type { FirebaseError } from "firebase/app"
-import { auth } from "@/lib/firebase"
+import { auth, signInWithGoogle } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { User, Mail, Lock, Stethoscope, ChevronRight } from "lucide-react"
 import { useLocale } from "../i18n/LocaleContext"
@@ -21,11 +22,47 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  const handleGoogleRegister = async () => {
+    try {
+      setLoading(true)
+      setError("")
+      const user = await signInWithGoogle()
+      if (!user) return
+      const token = await user.getIdToken()
+
+      // For Google users, we use "patient" as default role if not specified,
+      // but here we use the toggle state 'role' from the UI.
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: user.displayName || "Google User",
+          role: role
+        })
+      })
+
+      if (!res.ok) throw new Error("Registration failed")
+      router.push("/home")
+    } catch (err: any) {
+      setError(err.message || t.login.errors.googleFailed)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleRegister = async () => {
     setError("")
 
     if (!email || !password) {
       setError(t.register.errors.emailPasswordRequired)
+      return
+    }
+
+    if (!name.trim()) {
+      setError(t.register.errors.nameRequired)
       return
     }
 
@@ -37,9 +74,35 @@ export default function RegisterPage() {
     try {
       setLoading(true)
 
+      // 1️⃣ Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const token = await userCredential.user.getIdToken()
 
+      // 2️⃣ Save user profile to backend
+      const registerController = new AbortController()
+      const registerTimeoutId = setTimeout(() => registerController.abort(), 15000)
+
+      const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          role: role,
+        }),
+        signal: registerController.signal
+      })
+
+      clearTimeout(registerTimeoutId)
+
+      if (!registerResponse.ok) {
+        const errorData = await registerResponse.json().catch(() => ({}))
+        throw new Error(errorData.detail || "Failed to complete registration")
+      }
+
+      // 3️⃣ Verify token with backend
       const verifyController = new AbortController()
       const verifyTimeoutId = setTimeout(() => verifyController.abort(), 15000)
 
@@ -156,6 +219,27 @@ export default function RegisterPage() {
           {loading ? t.register.creatingAccount : t.register.createAccountBtn}
           <ChevronRight className="w-5 h-5" />
         </motion.button>
+
+        {/* Google Sign-Up */}
+        <div className="space-y-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+            <div className="relative text-center uppercase text-xs font-black text-slate-300 tracking-widest bg-white px-4 w-fit mx-auto">{t.auth.or}</div>
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={handleGoogleRegister}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border border-slate-100 bg-white text-slate-700 font-bold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-slate-300 border-t-pastel-violet rounded-full animate-spin" />
+            ) : (
+              <Image src="/logo2.png" className="w-5 h-5" alt="google" width={20} height={20} />
+            )}
+            {t.auth.signInGoogle}
+          </motion.button>
+        </div>
 
         <p className="text-center text-slate-400 font-medium">
           {t.register.alreadyRegistered}{" "}

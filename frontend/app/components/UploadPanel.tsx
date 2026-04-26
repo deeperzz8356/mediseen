@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { UploadCloud, Image as ImageIcon, Loader2, Sparkles, X, CheckCircle2, MessageSquare } from "lucide-react"
 import { DiagnosisResult } from "./ResultPanel"
 import { API_BASE_URL } from "../config"
@@ -10,9 +10,10 @@ import { auth } from "@/lib/firebase"
 interface UploadPanelProps {
   onAnalysisComplete?: (result: DiagnosisResult) => void
   onImageUpload?: (imageUrl: string) => void
+  externalPreview?: string | null
 }
 
-export default function UploadPanel({ onAnalysisComplete, onImageUpload }: UploadPanelProps) {
+export default function UploadPanel({ onAnalysisComplete, onImageUpload, externalPreview }: UploadPanelProps) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [symptoms, setSymptoms] = useState("")
@@ -21,6 +22,20 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload }: Uploa
   const [result, setResult] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Sync with external preview (e.g. from native camera)
+  useEffect(() => {
+    if (externalPreview) {
+      setPreview(externalPreview)
+      // Convert base64 to File object if possible
+      fetch(externalPreview)
+        .then(res => res.blob())
+        .then(blob => {
+          const f = new File([blob], "camera_capture.jpg", { type: "image/jpeg" })
+          setFile(f)
+        })
+    }
+  }, [externalPreview])
 
   const handleFile = (selectedFile: File) => {
     if (selectedFile && selectedFile.type.startsWith("image/")) {
@@ -187,10 +202,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload }: Uploa
                 <span>Running Core Analysis...</span>
               </>
             ) : (
-              <>
-                <Sparkles className="w-5 h-5 text-pastel-pink" />
-                <span>Initiate Diagnostic Cycle</span>
-              </>
+              <span>Initiate Diagnostic Cycle</span>
             )}
           </button>
           {result && (

@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'out',
   plugins: {
     FirebaseAuthentication: {
-      skipNativeAuthentication: false,
+      skipNativeAuth: false,
       providers: ['google.com', 'email']
     },
     Camera: {

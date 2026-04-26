@@ -197,25 +197,33 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 space-y-16 pb-32 pt-12">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 space-y-12 md:space-y-16 pb-32 pt-12">
       <header className="space-y-8">
-        <Link href="/wellness" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black/40 hover:text-black transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Wellness Directory
-        </Link>
-        <div className="flex items-center gap-6">
-           <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${condition.color}`}>
-             <div className="scale-150">{condition.icon}</div>
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/wellness" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black/40 hover:text-black transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </Link>
+          <div className="flex-1 h-px bg-black/5 hidden md:block"></div>
+          <span className="text-[10px] font-black uppercase tracking-widest text-black/20 hidden md:block">Reference: {id.replace("-", " ")}</span>
+        </div>
+        
+        <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-8">
+           <div className={`w-24 h-24 md:w-32 md:h-32 rounded-[2rem] flex items-center justify-center shadow-2xl flex-shrink-0 ${condition.color} border-4 border-white`}>
+             <div className="scale-[2] md:scale-[2.5]">{condition.icon}</div>
            </div>
-           <div className="space-y-2">
-             <h1 className="text-4xl md:text-5xl font-black text-black tracking-tight uppercase">
+           <div className="space-y-3">
+             <h1 className="text-4xl md:text-7xl font-black text-black tracking-tight uppercase leading-none">
                {condition.name}
              </h1>
-             <p className="text-sm font-black uppercase tracking-widest text-black/40">Clinical Wellness Profile</p>
+             <div className="flex flex-wrap justify-center md:justify-start gap-3">
+               <span className="px-4 py-1.5 rounded-full bg-black text-white text-[10px] font-black uppercase tracking-widest">Clinical Protocol</span>
+               <span className="px-4 py-1.5 rounded-full bg-white border border-black/10 text-black/60 text-[10px] font-black uppercase tracking-widest">Wellness Profile</span>
+             </div>
            </div>
         </div>
       </header>
 
-      <section className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 md:p-10 border border-black/5 shadow-xl">
+      <section className="bg-gradient-to-br from-white to-slate-50 rounded-[2rem] p-8 md:p-10 border border-black/5 shadow-xl">
          <div className="flex items-center gap-4 mb-8">
             <div className="w-12 h-12 rounded-xl bg-pastel-green/20 flex items-center justify-center text-pastel-green">
               <Salad className="w-6 h-6" />
@@ -235,7 +243,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
          </ul>
       </section>
 
-      <section className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 md:p-10 border border-black/5 shadow-xl">
+      <section className="bg-gradient-to-br from-white to-slate-50 rounded-[2rem] p-8 md:p-10 border border-black/5 shadow-xl">
          <div className="flex items-center gap-4 mb-8">
             <div className="w-12 h-12 rounded-xl bg-pastel-blue/20 flex items-center justify-center text-pastel-blue">
               <Activity className="w-6 h-6" />
@@ -245,7 +253,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-black/40">Healthy Practices</p>
             </div>
          </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {lifestyleGuidance.map((guide, i) => (
               <div key={i} className="bg-white p-6 rounded-xl border border-black/5 shadow-sm space-y-3">
                  <div className="flex items-center gap-3 text-pastel-blue">
@@ -264,7 +272,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
          </div>
       </section>
 
-      <section className="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 md:p-10 border border-black/5 shadow-xl">
+      <section className="bg-gradient-to-br from-white to-slate-50 rounded-[2rem] p-8 md:p-10 border border-black/5 shadow-xl">
          <div className="flex items-center gap-4 mb-8">
             <div className="w-12 h-12 rounded-xl bg-pastel-violet/20 flex items-center justify-center text-pastel-violet">
               <BrainCircuit className="w-6 h-6" />
@@ -278,7 +286,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
          <form onSubmit={handleGenerateDiet} className="space-y-12">
             <div className="space-y-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-pastel-violet border-b border-black/5 pb-2">Basic Information</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div><InputLabel txt="Age"/><input required type="number" className={InputStyle} value={formData.age} onChange={e=>setFormData({...formData, age: e.target.value})} /></div>
                 <div>
                   <InputLabel txt="Gender"/>
@@ -296,7 +304,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
 
             <div className="space-y-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-pastel-violet border-b border-black/5 pb-2">Health Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <InputLabel txt="Selected Disease/Condition"/>
                   <input readOnly value={condition.name} className={`${InputStyle} bg-slate-100 text-black/50 cursor-not-allowed`} />
@@ -316,7 +324,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
 
             <div className="space-y-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-pastel-violet border-b border-black/5 pb-2">Lifestyle Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <InputLabel txt="Activity Level"/>
                   <select required className={InputStyle} value={formData.activity} onChange={e=>setFormData({...formData, activity: e.target.value})}>
@@ -333,7 +341,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
 
             <div className="space-y-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-pastel-violet border-b border-black/5 pb-2">Dietary Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <InputLabel txt="Dietary Preference"/>
                   <select required className={InputStyle} value={formData.preference} onChange={e=>setFormData({...formData, preference: e.target.value})}>
@@ -351,7 +359,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
             <div className="space-y-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-pastel-violet border-b border-black/5 pb-2">Medical Information</h3>
               <p className="text-[10px] font-black uppercase tracking-widest text-black/60">Existing Conditions</p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                  <CheckboxLabel label="Diabetes" checked={formData.diabetes} onChange={c => setFormData({...formData, diabetes: c})} />
                  <CheckboxLabel label="High Blood Pressure" checked={formData.highBP} onChange={c => setFormData({...formData, highBP: c})} />
                  <CheckboxLabel label="Thyroid Disorders" checked={formData.thyroid} onChange={c => setFormData({...formData, thyroid: c})} />
@@ -359,7 +367,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
               </div>
 
               <p className="text-[10px] font-black uppercase tracking-widest text-black/60 pt-4">Previous Major Illnesses</p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                  <CheckboxLabel label="Cancer" checked={formData.cancer} onChange={c => setFormData({...formData, cancer: c})} />
                  <CheckboxLabel label="Stroke" checked={formData.stroke} onChange={c => setFormData({...formData, stroke: c})} />
                  <CheckboxLabel label="Kidney Disease" checked={formData.kidney} onChange={c => setFormData({...formData, kidney: c})} />
@@ -377,16 +385,16 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
 
             <div className="space-y-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-pastel-violet border-b border-black/5 pb-2">Medical Reports</h3>
-              <div className="p-6 border-2 border-dashed border-black/10 rounded-xl bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors group">
-                 <UploadCloud className="w-8 h-8 text-black/20 group-hover:text-pastel-violet transition-colors" />
-                 <p className="text-xs font-bold text-black uppercase tracking-widest text-center">Click to upload Blood, Lab, or Diagnostic reports</p>
+              <div className="p-8 border-2 border-dashed border-black/10 rounded-2xl bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors group">
+                 <UploadCloud className="w-10 h-10 text-black/20 group-hover:text-pastel-violet transition-colors" />
+                 <p className="text-xs font-black text-black uppercase tracking-widest text-center leading-relaxed">Click to upload Blood, Lab, or Diagnostic reports</p>
                  <input type="file" multiple className="hidden" />
               </div>
             </div>
 
             <div className="space-y-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-pastel-violet border-b border-black/5 pb-2">Additional Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><InputLabel txt="Known Allergies (Medications/Environmental)"/><input className={InputStyle} value={formData.allergies} onChange={e=>setFormData({...formData, allergies: e.target.value})} /></div>
                 <div><InputLabel txt="Smoking or Alcohol Habits"/><input className={InputStyle} value={formData.smokingAlcohol} onChange={e=>setFormData({...formData, smokingAlcohol: e.target.value})} /></div>
                 <div><InputLabel txt="Stress Level"/><input placeholder="e.g. High, Moderate, Low" className={InputStyle} value={formData.stressLevel} onChange={e=>setFormData({...formData, stressLevel: e.target.value})} /></div>
@@ -394,72 +402,72 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
               </div>
             </div>
 
-            <button type="submit" disabled={generating} className="w-full py-6 bg-black text-white rounded-xl font-black text-sm uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl active:scale-95 disabled:opacity-50 flex justify-center items-center gap-3">
+            <button type="submit" disabled={generating} className="w-full py-8 bg-black text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl active:scale-95 disabled:opacity-50 flex justify-center items-center gap-3">
                {generating ? "Analyzing Medical Data..." : "Generate Personalized Diet Plan"}
             </button>
          </form>
 
          <AnimatePresence>
-           {dietPlan && (
-             <motion.div 
-               initial={{ opacity: 0, y: 50, scale: 0.95 }}
-               animate={{ opacity: 1, y: 0, scale: 1 }}
-               className="mt-16 border-t-4 border-black/5 pt-16 space-y-8"
-             >
-               <div className="flex items-center gap-4 border-b-2 border-black pb-8 text-center md:text-left flex-col md:flex-row">
-                 <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center text-white">
-                   <Stethoscope />
-                 </div>
-                 <div>
-                   <h3 className="text-3xl font-black text-black italic">MediSeen Diet Report</h3>
-                   <p className="text-xs font-black uppercase tracking-[0.3em] text-black/40">Customized Nutrition & Hydration</p>
-                 </div>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                 <div className="space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-pastel-green">Recommended Foods</h4>
-                    <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                      {dietPlan.recommended.map((f, i) => (
-                        <span key={i} className="px-4 py-2 bg-slate-100 border border-black/5 text-black font-bold text-xs rounded-lg">{f}</span>
-                      ))}
-                    </div>
-                 </div>
-                 
-                 <div className="space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-pastel-pink">Foods to Avoid</h4>
-                    <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                      {dietPlan.limit.map((f, i) => (
-                        <span key={i} className="px-4 py-2 bg-slate-100 border border-black/5 text-black font-bold text-xs rounded-lg">{f}</span>
-                      ))}
-                    </div>
-                 </div>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                 <div className="p-8 bg-pastel-blue/10 rounded-2xl border border-pastel-blue/20">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-pastel-blue mb-2">Hydration Guidance</h4>
-                    <p className="text-black font-black text-xl">{dietPlan.hydration}</p>
-                 </div>
-                 <div className="p-8 bg-slate-50 rounded-2xl border border-black/5">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-2">Daily Nutrition Goals</h4>
-                    <p className="text-black font-bold text-lg">{dietPlan.goals}</p>
-                 </div>
-               </div>
-
-               <div className="space-y-4 pt-4 border-t border-black/5">
-                  <h4 className="text-sm font-black uppercase tracking-tight text-black flex items-center gap-2 justify-center md:justify-start"><Salad className="w-4 h-4"/> Sample Meal Plan</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {dietPlan.mealPlan.map((m, i) => (
-                      <div key={i} className="p-6 bg-white border border-black/10 rounded-xl shadow-sm">
-                         <span className="text-[10px] font-black uppercase tracking-widest text-pastel-violet block mb-2">{m.meal}</span>
-                         <span className="text-black font-bold text-sm leading-snug">{m.idea}</span>
-                      </div>
-                    ))}
+            {dietPlan && (
+              <motion.div 
+                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="mt-16 border-t-4 border-black/5 pt-16 space-y-8"
+              >
+                <div className="flex items-center gap-4 border-b-2 border-black pb-8 text-center md:text-left flex-col md:flex-row">
+                  <div className="w-14 h-14 bg-black rounded-xl flex items-center justify-center text-white">
+                    <Stethoscope />
                   </div>
-               </div>
-             </motion.div>
-           )}
+                  <div>
+                    <h3 className="text-3xl font-black text-black italic">MediSeen Diet Report</h3>
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-black/40">Customized Nutrition & Hydration</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-3">
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-pastel-green">Recommended Foods</h4>
+                     <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                       {dietPlan.recommended.map((f, i) => (
+                         <span key={i} className="px-4 py-2 bg-slate-100 border border-black/5 text-black font-bold text-xs rounded-lg">{f}</span>
+                       ))}
+                     </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-pastel-pink">Foods to Avoid</h4>
+                     <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                       {dietPlan.limit.map((f, i) => (
+                         <span key={i} className="px-4 py-2 bg-slate-100 border border-black/5 text-black font-bold text-xs rounded-lg">{f}</span>
+                       ))}
+                     </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="p-8 bg-pastel-blue/10 rounded-2xl border border-pastel-blue/20">
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-pastel-blue mb-2">Hydration Guidance</h4>
+                     <p className="text-black font-black text-xl">{dietPlan.hydration}</p>
+                  </div>
+                  <div className="p-8 bg-slate-50 rounded-2xl border border-black/5">
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-black/40 mb-2">Daily Nutrition Goals</h4>
+                     <p className="text-black font-bold text-lg">{dietPlan.goals}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-black/5">
+                   <h4 className="text-sm font-black uppercase tracking-tight text-black flex items-center gap-2 justify-center md:justify-start"><Salad className="w-4 h-4"/> Sample Meal Plan</h4>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     {dietPlan.mealPlan.map((m, i) => (
+                       <div key={i} className="p-6 bg-white border border-black/10 rounded-xl shadow-sm">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-pastel-violet block mb-2">{m.meal}</span>
+                          <span className="text-black font-bold text-sm leading-snug">{m.idea}</span>
+                       </div>
+                     ))}
+                   </div>
+                </div>
+              </motion.div>
+            )}
          </AnimatePresence>
       </section>
     </div>

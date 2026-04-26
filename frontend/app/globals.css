@@ -1,20 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  /* Flo-inspired Healthcare UI Theme - Darkened & Refined */
-  --background: #FDF4F5; /* Slightly warmer, darker background */
+  --background: #f7f8fc;
   --surface: #FFFFFF;
-  --foreground: #000000;
+  --foreground: #111827;
   
-  --accent-pink: #FCA5B0;   /* Darker pastel pink */
-  --accent-violet: #C084FC; /* Darker pastel violet */
-  --accent-green: #86EFAC;  /* Darker pastel green */
-  --accent-blue: #93C5FD;   /* Darker pastel blue */
-  --accent-yellow: #FDE047; /* Darker pastel yellow */
-  --accent-peach: #FDBA74;  /* Darker pastel peach */
+  --accent-pink: #fb7185;
+  --accent-violet: #8b5cf6;
+  --accent-green: #22c55e;
+  --accent-blue: #3b82f6;
+  --accent-yellow: #f59e0b;
+  --accent-peach: #f97316;
   
-  --primary-gradient: linear-gradient(145deg, #FCA5B0 0%, #C084FC 100%);
-  --surface-gradient: linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%);
+  --primary-gradient: linear-gradient(145deg, #fb7185 0%, #8b5cf6 100%);
+  --surface-gradient: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  --hero-gradient: radial-gradient(circle at 10% 0%, rgba(59, 130, 246, 0.18), transparent 42%),
+    radial-gradient(circle at 90% 100%, rgba(251, 113, 133, 0.2), transparent 35%),
+    linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
 }
 
 @theme inline {
@@ -34,7 +36,7 @@
 }
 
 body {
-  background-color: var(--background);
+  background: var(--hero-gradient);
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -45,7 +47,18 @@ body {
 }
 
 main {
-  padding-bottom: max(env(safe-area-inset-bottom), 12px);
+  padding-bottom: max(env(safe-area-inset-bottom), 86px);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent 75%);
 }
 
 /* Custom Scrollbar */
@@ -66,13 +79,69 @@ main {
 /* Boxy Card Helper with Gradient */
 .flo-card {
   background: var(--surface-gradient);
-  border-radius: 1rem; /* More boxy than 2rem */
-  border: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 4px 20px -5px rgba(0,0,0,0.05);
+  border-radius: 1.25rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 30px -20px rgba(15, 23, 42, 0.35);
   transition: all 0.3s ease;
 }
 
 .flo-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 15px 35px -10px rgba(0,0,0,0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px -16px rgba(15, 23, 42, 0.32);
+}
+
+.app-glass {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.mobile-safe {
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+  }
+  
+  body {
+    background-attachment: fixed;
+  }
+
+  .flo-card {
+    border-radius: 1.25rem;
+  }
+
+  .mobile-safe {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    font-size: 13px;
+  }
+
+  .flo-card {
+    border-radius: 1.25rem;
+    padding: 1.5rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    font-size: 16px;
+  }
+}
+
+.responsive-grid {
+  display: grid;
+  grid-template-cols: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.text-balance {
+  text-wrap: balance;
 }

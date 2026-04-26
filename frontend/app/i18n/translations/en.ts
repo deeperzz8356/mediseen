@@ -111,6 +111,7 @@ const en = {
     signIn: "Sign In",
     errors: {
       emailPasswordRequired: "Email and password required",
+      nameRequired: "Full name is required",
       timedOut: "Request timed out. Please try again.",
     },
   },

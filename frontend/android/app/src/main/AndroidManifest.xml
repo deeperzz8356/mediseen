@@ -20,19 +20,29 @@
         android:theme="@style/Theme.Mediseen">
 
         <activity
-            android:name=".SplashActivity"
+            android:name=".MainActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:exported="true"
-            android:theme="@style/Theme.Mediseen.Splash">
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Mediseen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.mediseen.app" />
+            </intent-filter>
         </activity>
 
         <activity
-            android:name=".MainActivity"
+            android:name=".SplashActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:exported="false"
-            android:theme="@style/Theme.Mediseen" />
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Mediseen.Splash" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -104,6 +104,7 @@ const ar: Translations = {
     signIn: "تسجيل الدخول",
     errors: {
       emailPasswordRequired: "البريد الإلكتروني وكلمة المرور مطلوبان",
+      nameRequired: "الاسم الكامل مطلوب",
       timedOut: "انتهت مهلة الطلب. يرجى المحاولة مرة أخرى.",
     },
   },

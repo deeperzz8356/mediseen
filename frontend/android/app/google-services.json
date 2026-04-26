@@ -1,31 +1,65 @@
 {
   "project_info": {
-    "project_number": "123456789",
-    "project_id": "mediseen-app-dev",
-    "storage_bucket": "mediseen-app-dev.appspot.com"
+    "project_number": "393582020539",
+    "project_id": "mediseen-37997",
+    "storage_bucket": "mediseen-37997.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789:android:abcdef123456",
+        "mobilesdk_app_id": "1:393582020539:android:60a068bff4c727d16e269e",
         "android_client_info": {
           "package_name": "com.mediseen.app"
         }
       },
       "oauth_client": [
         {
-          "client_id": "1234567890-abcdefg.apps.googleusercontent.com",
+          "client_id": "393582020539-idfmudgm0t9745d378b3tn4d88pij67d.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyEXAMPLE_PLACEHOLDER"
+          "current_key": "AIzaSyCVBFHun_TrRPoFGsQz5yV4h-_jgs6GtCc"
         }
       ],
       "services": {
-        "analytics_service": {
-          "status": "ENABLED"
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "393582020539-idfmudgm0t9745d378b3tn4d88pij67d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:393582020539:android:0a533f0238a585b06e269e",
+        "android_client_info": {
+          "package_name": "com.mediseen.health"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "393582020539-idfmudgm0t9745d378b3tn4d88pij67d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVBFHun_TrRPoFGsQz5yV4h-_jgs6GtCc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "393582020539-idfmudgm0t9745d378b3tn4d88pij67d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

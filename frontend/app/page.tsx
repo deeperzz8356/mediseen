@@ -28,14 +28,22 @@ function AuthStep() {
     handleGoogleRedirectResult().then(async (user) => {
       if (!user) return
       try {
+        setLoading(true)
         const token = await user.getIdToken()
-        await fetch(`${API_BASE_URL}/auth/verify`, {
+        const res = await fetch(`${API_BASE_URL}/auth/verify`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         })
-        router.push("/home")
+        const data = await res.json()
+        if (res.ok && data.has_profile) {
+          router.push("/home")
+        } else {
+          router.push("/register")
+        }
       } catch {
         setError("Verification failed. Please try again.")
+      } finally {
+        setLoading(false)
       }
     })
   }, [router])
@@ -45,17 +53,25 @@ function AuthStep() {
     setLoading(true)
     try {
       const user = await signInWithGoogle()
-      // null means redirect was triggered (Capacitor) — wait for redirect result
       if (!user) return
       const token = await user.getIdToken()
       const res = await fetch(`${API_BASE_URL}/auth/verify`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       })
+      
       if (!res.ok) throw new Error("Verification failed")
-      router.push("/home")
-    } catch {
-      setError(t.login.errors.googleFailed)
+      
+      const data = await res.json()
+      if (data.has_profile) {
+        router.push("/home")
+      } else {
+        // New user! Go to register to pick role
+        router.push("/register")
+      }
+    } catch (err: any) {
+      console.error("Login Step Error:", err)
+      setError(err.message || t.login.errors.googleFailed)
       setLoading(false)
     }
   }

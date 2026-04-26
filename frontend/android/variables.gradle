@@ -3,6 +3,7 @@ ext {
     compileSdkVersion = 36
     targetSdkVersion = 36
     androidxActivityVersion = '1.11.0'
+    androidxCredentialsVersion = '1.3.0'
     androidxAppCompatVersion = '1.7.1'
     androidxCoordinatorLayoutVersion = '1.3.0'
     androidxCoreVersion = '1.17.0'
@@ -16,11 +17,12 @@ ext {
     composeUiVersion = '1.5.0'
     composeCompilerVersion = '1.5.3'
     composeMaterial3Version = '1.3.2'
-    kotlinVersion = '1.9.10'
+    kotlinVersion = '2.1.0'
     lifecycleRuntimeKtxVersion = '2.6.2'
     lifecycleViewModelComposeVersion = '2.6.2'
     navigationComposeVersion = '2.7.2'
-    playServicesAuthVersion = '20.5.0'
-    firebaseAuthVersion = '22.1.2'
+    playServicesAuthVersion = '21.0.0'
+    firebaseAuthVersion = '23.2.1'
     coroutinesAndroidVersion = '1.7.3'
+    rgcfaIncludeGoogle = true
 }

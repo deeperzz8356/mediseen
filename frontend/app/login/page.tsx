@@ -4,12 +4,12 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { signInWithEmailAndPassword } from "firebase/auth"
+import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth"
 import type { FirebaseError } from "firebase/app"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { HeartPulse, Mail, Lock, ChevronRight } from "lucide-react"
-import { signInWithGoogle, handleGoogleRedirectResult } from "@/lib/firebase"
+import { signInWithGoogle } from "@/lib/firebase"
 import { useLocale } from "../i18n/LocaleContext"
 
 export default function LoginPage() {
@@ -21,22 +21,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Handle redirect result on mount (Capacitor)
   useEffect(() => {
-    handleGoogleRedirectResult().then(async (user) => {
-      if (!user) return
-      try {
-        const token = await user.getIdToken()
-        await fetch(`${API_BASE_URL}/auth/verify`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        router.push("/home")
-      } catch {
-        setError(t.login.errors.googleFailed)
-      }
+    if (!auth) return
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) router.push("/home")
     })
-  }, [router, t.login.errors.googleFailed])
+    return () => unsub()
+  }, [router])
 
   const handleGoogleLogin = async () => {
     try {

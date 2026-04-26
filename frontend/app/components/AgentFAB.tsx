@@ -23,7 +23,7 @@ export default function AgentFAB() {
   }
 
   return (
-    <div className="fixed right-4 bottom-[max(env(safe-area-inset-bottom),1rem)] sm:right-8 sm:bottom-8 z-[100]">
+    <div className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] sm:right-8 sm:bottom-8 z-[100]">
       <AnimatePresence>
         {isOpen && (
           <motion.div

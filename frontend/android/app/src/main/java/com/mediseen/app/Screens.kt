@@ -104,6 +104,7 @@ fun GetStartedScreen(onNext: () -> Unit) {
 fun AuthScreen(
     googleSignInClient: GoogleSignInClient,
     firebaseAuth: FirebaseAuth,
+    isGoogleSignInConfigured: Boolean,
     onAuthenticated: () -> Unit
 ) {
     val context = LocalContext.current
@@ -131,11 +132,11 @@ fun AuthScreen(
                         if (authResult.isSuccessful) {
                             onAuthenticated()
                         } else {
-                            error = authResult.exception?.localizedMessage ?: I18nState.t("auth_failed")
+                            error = normalizeAuthError(authResult.exception?.localizedMessage)
                         }
                     }
             } catch (apiException: ApiException) {
-                error = apiException.localizedMessage
+                error = normalizeAuthError(apiException.localizedMessage)
             }
         } else {
             error = I18nState.t("auth_cancelled")
@@ -214,7 +215,7 @@ fun AuthScreen(
                         if (authResult.isSuccessful) {
                             onAuthenticated()
                         } else {
-                            error = authResult.exception?.localizedMessage ?: I18nState.t("auth_failed")
+                            error = normalizeAuthError(authResult.exception?.localizedMessage)
                         }
                     }
                 },
@@ -245,12 +246,25 @@ fun AuthScreen(
         } else {
             OutlinedButton(
                 onClick = {
+                    if (!isGoogleSignInConfigured) {
+                        error = "Google sign-in is unavailable until the Android Firebase client is configured."
+                        return@OutlinedButton
+                    }
                     error = null
                     launcher.launch(googleSignInClient.signInIntent)
                 },
+                enabled = isGoogleSignInConfigured,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = I18nState.t("continue_google"))
+            }
+            if (!isGoogleSignInConfigured) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Google sign-in is disabled on this build until a valid Android OAuth client is added.",
+                    color = MaterialTheme.colorScheme.outline,
+                    textAlign = TextAlign.Center
+                )
             }
         }
         if (isLoading) {
@@ -261,6 +275,20 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
         }
+    }
+}
+
+private fun normalizeAuthError(message: String?): String {
+    val text = message.orEmpty()
+    return when {
+        text.contains("API key", ignoreCase = true) ||
+            text.contains("invalid-api-key", ignoreCase = true) ||
+            text.contains("invalid API key", ignoreCase = true) ->
+            "Authentication is not configured correctly on this build. Please rebuild with a valid Firebase Android config."
+        text.contains("network", ignoreCase = true) ->
+            "Network error. Check your connection and try again."
+        text.isBlank() -> I18nState.t("auth_failed")
+        else -> text
     }
 }
 

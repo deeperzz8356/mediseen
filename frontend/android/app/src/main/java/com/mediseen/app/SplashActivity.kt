@@ -8,7 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class SplashActivity : ComponentActivity() {
-    private val splashDuration = 5_000L
+    private val splashDuration = 1_200L
     private val handler = Handler(Looper.getMainLooper())
     private var keepOnScreen = true
     private val finishRunnable = Runnable {

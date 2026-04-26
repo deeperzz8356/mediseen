@@ -1,17 +1,13 @@
 # Hugging Face Docker Space runtime:
-# - Serves static Next.js frontend on port 7860 via Nginx
+# - Builds the Kotlin/JS frontend and serves it on port 7860 via Nginx
 # - Proxies /api and /uploads to FastAPI backend running on 127.0.0.1:8000
 
-FROM node:22-bookworm-slim AS frontend-builder
+FROM node:20-slim AS frontend-builder
 
 WORKDIR /app/frontend
-COPY frontend/package.json ./
-COPY frontend/package-lock.json* ./
-RUN npm ci
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install
 COPY frontend/ ./
-ENV NEXT_PUBLIC_API_URL=/api \
-    NEXT_TELEMETRY_DISABLED=1 \
-    CI=1
 RUN npm run build
 
 FROM python:3.11-slim-bookworm
@@ -19,7 +15,7 @@ FROM python:3.11-slim-bookworm
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     APP_ENV=production \
-    ALLOWED_ORIGINS=http://localhost:7860,http://127.0.0.1:7860,https://meediseen-meediseen.hf.space,http://localhost,capacitor://localhost
+    ALLOWED_ORIGINS=http://localhost:7860,http://127.0.0.1:7860,https://meediseen-meediseen.hf.space,https://meediseen-meediseen.hf.space/,http://localhost,capacitor://localhost
 
 WORKDIR /app
 

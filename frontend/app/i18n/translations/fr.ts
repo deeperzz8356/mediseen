@@ -102,6 +102,7 @@ const fr: Translations = {
     signIn: "Se connecter",
     errors: {
       emailPasswordRequired: "E-mail et mot de passe requis",
+      nameRequired: "Le nom complet est requis",
       timedOut: "La requête a expiré. Veuillez réessayer.",
     },
   },
