@@ -4,7 +4,6 @@ import traceback
 from io import BytesIO
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Header
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles  # <--- Added for URL access
 from dotenv import load_dotenv
@@ -68,13 +67,13 @@ graph = build_graph()
 _allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
 _app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
 
-# Always include Capacitor origins for native app support
+# Always include Capacitor origins for native app support on ALL devices
 _default_origins = "http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:3001,http://localhost:3001,http://localhost,capacitor://localhost,capacitor://app,file://,http://192.168.1.7:8000,http://192.168.1.7:3000"
 
 if not _allowed_origins_raw:
     if _app_env == "production":
-        # In production, require explicit ALLOWED_ORIGINS but include Capacitor by default
-        _allowed_origins_raw = "capacitor://app,capacitor://localhost,file://"
+        # In production, include Capacitor origins to support all Android devices
+        _allowed_origins_raw = "capacitor://localhost,capacitor://app,file://,https://your-frontend.onrender.com"
     else:
         _allowed_origins_raw = _default_origins
 
@@ -83,6 +82,19 @@ ALLOWED_ORIGINS = [
     for origin in _allowed_origins_raw.split(",")
     if origin.strip()
 ]
+
+# Function to allow any Capacitor origin (works on all phones)
+def is_allowed_origin(origin: str) -> bool:
+    """Check if origin is allowed, with special handling for Capacitor"""
+    # Allow all Capacitor origins (capacitor://anything)
+    if origin.startswith("capacitor://"):
+        return True
+    # Allow file:// protocol for local files
+    if origin.startswith("file://"):
+        return True
+    # Allow explicit whitelisted origins
+    return origin in ALLOWED_ORIGINS
+
 ALLOWED_UPLOAD_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 ALLOWED_IMAGE_EXTENSIONS = {
     "jpeg": ".jpg",
@@ -93,16 +105,45 @@ MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 MAX_SYMPTOMS_LENGTH = int(os.getenv("MAX_SYMPTOMS_LENGTH", "2000"))
 MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "50000000"))
 
-# 1️⃣ CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],  # Allow all headers in dev mode
-    expose_headers=["*"],
-    max_age=600,
-)
+# 1️⃣ CORS - Allow all Capacitor origins for universal Android device support
+class CORSOriginMiddleware:
+    def __init__(self, app):
+        self.app = app
+    
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            origin = dict(scope.get("headers", [])).get(b"origin", b"").decode()
+            if is_allowed_origin(origin):
+                async def send_with_cors(message):
+                    if message["type"] == "http.response.start":
+                        headers = list(message.get("headers", []))
+                        headers.append((b"access-control-allow-origin", origin.encode()))
+                        headers.append((b"access-control-allow-credentials", b"true"))
+                        headers.append((b"access-control-allow-methods", b"GET, POST, PUT, DELETE, OPTIONS"))
+                        headers.append((b"access-control-allow-headers", b"*"))
+                        headers.append((b"access-control-expose-headers", b"*"))
+                        headers.append((b"access-control-max-age", b"600"))
+                        message["headers"] = headers
+                    await send(message)
+                
+                if scope.get("method") == "OPTIONS":
+                    await send_with_cors({
+                        "type": "http.response.start",
+                        "status": 200,
+                        "headers": [],
+                    })
+                    await send({
+                        "type": "http.response.body",
+                        "body": b"",
+                    })
+                    return
+                
+                await self.app(scope, receive, send_with_cors)
+                return
+        
+        await self.app(scope, receive, send)
+
+app.add_middleware(CORSOriginMiddleware)
 
 # 2️⃣ Firebase Init
 init_firebase() # Centralized check-and-init
