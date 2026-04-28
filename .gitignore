@@ -7,6 +7,7 @@ out
 # Folders to exclude from HF Push
 /frontend-kotlin/
 /android/
+F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend\assets\icon.png
 
 # Editor and local tooling
 /.idea/
@@ -22,4 +23,4 @@ out
 firebase_admin.json
 **/firebase_admin.json
 temp_password.txt
-*.log
+*.log

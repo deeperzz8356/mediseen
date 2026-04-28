@@ -92,6 +92,9 @@ def is_allowed_origin(origin: str) -> bool:
     # Allow file:// protocol for local files
     if origin.startswith("file://"):
         return True
+    # Allow localhost and loopback origins used by Capacitor web/runtime bridges
+    if origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1"):
+        return True
     # Allow explicit whitelisted origins
     return origin in ALLOWED_ORIGINS
 

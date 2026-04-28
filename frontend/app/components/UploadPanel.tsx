@@ -23,6 +23,76 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const getRequestDebugContext = () => {
+    if (typeof window === "undefined") {
+      return {
+        apiUrl: `${API_BASE_URL}/diagnose`,
+        platform: "server-side render",
+        online: "unknown",
+        origin: "unknown",
+      }
+    }
+
+    const isCapacitor = "Capacitor" in window
+
+    return {
+      apiUrl: `${API_BASE_URL}/diagnose`,
+      platform: isCapacitor ? "capacitor/android" : "web",
+      online: navigator.onLine ? "online" : "offline",
+      origin: window.location.origin,
+    }
+  }
+
+  const buildDetailedErrorMessage = (error: unknown) => {
+    const context = getRequestDebugContext()
+
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return [
+        "Diagnosis timed out after 30 seconds.",
+        `API: ${context.apiUrl}`,
+        `Platform: ${context.platform}`,
+        `Network: ${context.online}`,
+        `Origin: ${context.origin}`,
+      ].join("\n")
+    }
+
+    if (error instanceof Error) {
+      const lowerMessage = error.message.toLowerCase()
+      const likelyNetworkFailure =
+        lowerMessage.includes("failed to fetch") ||
+        lowerMessage.includes("networkerror") ||
+        lowerMessage.includes("network request failed")
+
+      if (likelyNetworkFailure) {
+        return [
+          "Backend request failed before the server returned a response.",
+          `Error: ${error.message}`,
+          `API: ${context.apiUrl}`,
+          `Platform: ${context.platform}`,
+          `Network: ${context.online}`,
+          `Origin: ${context.origin}`,
+          "Likely causes: CORS blocked the request, the backend is offline, the device has no internet, or the API URL is wrong.",
+        ].join("\n")
+      }
+
+      return [
+        error.message,
+        `API: ${context.apiUrl}`,
+        `Platform: ${context.platform}`,
+        `Network: ${context.online}`,
+        `Origin: ${context.origin}`,
+      ].join("\n")
+    }
+
+    return [
+      "Diagnosis failed. Please check backend connection.",
+      `API: ${context.apiUrl}`,
+      `Platform: ${context.platform}`,
+      `Network: ${context.online}`,
+      `Origin: ${context.origin}`,
+    ].join("\n")
+  }
+
   // Sync with external preview (e.g. from native camera)
   useEffect(() => {
     if (externalPreview) {
@@ -94,8 +164,17 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
         } catch (_) {
           // response was not JSON
         }
-        console.error("Diagnosis API error:", response.status, text)
-        throw new Error(errorDetail || `Diagnosis request failed (${response.status})`)
+        console.error("Diagnosis API error:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: text,
+          url: `${API_BASE_URL}/diagnose`,
+        })
+        throw new Error(
+          errorDetail
+            ? `Backend returned ${response.status} ${response.statusText || "Error"}: ${errorDetail}`
+            : `Backend returned ${response.status} ${response.statusText || "Error"}${text ? `: ${text.slice(0, 400)}` : ""}`
+        )
       }
 
       const apiResult = await response.json()
@@ -118,13 +197,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
       if (onAnalysisComplete) onAnalysisComplete(res)
     } catch (error) {
       console.error("Backend fetch failed:", error)
-      if (error instanceof DOMException && error.name === "AbortError") {
-        setResult("Diagnosis timed out. Please try again.")
-      } else if (error instanceof Error) {
-        setResult(error.message)
-      } else {
-        setResult("Diagnosis failed. Please check backend connection.")
-      }
+      setResult(buildDetailedErrorMessage(error))
     } finally {
       setIsAnalyzing(false)
     }
@@ -214,7 +287,9 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
             )}
           </button>
           {result && (
-            <p className="mt-4 text-sm font-bold text-black/70">{result}</p>
+            <p className="mt-4 whitespace-pre-line rounded-xl border border-black/10 bg-white/80 p-4 text-sm font-bold text-black/75 shadow-sm">
+              {result}
+            </p>
           )}
         </div>
       </div>

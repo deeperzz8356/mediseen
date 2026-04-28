@@ -1,7 +1,7 @@
 // On the Android Emulator, 10.0.2.2 is the address of the host machine (loopback)
 const isDev = process.env.NODE_ENV === "development"
 const HUGGING_FACE_SPACE_ORIGIN = "https://meediseen-meediseen.hf.space"
-const DEFAULT_RENDER_API_URL = "https://mediseen-backend.onrender.com"
+const DEFAULT_RENDER_API_URL = "https://YOUR_RENDER_BACKEND_URL.onrender.com"
 
 function normalizeApiUrl(url: string) {
   const trimmedUrl = url.trim()
@@ -17,9 +17,26 @@ function normalizeApiUrl(url: string) {
   return trimmedUrl
 }
 
+function isNativeRuntime() {
+  if (typeof window === "undefined") {
+    return false
+  }
+
+  const protocol = window.location.protocol.toLowerCase()
+  const hostname = window.location.hostname.toLowerCase()
+
+  return (
+    "Capacitor" in window ||
+    protocol === "capacitor:" ||
+    protocol === "file:" ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1"
+  )
+}
+
 function getApiBaseUrl() {
   const envApiUrl = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL ?? "")
-  const isCapacitor = typeof window !== "undefined" && "Capacitor" in window
+  const isCapacitor = isNativeRuntime()
 
   if (isCapacitor) {
     if (envApiUrl) {
@@ -56,7 +73,7 @@ function getApiOrigin() {
     return new URL(API_BASE_URL).origin
   }
 
-  if (typeof window !== "undefined" && "Capacitor" in window) {
+  if (isNativeRuntime()) {
     return HUGGING_FACE_SPACE_ORIGIN
   }
 
