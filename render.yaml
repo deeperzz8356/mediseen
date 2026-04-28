@@ -10,7 +10,7 @@ services:
       - key: APP_ENV
         value: production
       - key: ALLOWED_ORIGINS
-        value: https://your-frontend.onrender.com,capacitor://localhost,http://localhost,http://127.0.0.1:3000
+        value: https://your-frontend.onrender.com,capacitor://app,capacitor://localhost,file://,http://localhost,http://127.0.0.1:3000
       - key: GEMINI_API_KEY
         sync: false
       - key: CLOUDINARY_NAME

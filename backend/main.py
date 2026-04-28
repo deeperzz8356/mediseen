@@ -67,10 +67,16 @@ graph = build_graph()
 # Restrict CORS to explicit origins from env instead of wildcard.
 _allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
 _app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+
+# Always include Capacitor origins for native app support
+_default_origins = "http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:3001,http://localhost:3001,http://localhost,capacitor://localhost,capacitor://app,file://,http://192.168.1.7:8000,http://192.168.1.7:3000"
+
 if not _allowed_origins_raw:
     if _app_env == "production":
-        raise RuntimeError("ALLOWED_ORIGINS must be set in production")
-    _allowed_origins_raw = "http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:3001,http://localhost:3001,http://localhost,capacitor://localhost,http://192.168.1.7:8000,http://192.168.1.7:3000"
+        # In production, require explicit ALLOWED_ORIGINS but include Capacitor by default
+        _allowed_origins_raw = "capacitor://app,capacitor://localhost,file://"
+    else:
+        _allowed_origins_raw = _default_origins
 
 ALLOWED_ORIGINS = [
     origin.strip()
