@@ -3,19 +3,47 @@ const isDev = process.env.NODE_ENV === "development"
 const HUGGING_FACE_SPACE_ORIGIN = "https://meediseen-meediseen.hf.space"
 const DEFAULT_RENDER_API_URL = "https://mediseen-backend.onrender.com"
 
+function normalizeApiUrl(url: string) {
+  const trimmedUrl = url.trim()
+
+  if (!trimmedUrl) {
+    return ""
+  }
+
+  if (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")) {
+    return trimmedUrl
+  }
+
+  return trimmedUrl
+}
+
 function getApiBaseUrl() {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL
+  const envApiUrl = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL ?? "")
+  const isCapacitor = typeof window !== "undefined" && "Capacitor" in window
+
+  if (isCapacitor) {
+    if (envApiUrl) {
+      try {
+        const parsedUrl = new URL(envApiUrl)
+        const hostname = parsedUrl.hostname.toLowerCase()
+
+        if (hostname !== "localhost" && hostname !== "127.0.0.1") {
+          return envApiUrl
+        }
+      } catch {
+        return envApiUrl
+      }
+    }
+
+    return DEFAULT_RENDER_API_URL
+  }
+
+  if (envApiUrl) {
+    return envApiUrl
   }
 
   if (isDev) {
     return "http://127.0.0.1:8000"
-  }
-
-  const isCapacitor = typeof window !== "undefined" && "Capacitor" in window
-
-  if (isCapacitor) {
-    return DEFAULT_RENDER_API_URL
   }
 
   return "/api"
