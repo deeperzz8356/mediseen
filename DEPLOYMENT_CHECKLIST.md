@@ -4,9 +4,8 @@
 
 - [ ] Google Cloud CLI (`gcloud`) installed and authenticated
 - [ ] Docker Desktop installed and running
-- [ ] `backend/firebase_admin.json` exists and is valid
 - [ ] `GEMINI_API_KEY` obtained from Google AI Console
-- [ ] `FIREBASE_STORAGE_BUCKET` name noted (e.g., mediseen-xxxxx.appspot.com)
+- [ ] `FIREBASE_STORAGE_BUCKET` name noted if Firebase Storage fallback is enabled (e.g., mediseen-xxxxx.appspot.com)
 - [ ] Read CLOUD_RUN_DEPLOYMENT.md guide
 
 ## Files Created ✅
@@ -79,13 +78,13 @@ chmod +x deploy-cloud-run.sh
 
 - [ ] Set Cloud Run Minimum Instances = 1 (to avoid cold starts, ~$1-2/month)
 - [ ] Add custom domain: `api.yourdomain.com` (requires DNS update)
-- [ ] Enable Cloud Run Secrets for firebase_admin.json
+- [ ] Enable Cloud Run Secrets for firebase_admin.json only if Firebase Storage fallback is required
 - [ ] Set up Cloud Monitoring alerts for errors
 - [ ] Monitor usage in Cloud Run dashboard to stay within free tier
 
 ## Important Reminders
 
-- ❌ Do NOT commit firebase_admin.json to git (already in .gitignore)
+- ❌ Do NOT commit firebase_admin.json to git (already in .gitignore); mount it only as a secret if you need Firebase Storage
 - ❌ Do NOT use localhost URLs in production Android app
 - ❌ Medical apps require Privacy Policy and Data Safety disclosure
 - ✅ Cloud Run URL will be public (that's OK, API checks Firebase tokens)

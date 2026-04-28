@@ -79,6 +79,7 @@ Set these in Render before first deploy:
 - `CLOUDINARY_KEY`
 - `CLOUDINARY_SECRET`
 - `FIREBASE_STORAGE_BUCKET` only if you want Firebase Storage as a fallback
+- `firebase_admin.json` is optional on Render; if it is not provided, the backend boots without Firebase Storage and continues with Cloudinary-only uploads
 
 ### Deploy
 
@@ -90,7 +91,7 @@ Set these in Render before first deploy:
 6. If you are building the Android app, rebuild the frontend export and resync Capacitor after changing `NEXT_PUBLIC_API_URL`.
 7. Rebuild the Android app so the Capacitor shell points at the Render backend.
 
-Cloudinary is the primary image upload target when the three Cloudinary variables are present, so uploaded reports and captures will be stored there instead of Firebase Storage.
+Cloudinary is the primary image upload target when the three Cloudinary variables are present, so uploaded reports and captures will be stored there instead of Firebase Storage. Firebase is only used when a valid service-account JSON is mounted and `FIREBASE_STORAGE_BUCKET` is set.
 
 ### Android App Configuration
 

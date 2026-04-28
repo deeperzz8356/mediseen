@@ -11,3 +11,4 @@ Pillow
 httpx
 langgraph
 cloudinary
+python-multipart

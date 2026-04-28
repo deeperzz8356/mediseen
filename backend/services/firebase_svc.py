@@ -9,6 +9,15 @@ from pathlib import Path
 _db = None
 
 
+def _resolve_firebase_cred_path(cred_path: str) -> Path:
+    """Resolve the Firebase service-account path from the local working directory or backend package."""
+    resolved_cred_path = Path(cred_path)
+    if resolved_cred_path.is_absolute() or resolved_cred_path.exists():
+        return resolved_cred_path
+
+    return Path(__file__).resolve().parents[1] / cred_path
+
+
 def init_firebase(cred_path: str = "firebase_admin.json"):
     """
     Initialize Firebase only once with storage support.
@@ -21,9 +30,15 @@ def init_firebase(cred_path: str = "firebase_admin.json"):
     try:
         if not firebase_admin._apps:
             # Support both backend cwd and project-root cwd deployments.
-            resolved_cred_path = Path(cred_path)
-            if not resolved_cred_path.is_absolute() and not resolved_cred_path.exists():
-                resolved_cred_path = Path(__file__).resolve().parents[1] / cred_path
+            resolved_cred_path = _resolve_firebase_cred_path(cred_path)
+
+            if not resolved_cred_path.exists():
+                print(
+                    "WARNING: Firebase service account JSON not found; "
+                    "skipping Firebase initialization"
+                )
+                _db = None
+                return _db
 
             cred = credentials.Certificate(str(resolved_cred_path))
             bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")

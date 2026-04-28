@@ -30,7 +30,7 @@ This guide walks you through deploying your FastAPI backend to Google Cloud Run 
 
 4. **Environment variables ready:**
    - `GEMINI_API_KEY` (from Firebase/Google AI console)
-   - `FIREBASE_STORAGE_BUCKET` (e.g., mediseen-xxxxx.appspot.com)
+   - `FIREBASE_STORAGE_BUCKET` (e.g., mediseen-xxxxx.appspot.com) only if Firebase Storage fallback is required
 
 ---
 
@@ -68,15 +68,17 @@ gcloud builds submit --tag gcr.io/mediseen-37997/backend
 **Step 2: Deploy to Cloud Run**
 ```bash
 gcloud run deploy mediseen-api \
-  --image gcr.io/mediseen-37997/backend \
-  --platform managed \
-  --region us-central1 \
-  --memory 512Mi \
-  --cpu 1 \
-  --timeout 300 \
-  --allow-unauthenticated \
-  --set-env-vars="PORT=8080,APP_ENV=production,GEMINI_API_KEY=YOUR_KEY,FIREBASE_STORAGE_BUCKET=YOUR_BUCKET.appspot.com,ALLOWED_ORIGINS=capacitor://localhost,http://localhost"
+   --image gcr.io/mediseen-37997/backend \
+   --platform managed \
+   --region us-central1 \
+   --memory 512Mi \
+   --cpu 1 \
+   --timeout 300 \
+   --allow-unauthenticated \
+   --set-env-vars="PORT=8080,APP_ENV=production,GEMINI_API_KEY=YOUR_KEY,ALLOWED_ORIGINS=capacitor://localhost,http://localhost"
 ```
+
+If you want Firebase Storage fallback, add `FIREBASE_STORAGE_BUCKET=YOUR_BUCKET.appspot.com` and mount `firebase_admin.json` as a Cloud Run secret. If you do not need Firebase Storage, leave both unset and the backend will boot with Cloudinary-only uploads.
 
 **Step 3: Get your service URL**
 ```bash
@@ -138,9 +140,9 @@ gcloud run logs read mediseen-api --region us-central1 --follow
 ## Important Security Notes
 
 ### 1. Firebase Admin JSON
-- Your `firebase_admin.json` inside Docker image is secure
+- `firebase_admin.json` is optional unless you want Firebase Storage fallback
 - Cloud Run containers are isolated (only your app has access)
-- Still, use Cloud Run Secrets for extra security:
+- If you do use Firebase, mount the file with Cloud Run Secrets:
 
 ```bash
 gcloud secrets create firebase-admin-json --data-file=backend/firebase_admin.json
