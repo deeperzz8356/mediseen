@@ -9,9 +9,12 @@ load_dotenv()
 
 # Google Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.5-flash")
 
 # OpenRouter (supports multiple models)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_TEXT_MODEL = os.getenv("OPENROUTER_TEXT_MODEL", "qwen/qwen-2.5-72b-instruct")
+OPENROUTER_VISION_MODEL = os.getenv("OPENROUTER_VISION_MODEL", "openai/gpt-4o-mini")
 
 # HuggingFace Inference API
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")

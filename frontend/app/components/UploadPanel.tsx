@@ -86,8 +86,16 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || "Diagnosis request failed")
+        const text = await response.text().catch(() => null)
+        let errorDetail: string | undefined
+        try {
+          const parsed = text ? JSON.parse(text) : {}
+          errorDetail = parsed.detail || parsed.message
+        } catch (_) {
+          // response was not JSON
+        }
+        console.error("Diagnosis API error:", response.status, text)
+        throw new Error(errorDetail || `Diagnosis request failed (${response.status})`)
       }
 
       const apiResult = await response.json()

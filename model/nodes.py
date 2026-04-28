@@ -9,10 +9,12 @@ from pydantic import BaseModel, Field, ValidationError
 from .state import AgentState
 
 try:
-    from backend.services.firebase_svc import get_db, upload_image
+    from backend.services.firebase_svc import get_db
+    from backend.services.storage_svc import upload_image
     from backend.services.llm_svc import call_llm
 except ModuleNotFoundError:
-    from services.firebase_svc import get_db, upload_image
+    from services.firebase_svc import get_db
+    from services.storage_svc import upload_image
     from services.llm_svc import call_llm
 
 
@@ -46,11 +48,11 @@ def analysis_node(state: AgentState):
     )
 
     try:
-        response_text = call_llm(prompt, image=img)
+        response_text = call_llm(prompt, image=img, preferred_provider="openrouter")
         clean_text = response_text.strip().replace('```json', '').replace('```', '')
         data = GeminiDiagnosisResponse.model_validate_json(clean_text)
     except Exception as e:
-        print(f"❌ Vision Error: {e}")
+        print(f"ERROR: Vision Error: {e}")
         data = GeminiDiagnosisResponse(
             diagnosis="Analysis Error",
             confidence=0.0,
@@ -112,7 +114,7 @@ def reverse_node(state: AgentState):
                 doc = results[0].to_dict()
                 db_context = f"Category Protocol: {doc.get('description')}"
     except Exception as e:
-        print(f"⚠️ DB Error: {e}")
+        print(f"WARNING: DB Error: {e}")
 
     return {"db_context": db_context}
 
@@ -135,9 +137,9 @@ def explanation_node(state: AgentState):
     )
 
     try:
-        final_report = call_llm(prompt).strip()
+        final_report = call_llm(prompt, preferred_provider="gemini").strip()
     except Exception as e:
-        print(f"⚠️ API Error: {e}")
+        print(f"WARNING: API Error: {e}")
         final_report = (
             f"Justification: The clinical presentation of {prediction} aligns with the reported "
             f"symptoms ({user_symptoms}) and visual markers identified during analysis."

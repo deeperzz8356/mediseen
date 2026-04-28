@@ -57,10 +57,14 @@ export default function Navbar() {
 
 	return (
 		<>
-			{/* Mobile Menu Button - Top Left */}
+			{/* Mobile Menu Button - Top Left with Safe Area */}
 			<button
 				onClick={() => setIsMenuOpen(true)}
-				className="fixed top-4 left-4 z-[80] md:hidden w-11 h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg flex items-center justify-center text-slate-700 active:scale-95"
+				className="fixed md:hidden z-[80] w-12 h-12 md:w-11 md:h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg flex items-center justify-center text-slate-700 active:scale-95 transition-all"
+				style={{
+					top: `max(0.75rem, env(safe-area-inset-top, 0.75rem))`,
+					left: `max(0.75rem, env(safe-area-inset-left, 0.75rem))`,
+				}}
 				aria-label="Open menu"
 			>
 				<Menu className="w-5 h-5" />
@@ -68,7 +72,11 @@ export default function Navbar() {
 
 			<Link
 				href="/profile"
-				className="fixed top-4 right-4 md:top-6 md:right-6 z-[70] w-11 h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg shadow-slate-900/10 flex items-center justify-center overflow-hidden"
+				className="fixed md:top-6 md:right-6 z-[70] w-12 h-12 md:w-11 md:h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg shadow-slate-900/10 flex items-center justify-center overflow-hidden transition-all"
+				style={{
+					top: `max(0.75rem, env(safe-area-inset-top, 0.75rem))`,
+					right: `max(0.75rem, env(safe-area-inset-right, 0.75rem))`,
+				}}
 				aria-label="Open profile"
 				title={currentUserName}
 			>
@@ -77,7 +85,7 @@ export default function Navbar() {
 						{getInitials(user)}
 					</div>
 				) : (
-					<Image src="/logo2.png" alt="MediSeen account" width={44} height={44} className="rounded-2xl" />
+					<Image src="/logo2.png" alt="MediSeen account" width={36} height={36} className="rounded-xl md:rounded-2xl" />
 				)}
 			</Link>
 
@@ -180,11 +188,18 @@ export default function Navbar() {
 				<Link href="/profile" className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all">
 					<Settings className="w-5 h-5" />
 				</Link>
-			</nav>
+		</nav>
 
-			{/* Mobile Bottom Bar (Fallback/Alternative) */}
-			<nav className="fixed md:hidden left-3 right-3 bottom-3 z-[70] app-glass rounded-2xl shadow-2xl shadow-slate-900/20 px-2 py-2 border border-white/70">
-				<div className="grid grid-cols-5 gap-1">
+		{/* Mobile Bottom Bar - Responsive with Safe Area */}
+		<nav className="fixed md:hidden left-0 right-0 z-[70] bg-white/80 backdrop-blur-xl shadow-2xl shadow-slate-900/20 border-t border-white/70"
+			style={{
+				bottom: 0,
+			}}
+		>
+			<div className="px-1 py-2" style={{
+				paddingBottom: `max(0.5rem, env(safe-area-inset-bottom, 0.5rem))`,
+			}}>
+				<div className="grid grid-cols-5 gap-0">
 					{navItems.map((item) => {
 						const active = isActiveRoute(item.href)
 						const Icon = item.icon
@@ -193,17 +208,18 @@ export default function Navbar() {
 							<Link
 								key={item.href}
 								href={item.href}
-								className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2 transition-all ${
+								className={`flex flex-col items-center justify-center gap-0 rounded-lg px-0 py-3 min-h-[60px] transition-all ${
 									active ? "bg-gradient-to-r from-pastel-pink to-pastel-violet text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
 								}`}
 							>
-								<Icon className={`w-4 h-4 ${active ? "scale-110" : ""}`} />
-								<span className="text-[10px] font-bold leading-none tracking-tight">{item.shortName}</span>
+								<Icon className={`w-6 h-6 flex-shrink-0 ${active ? "scale-110" : ""}`} />
+								<span className="text-[7px] font-bold leading-tight tracking-tight mt-0.5">{item.shortName}</span>
 							</Link>
 						)
 					})}
 				</div>
-			</nav>
-		</>
-	)
+			</div>
+		</nav>
+	</>
+)
 }

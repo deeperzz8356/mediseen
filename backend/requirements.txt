@@ -10,3 +10,4 @@ pdfkit
 Pillow
 httpx
 langgraph
+cloudinary

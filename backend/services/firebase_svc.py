@@ -32,10 +32,10 @@ def init_firebase(cred_path: str = "firebase_admin.json"):
             })
 
         _db = firestore.client()
-        print("✅ Firestore & Storage connected")
+        print("OK: Firestore & Storage connected")
 
     except Exception as e:
-        print(f"❌ Firebase initialization failed: {e}")
+        print(f"ERROR: Firebase initialization failed: {e}")
         _db = None
 
     return _db
@@ -73,10 +73,10 @@ def fetch_medical_context(prediction: str) -> str:
                 f"Protocol: {doc.get('description','Standard treatment recommended.')}\n"
                 f"Indicators: {doc.get('visual_indicators','Not specified.')}"
             )
-            print(f"✅ Exact DB match for {prediction}")
+            print(f"OK: Exact DB match for {prediction}")
 
     except Exception as e:
-        print(f"⚠️ Firestore query error: {e}")
+        print(f"WARNING: Firestore query error: {e}")
 
     if not db_context:
         try:
@@ -90,10 +90,10 @@ def fetch_medical_context(prediction: str) -> str:
                     f"Protocol: {doc.get('description','Consult clinical guidelines.')}\n"
                     f"Indicators: {doc.get('visual_indicators','N/A')}"
                 )
-                print(f"ℹ️ Fallback DB match via label {target_label}")
+                print(f"INFO: Fallback DB match via label {target_label}")
 
         except Exception as e:
-            print(f"⚠️ Firestore fallback error: {e}")
+            print(f"WARNING: Firestore fallback error: {e}")
 
     if not db_context:
         db_context = "No database reference found. Use general diagnostic reasoning."
@@ -111,6 +111,11 @@ def upload_image(local_path: str, destination_blob_name: str) -> str:
     """
     try:
         init_firebase() # Ensure app is initialized
+        bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")
+        if not bucket_name:
+            print("WARNING: FIREBASE_STORAGE_BUCKET not set. Skipping Firebase upload.")
+            return ""
+
         bucket = storage.bucket()
         blob = bucket.blob(destination_blob_name)
         blob.upload_from_filename(local_path)
@@ -121,7 +126,7 @@ def upload_image(local_path: str, destination_blob_name: str) -> str:
         )
 
     except Exception as e:
-        print(f"❌ Storage upload error: {e}")
+        print(f"ERROR: Storage upload error: {e}")
         return ""
 
 
@@ -165,6 +170,11 @@ def check_and_increment_rate_limit(uid: str) -> dict:
         # Fail closed when DB is unavailable so limits cannot be bypassed.
         return {"allowed": False, "used": 0, "limit": DAILY_LIMIT}
 
+    # Development shortcut: allow unlimited requests for local dev user 'dev-user'
+    app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+    if app_env != "production" and str(uid).startswith("dev"):
+        return {"allowed": True, "used": 0, "limit": DAILY_LIMIT}
+
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     doc_ref = db.collection("rate_limits").document(f"{uid}_{today}")
 
@@ -173,7 +183,7 @@ def check_and_increment_rate_limit(uid: str) -> dict:
         return _increment_daily_rate_limit(transaction, doc_ref, uid, today)
 
     except Exception as e:
-        print(f"⚠️ Rate limit check error: {e}")
+        print(f"WARNING: Rate limit check error: {e}")
         # Fail closed to avoid bypass during Firestore issues.
         return {"allowed": False, "used": 0, "limit": DAILY_LIMIT}
 
@@ -203,10 +213,10 @@ def get_cached_diagnosis(image_hash: str) -> dict | None:
         doc = db.collection("diagnosis_cache").document(image_hash).get()
         if doc.exists:
             data = doc.to_dict()
-            print(f"✅ Cache hit for image hash {image_hash[:12]}...")
+            print(f"OK: Cache hit for image hash {image_hash[:12]}...")
             return data.get("result")
     except Exception as e:
-        print(f"⚠️ Cache lookup error: {e}")
+        print(f"WARNING: Cache lookup error: {e}")
 
     return None
 
@@ -225,9 +235,9 @@ def save_diagnosis_cache(image_hash: str, result: dict):
             "created_at": datetime.now(timezone.utc).isoformat(),
             "hit_count": 1
         })
-        print(f"✅ Cached diagnosis for hash {image_hash[:12]}...")
+        print(f"OK: Cached diagnosis for hash {image_hash[:12]}...")
     except Exception as e:
-        print(f"⚠️ Cache save error: {e}")
+        print(f"WARNING: Cache save error: {e}")
 
 
 def increment_cache_hit(image_hash: str):
@@ -242,7 +252,7 @@ def increment_cache_hit(image_hash: str):
             current = doc.to_dict().get("hit_count", 1)
             doc_ref.update({"hit_count": current + 1, "last_hit": datetime.now(timezone.utc).isoformat()})
     except Exception as e:
-        print(f"⚠️ Cache hit increment error: {e}")
+        print(f"WARNING: Cache hit increment error: {e}")
 
 
 # ---------------------------------------------------
@@ -278,6 +288,6 @@ def save_diagnosis_record(
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "platform": platform or "unknown",
         })
-        print(f"✅ Diagnosis record saved for session {session_id}")
+        print(f"OK: Diagnosis record saved for session {session_id}")
     except Exception as e:
-        print(f"⚠️ Data collection save error: {e}")
+        print(f"WARNING: Data collection save error: {e}")

@@ -3,15 +3,27 @@ Unified LLM Service with Multi-API Fallback Support
 Supports: Google Gemini, OpenRouter (Qwen, Llama, Mistral, etc.), HuggingFace
 """
 
+import base64
+import io
 import json
 import logging
 from typing import Optional, List, Any
 from PIL.Image import Image
 
 try:
-    from backend.config import LLM_CONFIG
+    from backend.config import (
+        LLM_CONFIG,
+        GEMINI_TEXT_MODEL,
+        OPENROUTER_TEXT_MODEL,
+        OPENROUTER_VISION_MODEL,
+    )
 except ModuleNotFoundError:
-    from config import LLM_CONFIG
+    from config import (
+        LLM_CONFIG,
+        GEMINI_TEXT_MODEL,
+        OPENROUTER_TEXT_MODEL,
+        OPENROUTER_VISION_MODEL,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +47,7 @@ class GeminiProvider:
             logger.error(f"Failed to initialize Gemini: {e}")
             self.available = False
     
-    def call(self, prompt: str, image: Optional[Image] = None, model: str = "gemini-1.5-flash") -> str:
+    def call(self, prompt: str, image: Optional[Image] = None, model: str = GEMINI_TEXT_MODEL) -> str:
         """Call Gemini API"""
         if not self.available:
             raise LLMError("Gemini client not available")
@@ -73,15 +85,27 @@ class OpenRouterProvider:
                 logger.error("httpx not installed for OpenRouter")
                 self.available = False
     
-    def call(self, prompt: str, image: Optional[Image] = None, model: str = "qwen/qwen-2.5-72b-instruct") -> str:
+    def _image_to_data_url(self, image: Image) -> str:
+        buffer = io.BytesIO()
+        image_to_send = image.convert("RGB") if image.mode not in ("RGB", "L") else image
+        image_to_send.save(buffer, format="JPEG", quality=95)
+        encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        return f"data:image/jpeg;base64,{encoded}"
+
+    def call(self, prompt: str, image: Optional[Image] = None, model: str = OPENROUTER_TEXT_MODEL) -> str:
         """Call OpenRouter API"""
         if not self.available:
             raise LLMError("OpenRouter not available")
         
         try:
-            # OpenRouter handles text-only for now (image support varies by model)
             if image:
-                logger.warning("Image support for OpenRouter requires encoding - using text-only mode")
+                model = model or OPENROUTER_VISION_MODEL
+                content = [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": self._image_to_data_url(image)}}
+                ]
+            else:
+                content = prompt
             
             response = self.httpx.post(
                 f"{self.base_url}/chat/completions",
@@ -95,7 +119,7 @@ class OpenRouterProvider:
                     "messages": [
                         {
                             "role": "user",
-                            "content": prompt
+                            "content": content
                         }
                     ],
                     "temperature": 0.7,
@@ -134,7 +158,8 @@ class HuggingFaceProvider:
             response = httpx.post(
                 f"{self.base_url}/models/{model}",
                 headers={"Authorization": f"Bearer {self.api_key}"},
-                json={"inputs": prompt}
+                json={"inputs": prompt},
+                timeout=30.0
             )
             
             if response.status_code != 200:
@@ -221,9 +246,9 @@ class LLMFallbackService:
                 
                 # Select model based on provider
                 if provider.name == "gemini":
-                    response = provider.call(prompt, image, model="gemini-1.5-flash")
+                    response = provider.call(prompt, image, model=GEMINI_TEXT_MODEL)
                 elif provider.name == "openrouter":
-                    response = provider.call(prompt, image, model="qwen/qwen-2.5-72b-instruct")
+                    response = provider.call(prompt, image, model=OPENROUTER_VISION_MODEL if image else OPENROUTER_TEXT_MODEL)
                 elif provider.name == "huggingface":
                     response = provider.call(prompt, image, model="mistralai/Mistral-7B-Instruct-v0.1")
                 else:

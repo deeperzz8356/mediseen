@@ -34,7 +34,9 @@ COPY --from=frontend-builder /app/frontend/out/ /usr/share/nginx/html/
 COPY hf/nginx.conf /etc/nginx/conf.d/default.conf
 
 RUN mkdir -p /app/uploads
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 EXPOSE 7860
 
-CMD ["sh", "-lc", "uvicorn backend.main:app --host 127.0.0.1 --port 8000 & nginx -g 'daemon off;'"]
+CMD ["/app/start.sh"]

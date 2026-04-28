@@ -16,7 +16,6 @@ from PIL import Image, UnidentifiedImageError
 try:
     from backend.services.firebase_svc import (
         init_firebase,
-        upload_image,
         check_and_increment_rate_limit,
         get_image_hash,
         get_cached_diagnosis,
@@ -25,10 +24,10 @@ try:
         save_diagnosis_record,
         get_db,
     )
+    from backend.services.storage_svc import upload_image
 except ModuleNotFoundError:
     from services.firebase_svc import (
         init_firebase,
-        upload_image,
         check_and_increment_rate_limit,
         get_image_hash,
         get_cached_diagnosis,
@@ -37,6 +36,7 @@ except ModuleNotFoundError:
         save_diagnosis_record,
         get_db,
     )
+    from services.storage_svc import upload_image
 from firebase_admin import auth, firestore
 
 # Graph Pipeline
@@ -70,7 +70,7 @@ _app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
 if not _allowed_origins_raw:
     if _app_env == "production":
         raise RuntimeError("ALLOWED_ORIGINS must be set in production")
-    _allowed_origins_raw = "http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:3001,http://localhost:3001,http://localhost,capacitor://localhost"
+    _allowed_origins_raw = "http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:3001,http://localhost:3001,http://localhost,capacitor://localhost,http://192.168.1.7:8000,http://192.168.1.7:3000"
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -92,8 +92,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],  # Allow all headers in dev mode
+    expose_headers=["*"],
+    max_age=600,
 )
 
 # 2️⃣ Firebase Init
@@ -101,6 +103,12 @@ init_firebase() # Centralized check-and-init
 
 # 3️⃣ Request Models
 def verify_bearer_token(authorization: str = Header(default="")):
+    # Development bypass: when not in production, allow a special token 'dev'
+    # to simplify local testing without Firebase. DO NOT enable in production.
+    app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+    if app_env != "production" and authorization.strip() == "Bearer dev":
+        return {"uid": "dev-user", "email": "dev@local", "dev": True}
+
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
 
@@ -217,8 +225,15 @@ async def diagnose(
         session_id = str(uuid.uuid4())
 
         # ── 1. Validate file ──────────────────────────────────────────────
-        if image.content_type not in ALLOWED_UPLOAD_MIME_TYPES:
-            raise HTTPException(status_code=400, detail="Unsupported image format")
+        # In production, enforce that the declared multipart content-type is an allowed image MIME.
+        # In non-production (dev/test) accept uploads even if the client sends a generic content-type
+        # because some tools (PowerShell curl, etc.) may not set the part MIME correctly.
+        if _app_env == "production":
+            if image.content_type not in ALLOWED_UPLOAD_MIME_TYPES:
+                raise HTTPException(status_code=400, detail="Unsupported image format")
+        else:
+            if image.content_type not in ALLOWED_UPLOAD_MIME_TYPES:
+                print(f"WARNING: non-standard upload content_type={image.content_type}; continuing in dev mode")
 
         symptoms = (symptoms or "").strip()
         if len(symptoms) > MAX_SYMPTOMS_LENGTH:
@@ -255,12 +270,14 @@ async def diagnose(
             )
 
         # ── 2. Rate limit check (2 per user per day) ──────────────────────
-        rate = check_and_increment_rate_limit(uid)
-        if not rate["allowed"]:
-            raise HTTPException(
-                status_code=429,
-                detail=f"Daily limit reached. You can run {rate['limit']} diagnoses per day. Try again tomorrow."
-            )
+        # In dev mode, skip rate limiting entirely to allow unlimited testing
+        if _app_env == "production":
+            rate = check_and_increment_rate_limit(uid)
+            if not rate["allowed"]:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Daily limit reached. You can run {rate['limit']} diagnoses per day. Try again tomorrow."
+                )
 
         # ── 3. Cache check (same image = instant result) ──────────────────
         image_hash = get_image_hash(image_bytes)
@@ -309,7 +326,7 @@ async def diagnose(
         try:
             os.remove(image_path)
         except OSError as cleanup_error:
-            print(f"⚠️ Could not remove temporary file {image_path}: {cleanup_error}")
+            print(f"WARNING: Could not remove temporary file {image_path}: {cleanup_error}")
 
         # ── 8. Build response ─────────────────────────────────────────────
         response = {
@@ -332,7 +349,7 @@ async def diagnose(
     except HTTPException:
         raise
     except Exception as e:
-        print("❌ DIAGNOSIS ERROR")
+        print("ERROR: DIAGNOSIS ERROR")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Diagnosis pipeline failed")
 

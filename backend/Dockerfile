@@ -9,16 +9,21 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies from the backend requirements file.
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Copy application code
-COPY . .
+# Copy the backend app and the shared model package used by the pipeline.
+COPY backend ./backend
+COPY model ./model
+COPY uploads ./uploads
 
-# Set environment variables
-ENV PORT=8080
+# Set environment defaults.
+ENV PORT=10000
 ENV APP_ENV=production
+ENV PYTHONUNBUFFERED=1
 
-# Cloud Run requires the app to listen on 0.0.0.0 and port from PORT env var
-CMD ["python", "main.py"]
+EXPOSE 10000
+
+# Render provides PORT at runtime; fall back to 10000 locally.
+CMD ["sh", "-lc", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-10000}"]

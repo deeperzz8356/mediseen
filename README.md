@@ -64,6 +64,53 @@ Important: this frontend is built with static export, so `NEXT_PUBLIC_*` values 
 
 If you prefer not to commit service credentials, store Firebase service account JSON in a Space Secret and load it at runtime.
 
+## 🚀 Render Backend Deployment
+
+This repo also includes a Render blueprint for deploying the FastAPI backend with Cloudinary-backed image uploads.
+
+### Required Render environment variables
+
+Set these in Render before first deploy:
+
+- `APP_ENV=production`
+- `ALLOWED_ORIGINS=https://your-frontend.onrender.com,capacitor://localhost,http://localhost,http://127.0.0.1:3000`
+- `GEMINI_API_KEY`
+- `CLOUDINARY_NAME`
+- `CLOUDINARY_KEY`
+- `CLOUDINARY_SECRET`
+- `FIREBASE_STORAGE_BUCKET` only if you want Firebase Storage as a fallback
+
+### Deploy
+
+1. Push the repo to GitHub.
+2. In Render, create a new Web Service from the repo or import the `render.yaml` blueprint.
+3. Use the backend service defined in `render.yaml`.
+4. After deploy, copy the service URL, for example `https://your-service.onrender.com`.
+5. Set `NEXT_PUBLIC_API_URL` in the frontend to that Render service URL.
+6. If you are building the Android app, rebuild the frontend export and resync Capacitor after changing `NEXT_PUBLIC_API_URL`.
+7. Rebuild the Android app so the Capacitor shell points at the Render backend.
+
+Cloudinary is the primary image upload target when the three Cloudinary variables are present, so uploaded reports and captures will be stored there instead of Firebase Storage.
+
+### Android App Configuration
+
+For Capacitor Android builds, the app must use a public HTTPS backend URL. Do not use localhost or a LAN IP in production.
+
+Set one of these before building:
+
+- `NEXT_PUBLIC_API_URL=https://your-service.onrender.com`
+- or `NEXT_PUBLIC_API_URL=https://your-service.onrender.com/api` if you place the backend behind an API prefix
+
+Then run:
+
+```bash
+cd frontend
+npm run build
+npx cap sync android
+```
+
+If you change any Render secrets or variables, redeploy the backend and rebuild the frontend export again so the Android shell and API URL stay in sync.
+
 ### Push to Space
 
 ```bash

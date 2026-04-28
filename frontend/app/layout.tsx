@@ -27,7 +27,7 @@ className="antialiased bg-background text-foreground min-h-screen flex flex-col"
   <LocaleProvider>
     <NavbarWrapper />
     
-    <main className="flex-1 w-full relative">
+    <main className="flex-1 w-full relative pt-14 md:pt-0 pb-24 md:pb-0">
       {children}
     </main>
 
