@@ -196,11 +196,6 @@ def check_and_increment_rate_limit(uid: str) -> dict:
     """
     return {"allowed": True, "used": 0, "limit": 9999}
 
-    db = get_db()
-    if db is None:
-        # Fail closed when DB is unavailable so limits cannot be bypassed.
-        return {"allowed": False, "used": 0, "limit": DAILY_LIMIT}
-
     # Development shortcut: allow unlimited requests for local dev user 'dev-user'
     app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
     if app_env != "production" and str(uid).startswith("dev"):
