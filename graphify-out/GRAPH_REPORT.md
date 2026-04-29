@@ -1,4 +1,15 @@
-# Graph Report - F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix  (2026-04-26)
+# Graph Report - F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix  (2026-04-29)
+
+## CRITICAL ISSUE DISCOVERED: Backend API Configuration Mismatch
+
+### Issue Summary
+**Frontend is pointing to the wrong Render service.** The app is connecting to `https://meediseen-backend.onrender.com` (Next.js Frontend) instead of the FastAPI backend service.
+
+**Status:**
+- Frontend service (Next.js): ✅ **200 OK** - Serving HTML
+- Backend service (FastAPI): ❌ **Not deployed or unreachable**
+
+**Impact:** All API calls (`/diagnose`, `/auth/verify`, `/auth/register`) fail because they hit the frontend server, not the API backend.
 
 ## Corpus Check
 - 108 files · ~446,784 words
@@ -8,6 +19,40 @@
 - 2042 nodes · 5402 edges · 88 communities detected
 - Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 728 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
+- **Added Nodes:** Backend API Configuration Issue Analysis
+
+## Configuration Issues & Root Causes
+
+### Current Backend Setup
+| Component | URL | Status | Issue |
+|-----------|-----|--------|-------|
+| Frontend Service | `https://meediseen-backend.onrender.com` | 200 OK | Serving HTML, not API |
+| API Backend | `https://mediseen-api-backend.onrender.com` | 404 Not Found | Not deployed |
+
+### Backend API Endpoints (Defined in main.py)
+- `GET /` - Health check returns `{"status": "Mediseen API running"}`
+- `POST /auth/verify` - Verify Firebase token
+- `POST /auth/register` - User registration
+- `POST /auth/disable-account` - Account deactivation
+- `POST /diagnose` - **PRIMARY ENDPOINT** for ML diagnosis
+- `GET /diagnose/usage` - Usage statistics
+- `GET /report` - Report retrieval
+
+### Configuration Files Affected
+- `frontend/.env` → Line 4: `NEXT_PUBLIC_API_URL=https://meediseen-backend.onrender.com`
+- `frontend/app/config.ts` → Lines 38, 98-99: API URL resolution logic
+- `frontend/app/services/api.ts` → Lines 11, 24: diagnoseImage() uses wrong endpoint
+
+### CORS & Authentication Setup
+- Backend has custom CORSOriginMiddleware for Capacitor support
+- Allows: `capacitor://`, `file://`, `http://localhost`, `http://127.0.0.1`
+- Firebase token verification required (except dev mode with `Bearer dev` token)
+
+## Required Fixes
+1. Deploy FastAPI backend to separate Render service
+2. Update `frontend/.env` with correct backend URL
+3. Rebuild frontend to use new configuration
+4. Test `/diagnose` endpoint connectivity
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Community 0|Community 0]]
