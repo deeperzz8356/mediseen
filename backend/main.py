@@ -172,7 +172,7 @@ def verify_bearer_token(authorization: str = Header(default="")):
         raise HTTPException(status_code=401, detail="Invalid Firebase token")
 
 # 4️⃣ Health Check
-@app.get("/", methods=["GET", "HEAD"])
+@app.get("/")
 def root():
     return {"status": "Mediseen API running"}
 
