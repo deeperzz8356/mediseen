@@ -9,7 +9,8 @@ from pydantic import BaseModel, Field, ValidationError
 from .state import AgentState
 
 try:
-    from backend.services.firebase_svc import get_db, upload_image, call_llm, fetch_medical_context
+    from backend.services.firebase_svc import get_db, upload_image, fetch_medical_context
+    from backend.services.llm_svc import call_llm
 except ModuleNotFoundError:
     from services.firebase_svc import get_db, fetch_medical_context
     from services.storage_svc import upload_image
