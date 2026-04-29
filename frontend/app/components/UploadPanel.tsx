@@ -181,20 +181,23 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
       const apiResult = await response.json()
       const res: DiagnosisResult = {
         diseaseId: apiResult.session_id,
-        prediction: apiResult.diagnosis,
-        confidence: apiResult.confidence,
-        explanation: apiResult.explanation,
+        prediction: apiResult.diagnosis || apiResult.prediction,
+        confidence: apiResult.confidence || apiResult.confidence_score,
+        explanation: apiResult.explanation || apiResult.patient_friendly_explanation,
         severity: apiResult.severity || "medium",
         heatmapUrl: apiResult.heatmap_url,
         reportUrl: apiResult.report_url,
         affectedArea: apiResult.affectedArea,
-        nextSteps: apiResult.next_steps || [
+        likelySymptoms: apiResult.likely_symptoms,
+        rootCause: apiResult.root_cause_reason,
+        laymanExplanation: apiResult.patient_friendly_explanation,
+        managementSteps: apiResult.management_steps || apiResult.next_steps || [
           "Consult specialist for confirmation",
           "Monitor area for changes",
           "Follow clinical pathway"
         ]
       }
-      setResult(`Analysis complete. AI detected: ${apiResult.diagnosis}`)
+      setResult(`Analysis complete. AI detected: ${res.prediction}`)
       if (onAnalysisComplete) onAnalysisComplete(res)
     } catch (error) {
       console.error("Backend fetch failed:", error)

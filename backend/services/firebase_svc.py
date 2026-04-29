@@ -86,75 +86,84 @@ def get_db():
 # Medical Knowledge Retrieval
 # ---------------------------------------------------
 
-def fetch_medical_context(prediction: str) -> dict:
+def fetch_medical_context_object(prediction: str):
     """
-    Fetches comprehensive medical context for a given disease prediction.
-    Returns a unified structure for Library and Diet systems.
+    Retrieves the structured medical context object for a given prediction.
     """
+    from backend.services.diet_svc import DiseaseData, DietRules, NutritionRestrictions
+    
     db = get_db()
     if db is None:
-        return {
-            "disease": prediction,
-            "symptoms": ["Consult a medical professional for symptoms."],
-            "precautions": ["Consult a medical professional for precautions."],
-            "diet": {
-                "recommended": [],
-                "avoid": [],
-                "plan": "No specific diet plan available."
-            }
-        }
+        return DiseaseData(
+            id="unknown",
+            name=prediction,
+            diet_rules=DietRules(restrictions=NutritionRestrictions())
+        )
 
-    # Using 'medical_knowledge' as the single source of truth for all disease data
-    collection_ref = db.collection("medical_knowledge")
+    # Handle variations in prediction names
+    search_term = prediction.strip()
     
-    try:
-        # Try exact match first
-        query = collection_ref.where("disease_name", "==", prediction).limit(1)
-        results = query.get()
+    collection_ref = db.collection("medical_knowledge")
+    docs = collection_ref.where("disease_name", "==", search_term).limit(1).get()
+    
+    if not docs:
+        # Fallback for unknown conditions
+        return DiseaseData(
+            id="unknown",
+            name=prediction,
+            diet_rules=DietRules(
+                avoid=["Processed junk food"],
+                recommended=["Balanced whole foods", "High hydration"],
+                restrictions=NutritionRestrictions()
+            )
+        )
+    
+    data = docs[0].to_dict()
+    
+    # Ensure diet_rules structure exists
+    rules_dict = data.get("diet_rules", data.get("diet", {}))
+    restrictions_dict = rules_dict.get("restrictions", {})
+    
+    return DiseaseData(
+        id=docs[0].id,
+        name=data.get("disease_name", prediction),
+        symptoms=data.get("symptoms", []),
+        precautions=data.get("precautions", []),
+        diet_rules=DietRules(
+            description=data.get("description", ""),
+            triggers=data.get("triggers", []),
+            avoid=rules_dict.get("avoid", []),
+            recommended=rules_dict.get("recommended", []),
+            meal_rules=data.get("meal_rules", []),
+            lifestyle=data.get("lifestyle", []),
+            restrictions=NutritionRestrictions(
+                max_salt=restrictions_dict.get("max_salt"),
+                max_sugar=restrictions_dict.get("max_sugar"),
+                protein_limit=restrictions_dict.get("protein_limit"),
+                carb_cap_percent=restrictions_dict.get("carb_cap_percent"),
+                max_oil_ml=restrictions_dict.get("max_oil_ml"),
+                max_spice_level=restrictions_dict.get("max_spice_level"),
+                min_water_liters=restrictions_dict.get("min_water_liters"),
+                min_fiber_g=restrictions_dict.get("min_fiber_g")
+            )
+        )
+    )
 
-        if results:
-            doc = results[0].to_dict()
-            return {
-                "disease": doc.get("disease_name", prediction),
-                "symptoms": doc.get("symptoms", []),
-                "precautions": doc.get("precautions", []),
-                "diet": doc.get("diet", {
-                    "recommended": doc.get("diet_recommended", []),
-                    "avoid": doc.get("diet_avoid", []),
-                    "plan": doc.get("diet_plan", "Standard clinical diet recommended.")
-                })
-            }
-
-        # Fallback to label-based matching if no exact match
-        target_label = 0 if "Normal" in prediction else 1
-        query = collection_ref.where("label", "==", target_label).limit(3)
-        results = query.get()
-
-        if results:
-            doc = random.choice(results).to_dict()
-            return {
-                "disease": doc.get("disease_name", prediction),
-                "symptoms": doc.get("symptoms", []),
-                "precautions": doc.get("precautions", []),
-                "diet": doc.get("diet", {
-                    "recommended": doc.get("diet_recommended", []),
-                    "avoid": doc.get("diet_avoid", []),
-                    "plan": doc.get("diet_plan", "General guidance provided.")
-                })
-            }
-
-    except Exception as e:
-        print(f"WARNING: Firestore medical context fetch error: {e}")
-
-    # Final fallback
+def fetch_medical_context(prediction: str) -> dict:
+    """
+    Unified function to retrieve medical context (symptoms, precautions, diet).
+    Returns a dict for frontend compatibility.
+    """
+    obj = fetch_medical_context_object(prediction)
+    
     return {
-        "disease": prediction,
-        "symptoms": ["Information currently unavailable in clinical database."],
-        "precautions": ["Seek immediate professional medical advice."],
+        "disease": obj.name,
+        "symptoms": obj.symptoms,
+        "precautions": obj.precautions,
         "diet": {
-            "recommended": [],
-            "avoid": [],
-            "plan": "Consult your doctor for a personalized nutrition plan."
+            "recommended": obj.diet_rules.recommended,
+            "avoid": obj.diet_rules.avoid,
+            "plan": f"Follow a {prediction}-specific diet focusing on restricted intake of avoided items."
         }
     }
 
@@ -329,17 +338,25 @@ def save_diagnosis_record(
         return
 
     try:
+        # Save every diagnosis to Firestore for data collection.
+        # This builds your medical knowledge dataset over time.
         db.collection("diagnosis_records").document(session_id).set({
             "uid": uid,
             "session_id": session_id,
             "symptoms": symptoms,
-            "diagnosis": result.get("diagnosis"),
-            "confidence": result.get("confidence"),
+            "diagnosis": result.get("diagnosis") or result.get("prediction"),
+            "confidence": result.get("confidence") or result.get("confidence_score"),
             "image_url": image_url,
             "heatmap_url": result.get("heatmap_url"),
             "report_url": result.get("report_url"),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "platform": platform or "unknown",
+            "deep_knowledge": {
+                "likely_symptoms": result.get("likely_symptoms", []),
+                "reason": result.get("root_cause_reason", ""),
+                "simple_explanation": result.get("patient_friendly_explanation", ""),
+                "management": result.get("management_steps", [])
+            }
         })
         print(f"OK: Diagnosis record saved for session {session_id}")
     except Exception as e:

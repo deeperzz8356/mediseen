@@ -12,7 +12,9 @@ import {
   Printer,
   ExternalLink,
   X,
-  ShieldCheck
+  ShieldCheck,
+  ClipboardCheck,
+  Sparkles
 } from "lucide-react"
 
 export interface DiagnosisResult {
@@ -25,6 +27,10 @@ export interface DiagnosisResult {
   reportUrl?: string
   affectedArea?: number
   nextSteps?: string[]
+  likelySymptoms?: string[]
+  rootCause?: string
+  laymanExplanation?: string
+  managementSteps?: string[]
 }
 
 interface ResultPanelProps {
@@ -135,6 +141,61 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
           </div>
         </div>
       </motion.div>
+
+      {/* DEEP KNOWLEDGE SECTIONS */}
+      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-3xl p-8 border border-black/5 shadow-sm space-y-4"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">
+            <Zap className="w-6 h-6" />
+          </div>
+          <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">Why it happened</h3>
+          <p className="text-sm font-bold text-slate-500 leading-relaxed">
+            {result.rootCause || "The system is calculating the exact biological cause. Refer to the full report for details."}
+          </p>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-3xl p-8 border border-black/5 shadow-sm space-y-4"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">The Simple Version</h3>
+          <p className="text-sm font-bold text-slate-500 leading-relaxed italic">
+            {result.laymanExplanation || "The AI is summarizing the medical jargon into everyday language."}
+          </p>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="md:col-span-2 bg-black rounded-3xl p-8 shadow-2xl space-y-6"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-400">
+              <ClipboardCheck className="w-6 h-6" />
+            </div>
+            <h3 className="text-xl font-black uppercase tracking-tight text-white">Management & Steps</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(result.managementSteps || ["Monitor symptoms", "Keep records", "Consult doctor"]).map((step, idx) => (
+              <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-start gap-3">
+                <span className="text-emerald-400 font-black">0{idx + 1}</span>
+                <span className="text-white/70 text-xs font-bold leading-tight">{step}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
 
       {/* --- CLINICAL REPORT MODAL --- */}
       <AnimatePresence>

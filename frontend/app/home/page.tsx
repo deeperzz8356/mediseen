@@ -12,7 +12,8 @@ import {
   MessageCircle,
   Sparkles,
   ChevronRight,
-  Heart,
+  Moon,
+  Flame,
   Calendar,
   Activity
 } from "lucide-react"
@@ -20,8 +21,12 @@ import {
 import { MedicalAssistanceIllustration } from "../components/Illustrations"
 import { useLocale } from "../i18n/LocaleContext"
 
+import { healthService, HealthData } from "../services/HealthService"
+
 export default function Home() {
   const [username, setUsername] = useState("")
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [healthData, setHealthData] = useState<HealthData | null>(null)
   const { t } = useLocale()
 
   useEffect(() => {
@@ -35,6 +40,35 @@ export default function Home() {
     })
     return () => unsubscribe()
   }, [])
+
+  // Auto-fetch data if already connected
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (healthService.getSyncStatus()) {
+      fetchLiveStats();
+      interval = setInterval(fetchLiveStats, 5000); // Poll every 5s for 'real-time' effect
+    }
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchLiveStats = async () => {
+    try {
+      const data = await healthService.fetchRealTimeData();
+      setHealthData(data);
+    } catch (err) {
+      console.error("Auto-fetch failed", err);
+    }
+  }
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    const success = await healthService.requestPermissions();
+    if (success) {
+      const data = await healthService.fetchRealTimeData();
+      setHealthData(data);
+    }
+    setIsSyncing(false);
+  }
 
   const quickActions = [
     {
@@ -54,10 +88,34 @@ export default function Home() {
   ]
 
   const metrics = [
-    { icon: <Heart className="text-pastel-pink" />, label: t.home.metrics.heartRate, value: "72 BPM", desc: t.home.metrics.heartRateDesc, bg: "bg-pastel-pink/5" },
-    { icon: <Activity className="text-pastel-blue" />, label: t.home.metrics.oxygenLevel, value: "98%", desc: t.home.metrics.oxygenLevelDesc, bg: "bg-pastel-blue/5" },
-    { icon: <Plus className="text-pastel-green" />, label: t.home.metrics.dailySteps, value: "8,432", desc: t.home.metrics.dailyStepsDesc, bg: "bg-pastel-green/5" },
-    { icon: <Calendar className="text-pastel-violet" />, label: t.home.metrics.activityLogs, value: "45 Min", desc: t.home.metrics.activityLogsDesc, bg: "bg-pastel-violet/5" },
+    { 
+      icon: <Moon className="text-indigo-400" />, 
+      label: "Sleep Analysis", 
+      value: healthData ? `${healthData.sleepHours.toFixed(1)} hrs` : "--", 
+      desc: healthData ? "Last Night" : "Connect to track", 
+      bg: "bg-indigo-50/50" 
+    },
+    { 
+      icon: <Flame className="text-orange-500" />, 
+      label: "Calories Burned", 
+      value: healthData ? `${healthData.caloriesBurned.toLocaleString()} kcal` : "--", 
+      desc: healthData ? "Active Today" : "Connect to track", 
+      bg: "bg-orange-50/50" 
+    },
+    { 
+      icon: <Plus className="text-emerald-500" />, 
+      label: t.home.metrics.dailySteps, 
+      value: healthData ? healthData.steps.toLocaleString() : "--", 
+      desc: healthData ? "Live" : t.home.metrics.dailyStepsDesc, 
+      bg: "bg-emerald-50/50" 
+    },
+    { 
+      icon: <Activity className="text-violet-500" />, 
+      label: "Active Minutes", 
+      value: healthData ? `${healthData.activityTime} Min` : "--", 
+      desc: healthData ? "Total Today" : "Track activity", 
+      bg: "bg-violet-50/50" 
+    },
   ]
 
   return (
@@ -168,10 +226,12 @@ export default function Home() {
           </div>
           <motion.button 
             whileHover={{ scale: 1.05 }}
-            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs text-slate-500 uppercase tracking-widest flex items-center gap-2 self-start md:self-auto"
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs text-slate-500 uppercase tracking-widest flex items-center gap-2 self-start md:self-auto disabled:opacity-50"
           >
-            <Activity className="w-4 h-4 text-pastel-pink" /> 
-            {t.home.syncDevice}
+            <Activity className={`w-4 h-4 text-pastel-pink ${isSyncing ? 'animate-pulse' : ''}`} /> 
+            {isSyncing ? "Syncing..." : t.home.syncDevice}
           </motion.button>
         </div>
 

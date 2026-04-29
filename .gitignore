@@ -24,3 +24,4 @@ firebase_admin.json
 **/firebase_admin.json
 temp_password.txt
 *.log
+scripts/

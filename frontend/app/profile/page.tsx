@@ -10,7 +10,7 @@ import {
   updateProfile,
   User,
 } from "firebase/auth"
-import { Ban, LogOut, Mail, Save, UserRound } from "lucide-react"
+import { Ban, LogOut, Mail, Save, UserRound, ChevronRight } from "lucide-react"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 
@@ -272,6 +272,52 @@ export default function ProfilePage() {
           {saving ? "Saving..." : "Save Changes"}
           <Save className="w-4 h-4" />
         </motion.button>
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="flo-card p-8 md:p-10 rounded-[2rem] space-y-6"
+      >
+        <h2 className="text-xl font-black text-slate-800">Legal & Support</h2>
+        <div className="grid gap-4">
+          <a
+            href="https://sites.google.com/view/sapappsolutionmediseenterms/home"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-pastel-violet transition-all group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 group-hover:text-pastel-violet transition-colors">
+                <ChevronRight className="w-5 h-5 rotate-90" />
+              </div>
+              <div>
+                <p className="font-bold text-slate-800">Terms and Conditions</p>
+                <p className="text-xs text-slate-400 font-medium">Read our service agreement</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-pastel-violet transition-all group-hover:translate-x-1" />
+          </a>
+
+          <a
+            href="https://sites.google.com/view/sapappsolutionmediseenpolicy/home"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-pastel-violet transition-all group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 group-hover:text-pastel-violet transition-colors">
+                <ChevronRight className="w-5 h-5 rotate-90" />
+              </div>
+              <div>
+                <p className="font-bold text-slate-800">Privacy Policy</p>
+                <p className="text-xs text-slate-400 font-medium">How we handle your data</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-pastel-violet transition-all group-hover:translate-x-1" />
+          </a>
+        </div>
       </motion.section>
 
       <motion.section

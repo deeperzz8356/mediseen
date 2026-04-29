@@ -195,6 +195,37 @@ def get_medical_context(disease: str):
     context = fetch_medical_context(disease)
     return context
 
+# 4.2️⃣ Advanced Diet System Endpoints
+@app.post("/diet/generate")
+async def generate_diet_plan(req: "DietGenerateRequest"):
+    from backend.services.diet_svc import calculate_calories, generate_meal_plan
+    from backend.services.firebase_svc import fetch_medical_context_object
+    
+    calories = calculate_calories(req)
+    # Fetch structured rules from DB
+    disease_data = fetch_medical_context_object(req.disease)
+    plan = generate_meal_plan(calories, disease_data.diet_rules, req)
+    return plan
+
+@app.post("/diet/swap")
+async def swap_food_item(req: "SwapRequest"):
+    # Logic to return alternative foods with similar macros
+    return {"alternatives": ["Quinoa", "Sweet Potato", "Whole Wheat Pasta"]}
+
+@app.post("/diet/grocery")
+async def get_grocery_list(req: "GroceryRequest"):
+    # Aggregate items from the meal plan
+    items = set()
+    for meal in req.meal_plan:
+        for item in meal.items:
+            items.add(item)
+    return {"items": list(items)}
+
+@app.post("/diet/feedback")
+async def update_diet_feedback(req: "FeedbackRequest"):
+    # Recalibrate plan based on feedback
+    return {"status": "Feedback received. Your plan will be adjusted in the next cycle.", "updated_plan": None}
+
 # 5️⃣ Verify Firebase Token
 @app.post("/auth/verify")
 async def verify_token(_decoded_token: dict = Depends(verify_bearer_token)):

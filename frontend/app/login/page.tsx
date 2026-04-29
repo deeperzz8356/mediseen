@@ -201,16 +201,28 @@ export default function LoginPage() {
           </button>
         </p>
 
-        <p className="text-center text-[11px] text-slate-300 font-medium">
-          <a
-            href="https://sites.google.com/view/sapappsolutionmediseenpolicy/home"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-slate-400 transition-colors"
-          >
-            Privacy Policy
-          </a>
-        </p>
+        <div className="space-y-4">
+          <p className="text-center text-[11px] text-slate-300 font-medium leading-relaxed px-4">
+            By continuing, you agree to our{" "}
+            <a
+              href="https://sites.google.com/view/sapappsolutionmediseenterms/home"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 font-bold underline hover:text-pastel-violet transition-colors cursor-pointer"
+            >
+              Terms and Conditions
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://sites.google.com/view/sapappsolutionmediseenpolicy/home"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 font-bold underline hover:text-pastel-violet transition-colors cursor-pointer"
+            >
+              Privacy Policy
+            </a>.
+          </p>
+        </div>
       </motion.div>
     </div>
   )
