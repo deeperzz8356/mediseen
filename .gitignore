@@ -25,3 +25,4 @@ firebase_admin.json
 temp_password.txt
 *.log
 scripts/
+/graphify-out/
