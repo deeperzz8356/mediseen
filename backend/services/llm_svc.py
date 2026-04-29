@@ -50,7 +50,7 @@ class GeminiProvider:
     def call(self, prompt: str, image: Optional[Image] = None, model: str = GEMINI_TEXT_MODEL) -> str:
         """Call Gemini API"""
         if not self.available:
-            raise LLMError("Gemini client not available")
+            raise LLMError("Gemini client initialization failed. Check your API key and google-genai installation.")
         
         try:
             if image:
@@ -63,9 +63,22 @@ class GeminiProvider:
                     model=model,
                     contents=prompt
                 )
+            
+            if not response or not hasattr(response, 'text'):
+                # Handle safety blocks or empty responses
+                if hasattr(response, 'candidates') and response.candidates:
+                    finish_reason = response.candidates[0].finish_reason
+                    if finish_reason == 'SAFETY':
+                        raise LLMError("Gemini refused the request due to safety filters (likely medical restriction).")
+                raise LLMError(f"Gemini returned an empty or blocked response. Finish reason: {getattr(response.candidates[0], 'finish_reason', 'unknown') if response.candidates else 'no candidates'}")
+                
             return response.text
         except Exception as e:
             logger.error(f"Gemini API error: {e}")
+            if "API_KEY_INVALID" in str(e):
+                raise LLMError("Gemini API key is invalid.")
+            if "429" in str(e):
+                raise LLMError("Gemini rate limit exceeded.")
             raise LLMError(f"Gemini error: {str(e)}")
 
 
@@ -95,16 +108,17 @@ class OpenRouterProvider:
     def call(self, prompt: str, image: Optional[Image] = None, model: str = OPENROUTER_TEXT_MODEL) -> str:
         """Call OpenRouter API"""
         if not self.available:
-            raise LLMError("OpenRouter not available")
+            raise LLMError("OpenRouter not initialized. Check your API key.")
         
         try:
             if image:
-                model = model or OPENROUTER_VISION_MODEL
+                model_to_use = model or OPENROUTER_VISION_MODEL
                 content = [
                     {"type": "text", "text": prompt},
                     {"type": "image_url", "image_url": {"url": self._image_to_data_url(image)}}
                 ]
             else:
+                model_to_use = model or OPENROUTER_TEXT_MODEL
                 content = prompt
             
             response = self.httpx.post(
@@ -115,7 +129,7 @@ class OpenRouterProvider:
                     "X-OpenRouter-Title": "Mediseen",
                 },
                 json={
-                    "model": model,
+                    "model": model_to_use,
                     "messages": [
                         {
                             "role": "user",
@@ -124,17 +138,25 @@ class OpenRouterProvider:
                     ],
                     "temperature": 0.7,
                     "max_tokens": 1024,
-                }
+                },
+                timeout=45.0
             )
             
             if response.status_code != 200:
-                raise LLMError(f"OpenRouter API error: {response.status_code} - {response.text}")
+                error_data = response.json() if response.headers.get("Content-Type") == "application/json" else {"error": {"message": response.text}}
+                error_msg = error_data.get("error", {}).get("message", "Unknown OpenRouter error")
+                raise LLMError(f"OpenRouter API error {response.status_code}: {error_msg}")
             
             data = response.json()
+            if not data.get("choices"):
+                raise LLMError("OpenRouter returned no choices in response.")
+                
             return data["choices"][0]["message"]["content"]
         
         except Exception as e:
             logger.error(f"OpenRouter API error: {e}")
+            if "httpx" in str(e).lower():
+                raise LLMError(f"OpenRouter Network error: {str(e)}")
             raise LLMError(f"OpenRouter error: {str(e)}")
 
 
