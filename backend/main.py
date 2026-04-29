@@ -173,6 +173,7 @@ def verify_bearer_token(authorization: str = Header(default="")):
 
 # 4️⃣ Health Check
 @app.get("/")
+@app.head("/")
 def root():
     return {"status": "Mediseen API running"}
 
