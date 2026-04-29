@@ -193,9 +193,11 @@ def _increment_daily_rate_limit(transaction, doc_ref, uid: str, today: str) -> d
 def check_and_increment_rate_limit(uid: str) -> dict:
     """
     Check if user has exceeded daily diagnosis limit.
-    Returns {"allowed": bool, "used": int, "limit": int}
-    Atomically increments count if allowed.
     """
+    # 1. Master Bypass for development/testing
+    if os.getenv("DISABLE_RATE_LIMIT", "false").lower() == "true":
+        return {"allowed": True, "used": 0, "limit": 9999}
+
     db = get_db()
     if db is None:
         # Fail closed when DB is unavailable so limits cannot be bypassed.
