@@ -21,6 +21,7 @@ def _resolve_firebase_cred_path(cred_path: str) -> Path:
 def init_firebase(cred_path: str = "firebase_admin.json"):
     """
     Initialize Firebase only once with storage support.
+    Supports both a JSON file and a FIREBASE_SERVICE_ACCOUNT_JSON env var.
     """
     global _db
 
@@ -29,18 +30,33 @@ def init_firebase(cred_path: str = "firebase_admin.json"):
 
     try:
         if not firebase_admin._apps:
-            # Support both backend cwd and project-root cwd deployments.
-            resolved_cred_path = _resolve_firebase_cred_path(cred_path)
+            cred = None
+            
+            # 1. Try environment variable first (best for Render/Cloud)
+            env_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+            if env_json:
+                try:
+                    import json
+                    cred_dict = json.loads(env_json)
+                    cred = credentials.Certificate(cred_dict)
+                    print("OK: Firebase initialized from environment variable")
+                except Exception as json_err:
+                    print(f"WARNING: Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON: {json_err}")
 
-            if not resolved_cred_path.exists():
-                print(
-                    "WARNING: Firebase service account JSON not found; "
-                    "skipping Firebase initialization"
-                )
-                _db = None
-                return _db
+            # 2. Try local file if env var failed
+            if not cred:
+                resolved_cred_path = _resolve_firebase_cred_path(cred_path)
+                if resolved_cred_path.exists():
+                    cred = credentials.Certificate(str(resolved_cred_path))
+                    print(f"OK: Firebase initialized from {cred_path}")
+                else:
+                    print(
+                        "WARNING: Firebase credentials not found (no file and no env var); "
+                        "skipping Firebase initialization"
+                    )
+                    _db = None
+                    return _db
 
-            cred = credentials.Certificate(str(resolved_cred_path))
             bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")
             firebase_admin.initialize_app(cred, {
                 'storageBucket': bucket_name
