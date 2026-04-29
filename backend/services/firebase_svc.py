@@ -165,7 +165,7 @@ def upload_image(local_path: str, destination_blob_name: str) -> str:
 # Rate Limiting (2 diagnoses per user per day)
 # ---------------------------------------------------
 
-DAILY_LIMIT = 2
+DAILY_LIMIT = int(os.getenv("DAILY_DIAGNOSIS_LIMIT", "10"))
 
 
 @firestore.transactional
