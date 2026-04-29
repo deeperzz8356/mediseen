@@ -16,7 +16,9 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # Copy the backend app and the shared model package used by the pipeline.
 COPY backend ./backend
 COPY model ./model
-COPY uploads ./uploads
+
+# Create uploads directory for runtime file storage
+RUN mkdir -p /app/uploads
 
 # Set environment defaults.
 ENV PORT=10000
