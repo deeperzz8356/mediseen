@@ -21,7 +21,7 @@ const hi: Translations = {
     finish: "सेटअप पूरा करें",
   },
   auth: {
-    welcomeBack: "वापस स्वागत है",
+    welcomeBack: "स्वागत है",
     subtitle: "अपने सुरक्षित क्लिनिकल डैशबोर्ड तक पहुंचने के लिए Google से जारी रखें।",
     signInGoogle: "Google से साइन इन करें",
     or: "या",
@@ -69,7 +69,7 @@ const hi: Translations = {
     },
   },
   login: {
-    welcomeBack: "वापस स्वागत है",
+    welcomeBack: "स्वागत है",
     subtitle: "AI डायग्नोस्टिक प्लेटफॉर्म तक पहुंचने के लिए लॉगिन करें",
     emailLabel: "ईमेल पता",
     emailPlaceholder: "doctor@hospital.com",

@@ -2,14 +2,15 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { onAuthStateChanged, User } from "firebase/auth"
 import { motion, AnimatePresence } from "framer-motion"
-import { Activity, BookOpen, Heart, Home, Settings, Menu, X } from "lucide-react"
+import { Activity, BookOpen, Heart, Home, Settings, Languages, Brain } from "lucide-react"
 
 import { auth } from "../../lib/firebase"
 import { useLocale } from "../i18n/LocaleContext"
+import { LOCALES } from "../i18n"
 
 type NavItem = {
 	name: string
@@ -20,9 +21,10 @@ type NavItem = {
 
 export default function Navbar() {
 	const pathname = usePathname()
+	const router = useRouter()
 	const [user, setUser] = useState<User | null>(null)
-	const [isMenuOpen, setIsMenuOpen] = useState(false)
-	const { t } = useLocale()
+	const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
+	const { t, locale, setLocale } = useLocale()
 
 	useEffect(() => {
 		if (!auth) return
@@ -32,10 +34,10 @@ export default function Navbar() {
 	}, [])
 
 	const navItems: NavItem[] = [
-		{ name: t.navbar.home, shortName: "Home", href: "/home", icon: Home },
+		{ name: "Diet", shortName: "Diet", href: "/diet", icon: Heart },
 		{ name: t.navbar.checkup, shortName: "Scan", href: "/diagnose", icon: Activity },
-		{ name: t.navbar.health, shortName: "Health", href: "/wellness", icon: Heart },
-		{ name: t.navbar.library, shortName: "Library", href: "/disease-info", icon: BookOpen },
+		{ name: t.navbar.library, shortName: "Library", href: "/library", icon: BookOpen },
+		{ name: "Reports", shortName: "Reports", href: "/reports", icon: Activity }, // Will use Activity or Clipboard
 		{ name: "Profile", shortName: "Profile", href: "/profile", icon: Settings },
 	]
 
@@ -57,116 +59,101 @@ export default function Navbar() {
 
 	return (
 		<>
-			{/* Mobile Menu Button - Top Left with Safe Area */}
-			<button
-				onClick={() => setIsMenuOpen(true)}
-				className="fixed md:hidden z-[80] w-12 h-12 md:w-11 md:h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg flex items-center justify-center text-slate-700 active:scale-95 transition-all"
+			{/* Top Bar - Branding and Actions */}
+			<div 
+				className="fixed top-0 left-0 right-0 z-[80] bg-white/80 backdrop-blur-xl border-b border-slate-100 px-4 md:px-8 flex items-center justify-between transition-all duration-300"
 				style={{
-					top: `max(0.75rem, env(safe-area-inset-top, 0.75rem))`,
-					left: `max(0.75rem, env(safe-area-inset-left, 0.75rem))`,
+					height: `calc(4.5rem + env(safe-area-inset-top, 0px))`,
+					paddingTop: `env(safe-area-inset-top, 0px)`
 				}}
-				aria-label="Open menu"
 			>
-				<Menu className="w-5 h-5" />
-			</button>
-
-			<Link
-				href="/profile"
-				className="fixed md:top-6 md:right-6 z-[70] w-12 h-12 md:w-11 md:h-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200 shadow-lg shadow-slate-900/10 flex items-center justify-center overflow-hidden transition-all"
-				style={{
-					top: `max(0.75rem, env(safe-area-inset-top, 0.75rem))`,
-					right: `max(0.75rem, env(safe-area-inset-right, 0.75rem))`,
-				}}
-				aria-label="Open profile"
-				title={currentUserName}
-			>
-				{user ? (
-					<div className="w-full h-full bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-sm">
-						{getInitials(user)}
+				{/* Branding */}
+				<Link href="/home" className="flex items-center gap-3 active:scale-95 transition-transform">
+					<div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20">
+						<Brain className="w-6 h-6 text-white" />
 					</div>
-				) : (
-					<Image src="/logo2.png" alt="MediSeen account" width={36} height={36} className="rounded-xl md:rounded-2xl" />
-				)}
-			</Link>
+					<div className="flex flex-col">
+						<span className="font-black text-lg tracking-tight text-slate-900 leading-none">MediSeen</span>
+						<span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">AI Health Assistant</span>
+					</div>
+				</Link>
 
-			{/* Left Side Drawer - Mobile Only */}
-			<AnimatePresence>
-				{isMenuOpen && (
-					<>
-						<motion.div
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							onClick={() => setIsMenuOpen(false)}
-							className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm md:hidden"
-						/>
-						<motion.aside
-							initial={{ x: "-100%" }}
-							animate={{ x: 0 }}
-							exit={{ x: "-100%" }}
-							transition={{ type: "spring", damping: 25, stiffness: 200 }}
-							className="fixed top-0 left-0 bottom-0 z-[110] w-[280px] bg-white shadow-2xl border-r border-slate-100 md:hidden flex flex-col"
+				{/* Top Right Actions */}
+				<div className="flex items-center gap-3">
+					{/* Language Switcher */}
+					<div className="relative">
+						<button
+							onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+							className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-100 active:scale-90 transition-all"
+							aria-label="Change Language"
 						>
-							<div className="p-6 border-b border-slate-50 flex items-center justify-between">
-								<div className="flex items-center gap-3">
-									<div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
-										<Image src="/logo2.png" alt="MediSeen" width={24} height={24} />
-									</div>
-									<span className="font-black text-lg tracking-tighter uppercase italic text-black">MediSeen</span>
-								</div>
-								<button 
-									onClick={() => setIsMenuOpen(false)}
-									className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
-								>
-									<X className="w-5 h-5 text-slate-400" />
-								</button>
-							</div>
+							<Languages className="w-5 h-5" />
+						</button>
 
-							<nav className="flex-1 p-4 space-y-2">
-								{navItems.map((item) => {
-									const active = isActiveRoute(item.href)
-									const Icon = item.icon
-
-									return (
-										<Link
-											key={item.href}
-											href={item.href}
-											onClick={() => setIsMenuOpen(false)}
-											className={`flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${
-												active 
-													? "bg-slate-900 text-white shadow-lg" 
-													: "text-slate-500 hover:bg-slate-50"
-											}`}
-										>
-											<Icon className={`w-5 h-5 ${active ? "scale-110" : ""}`} />
-											<span className="font-bold text-sm tracking-tight">{item.name}</span>
-										</Link>
-									)
-								})}
-							</nav>
-
-							<div className="p-6 border-t border-slate-50 bg-slate-50/50">
-								<div className="flex items-center gap-3">
-									<div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-xs">
-										{user ? getInitials(user) : "G"}
-									</div>
-									<div className="flex-1 min-w-0">
-										<p className="text-sm font-black text-slate-800 truncate">{currentUserName}</p>
-										<p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{user ? "Active Professional" : "Guest Mode"}</p>
-									</div>
-								</div>
-							</div>
-						</motion.aside>
-					</>
-				)}
-			</AnimatePresence>
-
-			{/* Desktop Sidebar */}
-			<nav className="fixed hidden md:flex left-3 bottom-3 top-3 w-20 z-[70] app-glass rounded-3xl shadow-2xl shadow-slate-900/20 py-8 border border-white/70 flex-col items-center justify-between">
-				<div className="flex flex-col gap-6">
-					<div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center mb-4">
-						<Image src="/logo2.png" alt="MediSeen" width={32} height={32} />
+						<AnimatePresence>
+							{showLanguageDropdown && (
+								<>
+									<motion.div 
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										onClick={() => setShowLanguageDropdown(false)}
+										className="fixed inset-0 z-[-1]"
+									/>
+									<motion.div
+										initial={{ opacity: 0, y: 10, scale: 0.95 }}
+										animate={{ opacity: 1, y: 0, scale: 1 }}
+										exit={{ opacity: 0, y: 10, scale: 0.95 }}
+										className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
+									>
+										<div className="p-2 space-y-1">
+											{LOCALES.map((lang) => (
+												<button
+													key={lang.code}
+													onClick={() => {
+														setLocale(lang.code)
+														setShowLanguageDropdown(false)
+													}}
+													className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-colors ${
+														locale === lang.code 
+															? "bg-slate-900 text-white" 
+															: "text-slate-600 hover:bg-slate-50"
+													}`}
+												>
+													<span className="flex items-center gap-3">
+														<span className="text-lg">{lang.flag}</span>
+														{lang.name}
+													</span>
+													{locale === lang.code && <div className="w-1.5 h-1.5 rounded-full bg-pastel-pink" />}
+												</button>
+											))}
+										</div>
+									</motion.div>
+								</>
+							)}
+						</AnimatePresence>
 					</div>
+
+					{/* Profile Button */}
+					<Link
+						href="/profile"
+						className="w-10 h-10 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden active:scale-90 transition-all"
+						aria-label="Profile"
+					>
+						{user ? (
+							<div className="w-full h-full bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-xs">
+								{getInitials(user)}
+							</div>
+						) : (
+							<Image src="/logo2.png" alt="Profile" width={24} height={24} className="rounded-lg" />
+						)}
+					</Link>
+				</div>
+			</div>
+
+			{/* Desktop Sidebar - Left side */}
+			<nav className="fixed hidden md:flex left-4 bottom-4 top-[5.5rem] w-20 z-[70] bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-900/10 py-8 border border-slate-100 flex-col items-center justify-between">
+				<div className="flex flex-col gap-6">
 					{navItems.map((item) => {
 						const active = isActiveRoute(item.href)
 						const Icon = item.icon
@@ -177,7 +164,9 @@ export default function Navbar() {
 								href={item.href}
 								title={item.name}
 								className={`flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all ${
-									active ? "bg-slate-900 text-white shadow-lg" : "text-slate-400 hover:bg-white"
+									active 
+										? "bg-slate-900 text-white shadow-lg shadow-slate-900/20" 
+										: "text-slate-400 hover:bg-slate-50"
 								}`}
 							>
 								<Icon className={`w-5 h-5 ${active ? "scale-110" : ""}`} />
@@ -185,41 +174,44 @@ export default function Navbar() {
 						)
 					})}
 				</div>
-				<Link href="/profile" className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all">
+				<Link 
+					href="/profile" 
+					className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
+				>
 					<Settings className="w-5 h-5" />
 				</Link>
-		</nav>
+			</nav>
 
-		{/* Mobile Bottom Bar - Responsive with Safe Area */}
-		<nav className="fixed md:hidden left-0 right-0 z-[70] bg-white/80 backdrop-blur-xl shadow-2xl shadow-slate-900/20 border-t border-white/70"
-			style={{
-				bottom: 0,
-			}}
-		>
-			<div className="px-1 py-2" style={{
-				paddingBottom: `max(0.5rem, env(safe-area-inset-bottom, 0.5rem))`,
-			}}>
-				<div className="grid grid-cols-5 gap-0">
-					{navItems.map((item) => {
-						const active = isActiveRoute(item.href)
-						const Icon = item.icon
+			{/* Mobile Bottom Bar - Navigation */}
+			<nav className="fixed md:hidden left-0 right-0 z-[70] bg-white/80 backdrop-blur-xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] border-t border-slate-100"
+				style={{ bottom: 0 }}
+			>
+				<div className="px-1 py-2" style={{
+					paddingBottom: `max(0.5rem, env(safe-area-inset-bottom, 0.5rem))`
+				}}>
+					<div className="grid grid-cols-5 gap-1">
+						{navItems.map((item) => {
+							const active = isActiveRoute(item.href)
+							const Icon = item.icon
 
-						return (
-							<Link
-								key={item.href}
-								href={item.href}
-								className={`flex flex-col items-center justify-center gap-0 rounded-lg px-0 py-3 min-h-[60px] transition-all ${
-									active ? "bg-gradient-to-r from-pastel-pink to-pastel-violet text-white shadow-md" : "text-slate-500 hover:bg-slate-50"
-								}`}
-							>
-								<Icon className={`w-6 h-6 flex-shrink-0 ${active ? "scale-110" : ""}`} />
-								<span className="text-[7px] font-bold leading-tight tracking-tight mt-0.5">{item.shortName}</span>
-							</Link>
-						)
-					})}
+							return (
+								<Link
+									key={item.href}
+									href={item.href}
+									className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 min-h-[64px] transition-all ${
+										active 
+											? "bg-slate-900 text-white shadow-lg shadow-slate-900/20" 
+											: "text-slate-500 active:bg-slate-50"
+									}`}
+								>
+									<Icon className={`w-5 h-5 flex-shrink-0 ${active ? "scale-110" : ""}`} />
+									<span className="text-[9px] font-black leading-tight tracking-tight uppercase">{item.shortName}</span>
+								</Link>
+							)
+						})}
+					</div>
 				</div>
-			</div>
-		</nav>
-	</>
-)
+			</nav>
+		</>
+	)
 }

@@ -86,50 +86,77 @@ def get_db():
 # Medical Knowledge Retrieval
 # ---------------------------------------------------
 
-def fetch_medical_context(prediction: str) -> str:
+def fetch_medical_context(prediction: str) -> dict:
+    """
+    Fetches comprehensive medical context for a given disease prediction.
+    Returns a unified structure for Library and Diet systems.
+    """
     db = get_db()
     if db is None:
-        return "Database unavailable. Using general clinical reasoning."
+        return {
+            "disease": prediction,
+            "symptoms": ["Consult a medical professional for symptoms."],
+            "precautions": ["Consult a medical professional for precautions."],
+            "diet": {
+                "recommended": [],
+                "avoid": [],
+                "plan": "No specific diet plan available."
+            }
+        }
 
+    # Using 'medical_knowledge' as the single source of truth for all disease data
     collection_ref = db.collection("medical_knowledge")
-    db_context = None
-
+    
     try:
+        # Try exact match first
         query = collection_ref.where("disease_name", "==", prediction).limit(1)
         results = query.get()
 
         if results:
             doc = results[0].to_dict()
-            db_context = (
-                f"Protocol: {doc.get('description','Standard treatment recommended.')}\n"
-                f"Indicators: {doc.get('visual_indicators','Not specified.')}"
-            )
-            print(f"OK: Exact DB match for {prediction}")
+            return {
+                "disease": doc.get("disease_name", prediction),
+                "symptoms": doc.get("symptoms", []),
+                "precautions": doc.get("precautions", []),
+                "diet": doc.get("diet", {
+                    "recommended": doc.get("diet_recommended", []),
+                    "avoid": doc.get("diet_avoid", []),
+                    "plan": doc.get("diet_plan", "Standard clinical diet recommended.")
+                })
+            }
+
+        # Fallback to label-based matching if no exact match
+        target_label = 0 if "Normal" in prediction else 1
+        query = collection_ref.where("label", "==", target_label).limit(3)
+        results = query.get()
+
+        if results:
+            doc = random.choice(results).to_dict()
+            return {
+                "disease": doc.get("disease_name", prediction),
+                "symptoms": doc.get("symptoms", []),
+                "precautions": doc.get("precautions", []),
+                "diet": doc.get("diet", {
+                    "recommended": doc.get("diet_recommended", []),
+                    "avoid": doc.get("diet_avoid", []),
+                    "plan": doc.get("diet_plan", "General guidance provided.")
+                })
+            }
 
     except Exception as e:
-        print(f"WARNING: Firestore query error: {e}")
+        print(f"WARNING: Firestore medical context fetch error: {e}")
 
-    if not db_context:
-        try:
-            target_label = 0 if "Normal" in prediction else 1
-            query = collection_ref.where("label", "==", target_label).limit(3)
-            results = query.get()
-
-            if results:
-                doc = random.choice(results).to_dict()
-                db_context = (
-                    f"Protocol: {doc.get('description','Consult clinical guidelines.')}\n"
-                    f"Indicators: {doc.get('visual_indicators','N/A')}"
-                )
-                print(f"INFO: Fallback DB match via label {target_label}")
-
-        except Exception as e:
-            print(f"WARNING: Firestore fallback error: {e}")
-
-    if not db_context:
-        db_context = "No database reference found. Use general diagnostic reasoning."
-
-    return db_context
+    # Final fallback
+    return {
+        "disease": prediction,
+        "symptoms": ["Information currently unavailable in clinical database."],
+        "precautions": ["Seek immediate professional medical advice."],
+        "diet": {
+            "recommended": [],
+            "avoid": [],
+            "plan": "Consult your doctor for a personalized nutrition plan."
+        }
+    }
 
 
 # ---------------------------------------------------
@@ -317,3 +344,33 @@ def save_diagnosis_record(
         print(f"OK: Diagnosis record saved for session {session_id}")
     except Exception as e:
         print(f"WARNING: Data collection save error: {e}")
+
+
+def delete_user_data(uid: str):
+    """
+    Deletes all Firestore records associated with the user UID.
+    This includes profile, diagnosis records, and rate limits.
+    """
+    db = get_db()
+    if db is None:
+        return
+
+    try:
+        # 1. Delete user profile
+        db.collection("users").document(uid).delete()
+
+        # 2. Delete diagnosis records
+        records_ref = db.collection("diagnosis_records").where("uid", "==", uid)
+        records = records_ref.stream()
+        for doc in records:
+            doc.reference.delete()
+
+        # 3. Delete rate limits
+        limits_ref = db.collection("rate_limits").where("uid", "==", uid)
+        limits = limits_ref.stream()
+        for doc in limits:
+            doc.reference.delete()
+
+        print(f"OK: All Firestore data deleted for user {uid}")
+    except Exception as e:
+        print(f"ERROR: Failed to delete user data for {uid}: {e}")

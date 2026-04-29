@@ -1,58 +1,13 @@
-# Graph Report - F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix  (2026-04-29)
-
-## CRITICAL ISSUE DISCOVERED: Backend API Configuration Mismatch
-
-### Issue Summary
-**Frontend is pointing to the wrong Render service.** The app is connecting to `https://meediseen-backend.onrender.com` (Next.js Frontend) instead of the FastAPI backend service.
-
-**Status:**
-- Frontend service (Next.js): ✅ **200 OK** - Serving HTML
-- Backend service (FastAPI): ❌ **Not deployed or unreachable**
-
-**Impact:** All API calls (`/diagnose`, `/auth/verify`, `/auth/register`) fail because they hit the frontend server, not the API backend.
+# Graph Report - F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix  (2026-04-30)
 
 ## Corpus Check
-- 108 files · ~446,784 words
+- 113 files · ~1,304,992 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2042 nodes · 5402 edges · 88 communities detected
-- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 728 edges (avg confidence: 0.8)
+- 2113 nodes · 5516 edges · 109 communities detected
+- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 778 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
-- **Added Nodes:** Backend API Configuration Issue Analysis
-
-## Configuration Issues & Root Causes
-
-### Current Backend Setup
-| Component | URL | Status | Issue |
-|-----------|-----|--------|-------|
-| Frontend Service | `https://meediseen-backend.onrender.com` | 200 OK | Serving HTML, not API |
-| API Backend | `https://mediseen-api-backend.onrender.com` | 404 Not Found | Not deployed |
-
-### Backend API Endpoints (Defined in main.py)
-- `GET /` - Health check returns `{"status": "Mediseen API running"}`
-- `POST /auth/verify` - Verify Firebase token
-- `POST /auth/register` - User registration
-- `POST /auth/disable-account` - Account deactivation
-- `POST /diagnose` - **PRIMARY ENDPOINT** for ML diagnosis
-- `GET /diagnose/usage` - Usage statistics
-- `GET /report` - Report retrieval
-
-### Configuration Files Affected
-- `frontend/.env` → Line 4: `NEXT_PUBLIC_API_URL=https://meediseen-backend.onrender.com`
-- `frontend/app/config.ts` → Lines 38, 98-99: API URL resolution logic
-- `frontend/app/services/api.ts` → Lines 11, 24: diagnoseImage() uses wrong endpoint
-
-### CORS & Authentication Setup
-- Backend has custom CORSOriginMiddleware for Capacitor support
-- Allows: `capacitor://`, `file://`, `http://localhost`, `http://127.0.0.1`
-- Firebase token verification required (except dev mode with `Bearer dev` token)
-
-## Required Fixes
-1. Deploy FastAPI backend to separate Render service
-2. Update `frontend/.env` with correct backend URL
-3. Rebuild frontend to use new configuration
-4. Test `/diagnose` endpoint connectivity
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Community 0|Community 0]]
@@ -143,6 +98,27 @@
 - [[_COMMUNITY_Community 85|Community 85]]
 - [[_COMMUNITY_Community 86|Community 86]]
 - [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 89|Community 89]]
+- [[_COMMUNITY_Community 90|Community 90]]
+- [[_COMMUNITY_Community 91|Community 91]]
+- [[_COMMUNITY_Community 92|Community 92]]
+- [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
+- [[_COMMUNITY_Community 95|Community 95]]
+- [[_COMMUNITY_Community 96|Community 96]]
+- [[_COMMUNITY_Community 97|Community 97]]
+- [[_COMMUNITY_Community 98|Community 98]]
+- [[_COMMUNITY_Community 99|Community 99]]
+- [[_COMMUNITY_Community 100|Community 100]]
+- [[_COMMUNITY_Community 101|Community 101]]
+- [[_COMMUNITY_Community 102|Community 102]]
+- [[_COMMUNITY_Community 103|Community 103]]
+- [[_COMMUNITY_Community 104|Community 104]]
+- [[_COMMUNITY_Community 105|Community 105]]
+- [[_COMMUNITY_Community 106|Community 106]]
+- [[_COMMUNITY_Community 107|Community 107]]
+- [[_COMMUNITY_Community 108|Community 108]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `n` - 74 edges
@@ -153,106 +129,106 @@
 6. `sp()` - 45 edges
 7. `q()` - 39 edges
 8. `ew` - 34 edges
-9. `E()` - 33 edges
+9. `E()` - 34 edges
 10. `sh()` - 31 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `G()` --calls--> `Action`  [INFERRED]
   F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend\android\app\src\main\assets\public\_next\static\chunks\2ffc983c444794f6.js → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend-kotlin\src\main\kotlin\App.kt
-- `u()` --calls--> `E()`  [INFERRED]
-  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend\android\app\src\main\assets\public\_next\static\chunks\b92ebeea17b23c23.js → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend\android\app\src\main\assets\public\_next\static\chunks\turbopack-6bfaff936c061ca0.js
-- `register_user()` --calls--> `get_db()`  [INFERRED]
-  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\main.py → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\services\firebase_svc.py
-- `heatmap_node()` --calls--> `upload_image()`  [INFERRED]
-  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\model\nodes.py → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\services\firebase_svc.py
-- `to()` --calls--> `tr()`  [INFERRED]
-  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend\android\app\src\main\assets\public\_next\static\chunks\2b4e514a28cac768.js → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend\android\app\src\main\assets\public\_next\static\chunks\97dac3281830cc0a.js
+- `verify_bearer_token()` --calls--> `getEnv()`  [INFERRED]
+  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\main.py → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\frontend-kotlin\src\main\kotlin\Config.kt
+- `diagnose()` --calls--> `upload_image()`  [INFERRED]
+  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\main.py → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\services\storage_svc.py
+- `upload_image()` --calls--> `heatmap_node()`  [INFERRED]
+  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\services\firebase_svc.py → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\model\nodes.py
+- `upload_image()` --calls--> `report_node()`  [INFERRED]
+  F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\backend\services\firebase_svc.py → F:\wiet-hackverse-2-0-hackathon-project-submission-aiml-701-wa05_hackmatrix\model\nodes.py
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (150): _(), A(), C(), e$(), e3(), e5(), e7(), e8() (+142 more)
+Nodes (151): _(), A(), C(), e$(), e1(), e3(), e5(), e6() (+143 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.02
-Nodes (357): i$(), eP(), er(), a(), a0(), a2(), a3(), a4() (+349 more)
+Nodes (357): i$(), eP(), a(), a0(), a2(), a3(), a4(), a5() (+349 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.01
-Nodes (142): _(), a(), e$(), e0(), e1, e5(), ea(), ec() (+134 more)
+Nodes (141): _(), a(), e$(), e0(), e1, e5(), ea(), ec() (+133 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.05
-Nodes (86): nC(), $(), A(), B(), c(), D(), E(), ea() (+78 more)
+Cohesion: 0.04
+Nodes (104): $(), A(), B(), c(), D(), E(), ea(), ee() (+96 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.03
-Nodes (46): _(), a, b(), c(), d(), ee(), er(), f() (+38 more)
-
-### Community 5 - "Community 5"
-Cohesion: 0.04
-Nodes (20): ra(), n0, nf(), nj, ro, a(), c(), d (+12 more)
-
-### Community 6 - "Community 6"
-Cohesion: 0.03
-Nodes (62): BaseModel, getApiBaseUrl(), getApiOrigin(), getEnv(), resolveBackendAssetUrl(), URL, Exception, check_and_increment_rate_limit() (+54 more)
-
-### Community 7 - "Community 7"
-Cohesion: 0.06
+Cohesion: 0.05
 Nodes (1): n
 
-### Community 8 - "Community 8"
+### Community 5 - "Community 5"
+Cohesion: 0.03
+Nodes (43): a(), c(), d(), l(), m(), n(), r(), s() (+35 more)
+
+### Community 6 - "Community 6"
 Cohesion: 0.04
-Nodes (33): a(), b(), c(), d, f(), l(), m(), n() (+25 more)
+Nodes (20): to(), er(), n0, nf(), nj, a(), c(), d (+12 more)
+
+### Community 7 - "Community 7"
+Cohesion: 0.05
+Nodes (42): n1(), nC(), eg, e(), eb(), hb(), nb(), rb() (+34 more)
+
+### Community 8 - "Community 8"
+Cohesion: 0.06
+Nodes (9): eL(), id, ie, iN, iw, n5, n9, rc (+1 more)
 
 ### Community 9 - "Community 9"
-Cohesion: 0.06
-Nodes (10): e1(), e6(), eg, em(), eQ, eS(), k(), P() (+2 more)
+Cohesion: 0.05
+Nodes (6): B(), iq, z, w, takePhoto(), handleBrowse()
 
 ### Community 10 - "Community 10"
-Cohesion: 0.06
-Nodes (7): ic, R(), rg(), rk(), rL, rn(), rq
+Cohesion: 0.05
+Nodes (34): BaseModel, Exception, build_graph(), Build and compile the MediSeen LangGraph workflow., call_llm(), GeminiProvider, get_llm_service(), HuggingFaceProvider (+26 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.05
 Nodes (9): Action, ChatMessage, DiagnosisState, Metric, NavItem, Page, PrivacySection, SkinCondition (+1 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.11
-Nodes (11): b, c(), d(), f(), o(), p(), u(), v (+3 more)
+Cohesion: 0.08
+Nodes (4): R(), rg(), rk(), rq
 
 ### Community 13 - "Community 13"
-Cohesion: 0.13
-Nodes (7): AgentFAB(), getTranslations(), LanguageSelection(), LocaleProvider(), useLocale(), RegisterPage(), SplashScreen()
+Cohesion: 0.1
+Nodes (25): _(), a, b(), c(), d(), ee(), er(), f() (+17 more)
 
 ### Community 14 - "Community 14"
+Cohesion: 0.1
+Nodes (5): ic, rh, rL, rn(), ro
+
+### Community 15 - "Community 15"
 Cohesion: 0.14
 Nodes (2): I18n, LocaleInfo
 
-### Community 15 - "Community 15"
-Cohesion: 0.2
-Nodes (1): ApiClient
-
 ### Community 16 - "Community 16"
-Cohesion: 0.25
-Nodes (1): tq
+Cohesion: 0.15
+Nodes (6): AgentFAB(), getTranslations(), LanguageSelection(), LocaleProvider(), useLocale(), SplashScreen()
 
 ### Community 17 - "Community 17"
-Cohesion: 0.25
-Nodes (1): Metric
+Cohesion: 0.29
+Nodes (7): getApiBaseUrl(), getApiOrigin(), isNativeRuntime(), normalizeApiUrl(), resolveBackendAssetUrl(), URL, HeatmapViewer()
 
 ### Community 18 - "Community 18"
 Cohesion: 0.25
-Nodes (0): 
+Nodes (1): Metric
 
 ### Community 19 - "Community 19"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (0): 
 
 ### Community 20 - "Community 20"
-Cohesion: 0.33
-Nodes (0): 
+Cohesion: 0.4
+Nodes (2): s(), t()
 
 ### Community 21 - "Community 21"
 Cohesion: 0.53
@@ -267,44 +243,44 @@ Cohesion: 0.5
 Nodes (0): 
 
 ### Community 24 - "Community 24"
-Cohesion: 0.5
-Nodes (0): 
+Cohesion: 0.67
+Nodes (2): i(), t()
 
 ### Community 25 - "Community 25"
-Cohesion: 0.5
-Nodes (1): I18nState
+Cohesion: 0.67
+Nodes (2): a(), t()
 
 ### Community 26 - "Community 26"
 Cohesion: 0.5
-Nodes (1): SplashActivity
+Nodes (0): 
 
 ### Community 27 - "Community 27"
-Cohesion: 0.5
-Nodes (0): 
+Cohesion: 0.67
+Nodes (2): a(), t()
 
 ### Community 28 - "Community 28"
-Cohesion: 0.67
-Nodes (1): ExampleInstrumentedTest
+Cohesion: 0.5
+Nodes (1): I18nState
 
 ### Community 29 - "Community 29"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 0.5
+Nodes (1): SplashActivity
 
 ### Community 30 - "Community 30"
-Cohesion: 0.67
+Cohesion: 0.5
 Nodes (0): 
 
 ### Community 31 - "Community 31"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): ExampleInstrumentedTest
 
 ### Community 32 - "Community 32"
-Cohesion: 0.67
-Nodes (1): ExampleUnitTest
+Cohesion: 1.0
+Nodes (2): e(), r()
 
 ### Community 33 - "Community 33"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): ExampleUnitTest
 
 ### Community 34 - "Community 34"
 Cohesion: 0.67
@@ -522,18 +498,102 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
+### Community 88 - "Community 88"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 89 - "Community 89"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 90 - "Community 90"
+Cohesion: 1.0
+Nodes (1): Save user profile data to Firestore after Firebase signup.
+
+### Community 91 - "Community 91"
+Cohesion: 1.0
+Nodes (1): Get Firestore client instance.
+
+### Community 92 - "Community 92"
+Cohesion: 1.0
+Nodes (1): Uploads a file to Firebase Storage and returns a short-lived signed URL.
+
+### Community 93 - "Community 93"
+Cohesion: 1.0
+Nodes (1): Check if user has exceeded daily diagnosis limit.     Returns {"allowed": bool,
+
+### Community 94 - "Community 94"
+Cohesion: 1.0
+Nodes (1): SHA-256 hash of image bytes for cache key.
+
+### Community 95 - "Community 95"
+Cohesion: 1.0
+Nodes (1): Save a diagnosis result to cache keyed by image hash.
+
+### Community 96 - "Community 96"
+Cohesion: 1.0
+Nodes (1): Track how many times a cached result was served.
+
+### Community 97 - "Community 97"
+Cohesion: 1.0
+Nodes (1): Save every diagnosis to Firestore for data collection.     This builds your medi
+
+### Community 98 - "Community 98"
+Cohesion: 1.0
+Nodes (1): Base exception for LLM service
+
+### Community 99 - "Community 99"
+Cohesion: 1.0
+Nodes (1): Google Gemini API Provider
+
+### Community 100 - "Community 100"
+Cohesion: 1.0
+Nodes (1): OpenRouter API Provider - supports multiple models (Qwen, Llama, Mistral, etc.)
+
+### Community 101 - "Community 101"
+Cohesion: 1.0
+Nodes (1): HuggingFace Inference API Provider
+
+### Community 102 - "Community 102"
+Cohesion: 1.0
+Nodes (1): Call HuggingFace Inference API
+
+### Community 103 - "Community 103"
+Cohesion: 1.0
+Nodes (1): Unified LLM Service with automatic provider fallback.     Tries providers in or
+
+### Community 104 - "Community 104"
+Cohesion: 1.0
+Nodes (1): Initialize all available providers
+
+### Community 105 - "Community 105"
+Cohesion: 1.0
+Nodes (1): Call LLM with automatic fallback.                  Args:             prompt:
+
+### Community 106 - "Community 106"
+Cohesion: 1.0
+Nodes (1): Return list of available provider names
+
+### Community 107 - "Community 107"
+Cohesion: 1.0
+Nodes (1): Get or initialize the LLM service singleton
+
+### Community 108 - "Community 108"
+Cohesion: 1.0
+Nodes (1): Convenience function to call the LLM with fallback.          Args:         pr
+
 ## Knowledge Gaps
-- **40 isolated node(s):** `Save user profile data to Firestore after Firebase signup.`, `Initialize Firebase only once with storage support.`, `Get Firestore client instance.`, `Uploads a file to Firebase Storage and returns a short-lived signed URL.`, `Check if user has exceeded daily diagnosis limit.     Returns {"allowed": bool,` (+35 more)
+- **63 isolated node(s):** `Check if origin is allowed, with special handling for Capacitor`, `Save user profile data to Firestore after Firebase signup.`, `Uploads a file to Cloudinary and returns the secure URL.     This signature matc`, `Initialize Firebase only once with storage support.`, `Initialize Firebase only once with storage support.     Supports both a JSON fil` (+58 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 37`** (2 nodes): `u()`, `1c57092fdc12f076.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 38`** (2 nodes): `c()`, `1ebc0b09c4bb635d.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 39`** (2 nodes): `y()`, `2e1c275ce6b63862.js`
+- **Thin community `Community 39`** (2 nodes): `e()`, `7a7db6ab9ec84b5c.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 40`** (2 nodes): `e()`, `7a7db6ab9ec84b5c.js`
+- **Thin community `Community 40`** (2 nodes): `u()`, `a017b3593334359a.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 41`** (2 nodes): `u()`, `a017b3593334359a.js`
+- **Thin community `Community 41`** (2 nodes): `y()`, `c0e5e1158d0df476.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 42`** (2 nodes): `MainActivity.kt`, `MainActivity`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -575,70 +635,112 @@ Nodes (0):
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 61`** (1 nodes): `cordova_plugins.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (1 nodes): `f1b4d49aa9e249c5.js`
+- **Thin community `Community 62`** (1 nodes): `_buildManifest.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (1 nodes): `_buildManifest.js`
+- **Thin community `Community 63`** (1 nodes): `_ssgManifest.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (1 nodes): `_ssgManifest.js`
+- **Thin community `Community 64`** (1 nodes): `f1b4d49aa9e249c5.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 65`** (1 nodes): `Color.kt`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 66`** (1 nodes): `Type.kt`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (1 nodes): `GetStarted.tsx`
+- **Thin community `Community 67`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (1 nodes): `Illustrations.tsx`
+- **Thin community `Community 68`** (1 nodes): `GetStarted.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (1 nodes): `ModelSelector.tsx`
+- **Thin community `Community 69`** (1 nodes): `Illustrations.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (1 nodes): `PatientForm.tsx`
+- **Thin community `Community 70`** (1 nodes): `ModelSelector.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (1 nodes): `Sidebar.tsx`
+- **Thin community `Community 71`** (1 nodes): `PatientForm.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (1 nodes): `conditions.tsx`
+- **Thin community `Community 72`** (1 nodes): `Sidebar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (1 nodes): `diseases.ts`
+- **Thin community `Community 73`** (1 nodes): `conditions.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (1 nodes): `page.tsx`
+- **Thin community `Community 74`** (1 nodes): `diseases.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 75`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (1 nodes): `ar.ts`
+- **Thin community `Community 76`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (1 nodes): `en.ts`
+- **Thin community `Community 77`** (1 nodes): `ar.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (1 nodes): `es.ts`
+- **Thin community `Community 78`** (1 nodes): `en.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (1 nodes): `fr.ts`
+- **Thin community `Community 79`** (1 nodes): `es.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (1 nodes): `hi.ts`
+- **Thin community `Community 80`** (1 nodes): `fr.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (1 nodes): `page.tsx`
+- **Thin community `Community 81`** (1 nodes): `hi.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `data.ts`
+- **Thin community `Community 82`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (1 nodes): `page.tsx`
+- **Thin community `Community 83`** (1 nodes): `NotificationService.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (1 nodes): `lucide-react.d.ts`
+- **Thin community `Community 84`** (1 nodes): `data.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (1 nodes): `build.gradle.kts`
+- **Thin community `Community 85`** (1 nodes): `page.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (1 nodes): `settings.gradle.kts`
+- **Thin community `Community 86`** (1 nodes): `lucide-react.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (1 nodes): `__init__.py`
+- **Thin community `Community 87`** (1 nodes): `build.gradle.kts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 88`** (1 nodes): `settings.gradle.kts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 89`** (1 nodes): `__init__.py`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 90`** (1 nodes): `Save user profile data to Firestore after Firebase signup.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 91`** (1 nodes): `Get Firestore client instance.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 92`** (1 nodes): `Uploads a file to Firebase Storage and returns a short-lived signed URL.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 93`** (1 nodes): `Check if user has exceeded daily diagnosis limit.     Returns {"allowed": bool,`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 94`** (1 nodes): `SHA-256 hash of image bytes for cache key.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 95`** (1 nodes): `Save a diagnosis result to cache keyed by image hash.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 96`** (1 nodes): `Track how many times a cached result was served.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 97`** (1 nodes): `Save every diagnosis to Firestore for data collection.     This builds your medi`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 98`** (1 nodes): `Base exception for LLM service`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 99`** (1 nodes): `Google Gemini API Provider`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 100`** (1 nodes): `OpenRouter API Provider - supports multiple models (Qwen, Llama, Mistral, etc.)`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 101`** (1 nodes): `HuggingFace Inference API Provider`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 102`** (1 nodes): `Call HuggingFace Inference API`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 103`** (1 nodes): `Unified LLM Service with automatic provider fallback.     Tries providers in or`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 104`** (1 nodes): `Initialize all available providers`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 105`** (1 nodes): `Call LLM with automatic fallback.                  Args:             prompt:`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 106`** (1 nodes): `Return list of available provider names`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 107`** (1 nodes): `Get or initialize the LLM service singleton`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 108`** (1 nodes): `Convenience function to call the LLM with fallback.          Args:         pr`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `G()` connect `Community 3` to `Community 11`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
-- **Why does `Action` connect `Community 11` to `Community 3`?**
+- **Why does `n` connect `Community 4` to `Community 5`?**
+  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **Why does `E()` connect `Community 6` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 5`, `Community 7`, `Community 8`, `Community 14`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `n` connect `Community 7` to `Community 8`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
-- **What connects `Save user profile data to Firestore after Firebase signup.`, `Initialize Firebase only once with storage support.`, `Get Firestore client instance.` to the rest of the system?**
-  _40 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `signInWithGoogle()` connect `Community 5` to `Community 1`, `Community 12`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
+- **What connects `Check if origin is allowed, with special handling for Capacitor`, `Save user profile data to Firestore after Firebase signup.`, `Uploads a file to Cloudinary and returns the secure URL.     This signature matc` to the rest of the system?**
+  _63 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.01 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

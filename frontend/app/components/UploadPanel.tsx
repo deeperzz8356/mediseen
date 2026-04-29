@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 import { UploadCloud, Image as ImageIcon, Loader2, Sparkles, X, CheckCircle2, MessageSquare } from "lucide-react"
+import { Camera } from "@capacitor/camera"
 import { DiagnosisResult } from "./ResultPanel"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
@@ -203,6 +204,25 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     }
   }
 
+  const handleBrowse = async () => {
+    if (file) return;
+    
+    try {
+      const permissions = await Camera.checkPermissions();
+      if (permissions.photos !== 'granted') {
+        const request = await Camera.requestPermissions({ permissions: ['photos'] });
+        if (request.photos !== 'granted') {
+          alert("Media access is required to upload scans from your gallery.");
+          return;
+        }
+      }
+      fileInputRef.current?.click();
+    } catch (err) {
+      console.warn("Permission check failed, falling back to default behavior", err);
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
     <div className="w-full h-full bg-gradient-to-br from-white to-slate-50 rounded-2xl p-10 md:p-12 shadow-xl border border-black/5 flex flex-col space-y-10">
       {/* 1. SECTION HEADER */}
@@ -221,7 +241,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
             <ImageIcon className="w-3.5 h-3.5" /> Clinical Imaging Input (Scan)
           </label>
           <div
-            onClick={() => !file && fileInputRef.current?.click()}
+            onClick={handleBrowse}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}

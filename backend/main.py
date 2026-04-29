@@ -34,6 +34,7 @@ except ModuleNotFoundError:
         increment_cache_hit,
         save_diagnosis_record,
         get_db,
+        delete_user_data,
     )
     from services.storage_svc import upload_image
 from firebase_admin import auth, firestore
@@ -180,6 +181,20 @@ def verify_bearer_token(authorization: str = Header(default="")):
 def root():
     return {"status": "Mediseen API running"}
 
+# 4.1️⃣ Medical Context Endpoint (Single Source of Truth)
+@app.get("/medical/context")
+def get_medical_context(disease: str):
+    """
+    Returns unified data for Library and Diet sections.
+    """
+    try:
+        from backend.services.firebase_svc import fetch_medical_context
+    except ModuleNotFoundError:
+        from services.firebase_svc import fetch_medical_context
+        
+    context = fetch_medical_context(disease)
+    return context
+
 # 5️⃣ Verify Firebase Token
 @app.post("/auth/verify")
 async def verify_token(_decoded_token: dict = Depends(verify_bearer_token)):
@@ -251,18 +266,24 @@ async def register_user(
         raise HTTPException(status_code=500, detail="Failed to save user profile")
 
 
-@app.post("/auth/disable-account")
-async def disable_account(_decoded_token: dict = Depends(verify_bearer_token)):
+# 5.1️⃣ Delete Account and Data
+@app.post("/auth/delete-account")
+async def delete_account(_decoded_token: dict = Depends(verify_bearer_token)):
     uid = _decoded_token.get("uid")
     if not uid:
         raise HTTPException(status_code=400, detail="Missing user id in token")
 
     try:
-        auth.update_user(uid, disabled=True)
-        auth.revoke_refresh_tokens(uid)
-        return {"status": "disabled"}
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to disable account")
+        # 1. Delete all Firestore records (Profile, History, etc.)
+        delete_user_data(uid)
+
+        # 2. Delete the user from Firebase Authentication
+        auth.delete_user(uid)
+
+        return {"status": "deleted"}
+    except Exception as e:
+        print(f"Deletion error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account completely")
 
 # ---------------------------------------------------
 # 6️⃣ AI Diagnosis Endpoint

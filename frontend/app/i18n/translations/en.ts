@@ -25,7 +25,7 @@ const en = {
   },
   // Auth (landing page auth step)
   auth: {
-    welcomeBack: "Welcome Back",
+    welcomeBack: "Welcome",
     subtitle: "Continue with Google to access your clinical dashboard secure data.",
     signInGoogle: "Sign in with Google",
     or: "OR",
@@ -77,7 +77,7 @@ const en = {
   },
   // Login page
   login: {
-    welcomeBack: "Welcome Back",
+    welcomeBack: "Welcome",
     subtitle: "Login to access the AI diagnostic platform",
     emailLabel: "Email Address",
     emailPlaceholder: "doctor@hospital.com",

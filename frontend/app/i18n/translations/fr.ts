@@ -21,7 +21,7 @@ const fr: Translations = {
     finish: "Terminer la configuration",
   },
   auth: {
-    welcomeBack: "Bon retour",
+    welcomeBack: "Bienvenue",
     subtitle: "Continuez avec Google pour accéder à votre tableau de bord clinique sécurisé.",
     signInGoogle: "Se connecter avec Google",
     or: "OU",
@@ -69,7 +69,7 @@ const fr: Translations = {
     },
   },
   login: {
-    welcomeBack: "Bon retour",
+    welcomeBack: "Bienvenue",
     subtitle: "Connectez-vous pour accéder à la plateforme de diagnostic IA",
     emailLabel: "Adresse e-mail",
     emailPlaceholder: "medecin@hopital.com",

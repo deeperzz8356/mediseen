@@ -9,11 +9,9 @@ from pydantic import BaseModel, Field, ValidationError
 from .state import AgentState
 
 try:
-    from backend.services.firebase_svc import get_db
-    from backend.services.storage_svc import upload_image
-    from backend.services.llm_svc import call_llm
+    from backend.services.firebase_svc import get_db, upload_image, call_llm, fetch_medical_context
 except ModuleNotFoundError:
-    from services.firebase_svc import get_db
+    from services.firebase_svc import get_db, fetch_medical_context
     from services.storage_svc import upload_image
     from services.llm_svc import call_llm
 
@@ -55,8 +53,8 @@ def analysis_node(state: AgentState):
         print(f"ERROR: Vision Error: {e}")
         data = GeminiDiagnosisResponse(
             diagnosis="Analysis Error",
-            confidence=0.0,
-            reasoning="Processing failed.",
+            confidence: 0.0,
+            reasoning: "Processing failed.",
         )
         
     return {
@@ -95,28 +93,23 @@ def heatmap_node(state: AgentState):
 
 def reverse_node(state: AgentState):
     print("--- [STEP 3: DB Search] ---")
-    db = get_db()
     prediction = state.get('prediction', 'Normal')
-    db_context = "Standard diagnostic protocol recommended."
+    
+    # Use the unified service function for single source of truth
+    context = fetch_medical_context(prediction)
+    
+    # Format a string version for the LLM justification node to keep backward compatibility with existing prompts
+    db_context_str = (
+        f"Disease: {context['disease']}\n"
+        f"Symptoms: {', '.join(context['symptoms'])}\n"
+        f"Precautions: {', '.join(context['precautions'])}\n"
+        f"Diet Plan: {context['diet']['plan']}"
+    )
 
-    try:
-        query = db.collection("medical_knowledge").where("disease_name", "==", prediction).limit(1)
-        results = query.get()
-
-        if results:
-            doc = results[0].to_dict()
-            db_context = f"Protocol: {doc.get('description')}\nIndicators: {doc.get('visual_indicators')}"
-        else:
-            label = 0 if "Normal" in prediction else 1
-            query = db.collection("medical_knowledge").where("label", "==", label).limit(1)
-            results = query.get()
-            if results:
-                doc = results[0].to_dict()
-                db_context = f"Category Protocol: {doc.get('description')}"
-    except Exception as e:
-        print(f"WARNING: DB Error: {e}")
-
-    return {"db_context": db_context}
+    return {
+        "db_context": db_context_str,
+        "medical_context": context # Store the full dict for potential use in reports
+    }
 
 def explanation_node(state: AgentState):
     print("--- [STEP 4: Generating Final Medical Justification] ---")

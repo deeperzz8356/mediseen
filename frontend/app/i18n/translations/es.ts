@@ -21,7 +21,7 @@ const es: Translations = {
     finish: "Finalizar configuración",
   },
   auth: {
-    welcomeBack: "Bienvenido de nuevo",
+    welcomeBack: "Bienvenido",
     subtitle: "Continúa con Google para acceder a tu panel clínico seguro.",
     signInGoogle: "Iniciar sesión con Google",
     or: "O",
@@ -69,7 +69,7 @@ const es: Translations = {
     },
   },
   login: {
-    welcomeBack: "Bienvenido de nuevo",
+    welcomeBack: "Bienvenido",
     subtitle: "Inicia sesión para acceder a la plataforma de diagnóstico IA",
     emailLabel: "Correo electrónico",
     emailPlaceholder: "doctor@hospital.com",

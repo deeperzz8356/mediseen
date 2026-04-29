@@ -9,7 +9,7 @@ load_dotenv()
 
 # Google Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash-exp")
+GEMINI_TEXT_MODEL = os.getenv("GEMINI_TEXT_MODEL", "gemini-2.0-flash-lite-preview-02-05")
 
 # OpenRouter (supports multiple models)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")

@@ -43,7 +43,13 @@ export default function LoginPage() {
       })
 
       if (!res.ok) throw new Error("Verification failed")
-      router.push("/home")
+      const data = await res.json()
+      
+      if (data.has_profile) {
+        router.push("/home")
+      } else {
+        router.push("/register")
+      }
     } catch {
       setError(t.login.errors.googleFailed)
     } finally {
@@ -82,8 +88,13 @@ export default function LoginPage() {
       clearTimeout(verifyTimeoutId)
 
       if (!verifyResponse.ok) throw new Error("Failed to verify authentication token")
+      const data = await verifyResponse.json()
 
-      router.push("/home")
+      if (data.has_profile) {
+        router.push("/home")
+      } else {
+        router.push("/register")
+      }
     } catch (err: unknown) {
       const code = (err as FirebaseError).code
 

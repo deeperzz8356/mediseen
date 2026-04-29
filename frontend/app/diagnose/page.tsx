@@ -26,6 +26,16 @@ export default function DiagnosePage() {
 
   const takePhoto = async () => {
     try {
+      const permissions = await Camera.checkPermissions();
+      
+      if (permissions.camera !== 'granted') {
+        const request = await Camera.requestPermissions({ permissions: ['camera'] });
+        if (request.camera !== 'granted') {
+          alert("Camera permission is required to take photos of your reports.");
+          return;
+        }
+      }
+
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
@@ -35,11 +45,13 @@ export default function DiagnosePage() {
 
       if (image.base64String) {
         setUploadedImage(`data:image/jpeg;base64,${image.base64String}`)
-        // We'll let the UploadPanel handle the actual upload once the image is set
-        // But for direct camera, we might need a way to trigger analysis
       }
     } catch (error) {
       console.error("Camera error:", error)
+      // Only show error if it's not a user cancellation
+      if (error instanceof Error && !error.message.includes("User cancelled")) {
+        alert("Could not access camera. Please check your settings.");
+      }
     }
   }
 

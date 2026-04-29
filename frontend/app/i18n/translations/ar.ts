@@ -23,7 +23,7 @@ const ar: Translations = {
     finish: "إنهاء الإعداد",
   },
   auth: {
-    welcomeBack: "مرحبًا بعودتك",
+    welcomeBack: "مرحبًا",
     subtitle: "تابع مع Google للوصول إلى لوحة التحكم السريرية الآمنة.",
     signInGoogle: "تسجيل الدخول بـ Google",
     or: "أو",
@@ -71,7 +71,7 @@ const ar: Translations = {
     },
   },
   login: {
-    welcomeBack: "مرحبًا بعودتك",
+    welcomeBack: "مرحبًا",
     subtitle: "سجّل الدخول للوصول إلى منصة التشخيص بالذكاء الاصطناعي",
     emailLabel: "البريد الإلكتروني",
     emailPlaceholder: "doctor@hospital.com",

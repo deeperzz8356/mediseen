@@ -37,7 +37,7 @@ export default function ProfilePage() {
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
-  const [disabling, setDisabling] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [status, setStatus] = useState("")
   const [error, setError] = useState("")
@@ -155,7 +155,7 @@ export default function ProfilePage() {
     }
   }
 
-  const handleDisableAccount = async () => {
+  const handleDeleteAccount = async () => {
     setError("")
     setStatus("")
 
@@ -172,27 +172,27 @@ export default function ProfilePage() {
     }
 
     const confirmed = window.confirm(
-      "Disable this account now? You will be signed out and will not be able to sign in again until support re-enables your account."
+      "PERMANENTLY DELETE your account and all saved data? This cannot be undone. You will be able to sign up again with the same email if you wish."
     )
 
     if (!confirmed) return
 
     try {
-      setDisabling(true)
+      setDeleting(true)
       const token = await currentUser.getIdToken()
 
-      const response = await fetch(`${API_BASE_URL}/auth/disable-account`, {
+      const response = await fetch(`${API_BASE_URL}/auth/delete-account`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       })
 
       if (!response.ok) {
-        let detail = "Unable to disable account right now."
+        let detail = "Unable to delete account right now."
         try {
           const body = await response.json()
           detail = body?.detail || detail
         } catch {
-          // Ignore parse errors and keep default detail
+          // Ignore
         }
         throw new Error(detail)
       }
@@ -200,9 +200,9 @@ export default function ProfilePage() {
       await signOut(auth)
       router.replace("/login")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to disable account right now.")
+      setError(err instanceof Error ? err.message : "Unable to delete account right now.")
     } finally {
-      setDisabling(false)
+      setDeleting(false)
     }
   }
 
@@ -219,7 +219,7 @@ export default function ProfilePage() {
       >
         <h1 className="text-3xl md:text-4xl font-black text-slate-800">Profile Settings</h1>
         <p className="text-slate-500 mt-3 font-medium">
-          Update your account details, log out, or disable your account.
+          Update your account details, log out, or delete your account.
         </p>
       </motion.section>
 
@@ -282,14 +282,14 @@ export default function ProfilePage() {
       >
         <h2 className="text-2xl font-black text-slate-800">Account Actions</h2>
         <p className="text-slate-500 mt-2 font-medium">
-          Log out from this device or disable your account.
+          Log out from this device or permanently delete your account.
         </p>
 
         <div className="mt-6 flex flex-col sm:flex-row gap-4">
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleLogout}
-            disabled={loggingOut || disabling}
+            disabled={loggingOut || deleting}
             className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-700 text-white font-bold shadow-md hover:bg-slate-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loggingOut ? "Logging Out..." : "Log Out"}
@@ -298,11 +298,11 @@ export default function ProfilePage() {
 
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={handleDisableAccount}
-            disabled={disabling || loggingOut}
+            onClick={handleDeleteAccount}
+            disabled={deleting || loggingOut}
             className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-red-600 text-white font-bold shadow-md hover:bg-red-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {disabling ? "Disabling..." : "Disable Account"}
+            {deleting ? "Deleting..." : "Delete Account"}
             <Ban className="w-4 h-4" />
           </motion.button>
         </div>
