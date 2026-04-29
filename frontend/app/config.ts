@@ -1,7 +1,7 @@
 // On the Android Emulator, 10.0.2.2 is the address of the host machine (loopback)
 const isDev = process.env.NODE_ENV === "development"
 const HUGGING_FACE_SPACE_ORIGIN = "https://meediseen-meediseen.hf.space"
-const DEFAULT_RENDER_API_URL = "https://YOUR_RENDER_BACKEND_URL.onrender.com"
+const DEFAULT_RENDER_API_URL = "https://mediseen.onrender.com"
 
 function normalizeApiUrl(url: string) {
   const trimmedUrl = url.trim()
