@@ -96,27 +96,40 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
 
   // Sync with external preview (e.g. from native camera)
   useEffect(() => {
-    if (externalPreview) {
+    if (externalPreview && externalPreview !== preview) {
       setPreview(externalPreview)
-      // Convert base64 to File object if possible
-      fetch(externalPreview)
-        .then(res => res.blob())
-        .then(blob => {
-          const f = new File([blob], "camera_capture.jpg", { type: "image/jpeg" })
-          setFile(f)
-        })
+      
+      // Convert base64 to File object more robustly
+      if (externalPreview.startsWith('data:')) {
+        try {
+          const parts = externalPreview.split(',');
+          const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+          const bstr = atob(parts[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          const f = new File([u8arr], "upload.jpg", { type: mime });
+          setFile(f);
+        } catch (e) {
+          console.error("Failed to convert base64 to file:", e);
+        }
+      }
     }
-  }, [externalPreview])
+  }, [externalPreview, preview])
 
   const handleFile = (selectedFile: File) => {
-    if (selectedFile && selectedFile.type.startsWith("image/")) {
+    if (selectedFile) {
       setFile(selectedFile)
       setResult(null)
       const reader = new FileReader()
       reader.onloadend = () => {
         const resultUrl = reader.result as string
-        setPreview(resultUrl)
-        if (onImageUpload) onImageUpload(resultUrl)
+        if (resultUrl !== preview) {
+          setPreview(resultUrl)
+          if (onImageUpload) onImageUpload(resultUrl)
+        }
       }
       reader.readAsDataURL(selectedFile)
     }
@@ -149,7 +162,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          "X-Client-Platform": "web",
+          "X-Client-Platform": getRequestDebugContext().platform,
         },
         body: formData,
         signal: controller.signal
@@ -179,11 +192,16 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
       }
 
       const apiResult = await response.json()
+      
+      // Ensure we always have a numeric confidence
+      const rawConfidence = apiResult.confidence || apiResult.confidence_score || 0
+      const confidence = typeof rawConfidence === 'number' ? rawConfidence : parseFloat(rawConfidence) || 0
+
       const res: DiagnosisResult = {
-        diseaseId: apiResult.session_id,
-        prediction: apiResult.diagnosis || apiResult.prediction,
-        confidence: apiResult.confidence || apiResult.confidence_score,
-        explanation: apiResult.explanation || apiResult.patient_friendly_explanation,
+        diseaseId: apiResult.session_id || `session_${Date.now()}`,
+        prediction: apiResult.diagnosis || apiResult.prediction || "Analysis Complete",
+        confidence: confidence,
+        explanation: apiResult.explanation || apiResult.patient_friendly_explanation || "No detailed explanation available.",
         severity: apiResult.severity || "medium",
         heatmapUrl: apiResult.heatmap_url,
         reportUrl: apiResult.report_url,
@@ -208,21 +226,34 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
   }
 
   const handleBrowse = async () => {
-    if (file) return;
-    
     try {
-      const permissions = await Camera.checkPermissions();
-      if (permissions.photos !== 'granted') {
-        const request = await Camera.requestPermissions({ permissions: ['photos'] });
-        if (request.photos !== 'granted') {
-          alert("Media access is required to upload scans from your gallery.");
-          return;
+      const { CameraSource, CameraResultType } = await import("@capacitor/camera")
+      
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Photos // Force use of native gallery picker
+      })
+
+      if (image.base64String) {
+        const base64Url = `data:image/jpeg;base64,${image.base64String}`
+        setPreview(base64Url)
+        if (onImageUpload) onImageUpload(base64Url)
+        
+        // Convert to File for the upload
+        const bstr = atob(image.base64String)
+        let n = bstr.length
+        const u8arr = new Uint8Array(n)
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n)
         }
+        const f = new File([u8arr], "gallery_upload.jpg", { type: "image/jpeg" })
+        setFile(f)
       }
-      fileInputRef.current?.click();
     } catch (err) {
-      console.warn("Permission check failed, falling back to default behavior", err);
-      fileInputRef.current?.click();
+      console.warn("Native gallery picker failed, falling back to web input", err)
+      fileInputRef.current?.click()
     }
   };
 
@@ -275,8 +306,8 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
                 <p className="text-[10px] font-bold text-black/40 mt-3 uppercase tracking-widest">DICOM Compatible (PNG, JPG, HEIC)</p>
               </div>
             )}
-            <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
           </div>
+          <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
         </div>
 
         {/* 3. REFINED TEXTAREA */}

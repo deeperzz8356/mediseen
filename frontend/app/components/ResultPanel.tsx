@@ -56,7 +56,8 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
   }
 
   const { badge, icon } = getSeverityStyles(result.severity)
-  const confidencePercent = Math.round(result.confidence * 100)
+  const confidenceValue = typeof result.confidence === 'number' ? result.confidence : 0
+  const confidencePercent = Math.round(confidenceValue * 100)
   const fullReportUrl = resolveBackendAssetUrl(result.reportUrl)
 
   return (
@@ -92,7 +93,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
               strokeWidth="12"
               strokeDasharray="276%"
               initial={{ strokeDashoffset: "276%" }}
-              animate={{ strokeDashoffset: `${276 * (1 - result.confidence)}%` }}
+              animate={{ strokeDashoffset: `${276 * (1 - confidenceValue)}%` }}
               transition={{ duration: 2, ease: "easeOut" }}
               strokeLinecap="round"
             />

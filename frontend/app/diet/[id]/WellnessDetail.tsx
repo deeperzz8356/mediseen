@@ -388,8 +388,8 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
               <div className="p-8 border-2 border-dashed border-black/10 rounded-2xl bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-100 transition-colors group">
                  <UploadCloud className="w-10 h-10 text-black/20 group-hover:text-pastel-violet transition-colors" />
                  <p className="text-xs font-black text-black uppercase tracking-widest text-center leading-relaxed">Click to upload Blood, Lab, or Diagnostic reports</p>
-                 <input type="file" multiple className="hidden" />
               </div>
+              <input type="file" multiple className="hidden" />
             </div>
 
             <div className="space-y-6">

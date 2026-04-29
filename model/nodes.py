@@ -55,17 +55,45 @@ def analysis_node(state: AgentState):
 
     try:
         response_text = call_llm(prompt, image=img, preferred_provider="openrouter")
-        clean_text = response_text.strip().replace('```json', '').replace('```', '')
+        
+        # More robust JSON extraction
+        import re
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if json_match:
+            clean_text = json_match.group(0)
+        else:
+            clean_text = response_text.strip().replace('```json', '').replace('```', '')
+            
         data = GeminiDiagnosisResponse.model_validate_json(clean_text)
     except Exception as e:
-        print(f"ERROR: Deep Analysis Error: {e}")
-        data = GeminiDiagnosisResponse(
-            disease_identification="Analysis Error",
-            confidence=0.0,
-            root_cause_reason="Processing failed.",
-            patient_friendly_explanation="We couldn't read your report clearly. Please try a clearer photo.",
-            steps_to_understand_and_manage=["Re-upload a high-quality image", "Ensure lighting is even", "Avoid blurry text"]
-        )
+        print(f"WARNING: Vision analysis failed for {state['session_id']}, attempting symptom-only fallback. Error: {e}")
+        
+        # Fallback: Try a text-only call based on symptoms if vision fails
+        try:
+            fallback_prompt = (
+                "Role: Medical Expert. Context: A clinical scan was provided but was unreadable. "
+                f"Patient symptoms: {state.get('user_symptoms', 'None')}. "
+                "Task: Provide a preliminary assessment based ONLY on the symptoms. "
+                "Return ONLY valid JSON with keys: "
+                "disease_identification, confidence (float 0.1-0.5), likely_symptoms (list), "
+                "root_cause_reason, patient_friendly_explanation, steps_to_understand_and_manage (list)."
+            )
+            fallback_response = call_llm(fallback_prompt, preferred_provider="gemini")
+            
+            import re
+            json_match = re.search(r'\{.*\}', fallback_response, re.DOTALL)
+            clean_text = json_match.group(0) if json_match else fallback_response
+            data = GeminiDiagnosisResponse.model_validate_json(clean_text)
+        except Exception as fallback_e:
+            print(f"ERROR: Fallback analysis also failed: {fallback_e}")
+            data = GeminiDiagnosisResponse(
+                disease_identification="Analysis Error",
+                confidence=0.0,
+                likely_symptoms=[],
+                root_cause_reason=f"Processing failed: {str(e)[:100]}",
+                patient_friendly_explanation="We couldn't read your report or assess your symptoms clearly. Please provide more detail or a clearer photo.",
+                steps_to_understand_and_manage=["Re-upload a high-quality image", "Describe symptoms in more detail", "Consult a doctor for severe symptoms like heart pain"]
+            )
         
     return {
         "prediction": data.disease_identification,
