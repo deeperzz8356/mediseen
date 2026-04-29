@@ -58,6 +58,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Serves files at: http://localhost:8000/uploads/
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+# Log Configuration for Debugging
+print(f"DEBUG: APP_ENV={os.getenv('APP_ENV')}")
+print(f"DEBUG: ALLOWED_ORIGINS={os.getenv('ALLOWED_ORIGINS')}")
+print(f"DEBUG: DISABLE_RATE_LIMIT={os.getenv('DISABLE_RATE_LIMIT')}")
+print(f"DEBUG: DAILY_DIAGNOSIS_LIMIT={os.getenv('DAILY_DIAGNOSIS_LIMIT')}")
 # ---------------------------------------------------
 # Build LangGraph once
 # ---------------------------------------------------
