@@ -49,7 +49,7 @@ export default function Home() {
       desc: t.home.quickActions.learnExploreDesc,
       icon: <MessageCircle />,
       color: "bg-pastel-violet",
-      link: "/disease-info"
+      link: "/library"
     },
   ]
 

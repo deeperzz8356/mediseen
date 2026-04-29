@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { onAuthStateChanged, User } from "firebase/auth"
 import { motion, AnimatePresence } from "framer-motion"
-import { Activity, BookOpen, Heart, Home, Settings, Languages, Brain } from "lucide-react"
+import { Activity, BookOpen, Heart, Home, Settings, Languages, Brain, ClipboardList } from "lucide-react"
 
 import { auth } from "../../lib/firebase"
 import { useLocale } from "../i18n/LocaleContext"
@@ -34,10 +34,10 @@ export default function Navbar() {
 	}, [])
 
 	const navItems: NavItem[] = [
-		{ name: "Diet", shortName: "Diet", href: "/diet", icon: Heart },
+		{ name: t.navbar.home, shortName: "Home", href: "/home", icon: Home },
+		{ name: t.navbar.diet, shortName: "Diet", href: "/diet", icon: Heart },
 		{ name: t.navbar.checkup, shortName: "Scan", href: "/diagnose", icon: Activity },
 		{ name: t.navbar.library, shortName: "Library", href: "/library", icon: BookOpen },
-		{ name: "Reports", shortName: "Reports", href: "/reports", icon: Activity }, // Will use Activity or Clipboard
 		{ name: "Profile", shortName: "Profile", href: "/profile", icon: Settings },
 	]
 

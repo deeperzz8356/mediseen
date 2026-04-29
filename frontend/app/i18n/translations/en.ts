@@ -34,9 +34,10 @@ const en = {
   // Navbar
   navbar: {
     home: "Home",
-    checkup: "Checkup",
-    health: "Health",
+    checkup: "Scan",
+    diet: "Diet",
     library: "Library",
+    reports: "Reports",
     notSignedIn: "Not signed in",
   },
   // Agent FAB
@@ -184,11 +185,11 @@ const en = {
       startDiagnosis: "Start Diagnosis",
     },
   },
-  // Wellness page
-  wellness: {
+  // Diet page
+  diet: {
     title: "Your Health",
-    titleHighlight: "& Wellness",
-    subtitle: "Simple tips for food, lifestyle, and habits to help you feel your best.",
+    titleHighlight: "& Nutrition",
+    subtitle: "Actionable food, lifestyle, and habit plans to help you feel your best.",
   },
   // Communication page
   communication: {

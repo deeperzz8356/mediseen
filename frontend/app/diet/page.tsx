@@ -77,12 +77,22 @@ function DiseaseDietSection() {
   const [data, setData] = useState<MedicalContext | null>(null)
   const [error, setError] = useState("")
 
-  const fetchDiet = async () => {
-    if (!disease.trim()) return
+  const commonDiseases = [
+    "Pneumonia", "Eczema", "Psoriasis", "Melanoma", "Ringworm", "Acne", "Rosacea", "Vitiligo"
+  ]
+
+  const fetchDiet = async (diseaseName?: string) => {
+    const searchTarget = diseaseName || disease
+    if (!searchTarget.trim()) return
+    
+    if (diseaseName) setDisease(searchTarget)
+    
     setLoading(true)
     setError("")
+    setData(null)
+
     try {
-      const res = await fetch(`${API_BASE_URL}/medical/context?disease=${encodeURIComponent(disease)}`)
+      const res = await fetch(`${API_BASE_URL}/medical/context?disease=${encodeURIComponent(searchTarget)}`)
       if (!res.ok) throw new Error("Failed to fetch medical context")
       const json = await res.json()
       setData(json)
@@ -110,12 +120,27 @@ function DiseaseDietSection() {
               />
             </div>
             <button
-              onClick={fetchDiet}
+              onClick={() => fetchDiet()}
               disabled={loading}
               className="bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Get Diet"}
             </button>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Popular Conditions</p>
+          <div className="flex flex-wrap gap-2">
+            {commonDiseases.map((d) => (
+              <button
+                key={d}
+                onClick={() => fetchDiet(d)}
+                className="px-3 py-1.5 rounded-lg bg-white border border-slate-100 text-xs font-bold text-slate-600 hover:border-pastel-green hover:text-pastel-green transition-all shadow-sm"
+              >
+                {d}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -178,67 +203,238 @@ function DiseaseDietSection() {
 
 function PersonalDietSection() {
   const [weight, setWeight] = useState("")
+  const [height, setHeight] = useState("")
+  const [age, setAge] = useState("")
+  const [gender, setGender] = useState<"male" | "female">("male")
+  const [activity, setActivity] = useState<number>(1.2)
   const [goal, setGoal] = useState<"cutting" | "bulking" | "maintenance">("maintenance")
+  const [allergies, setAllergies] = useState<string[]>([])
+  const [allergyInput, setAllergyInput] = useState("")
+
+  const activityOptions = [
+    { label: "Sedentary", value: 1.2, desc: "Little/no exercise" },
+    { label: "Light", value: 1.375, desc: "1-3 days/week" },
+    { label: "Moderate", value: 1.55, desc: "3-5 days/week" },
+    { label: "Active", value: 1.725, desc: "6-7 days/week" },
+  ]
+
+  const calculateResults = () => {
+    const w = Number(weight)
+    const h = Number(height)
+    const a = Number(age)
+    if (!w || !h || !a) return null
+
+    // Mifflin-St Jeor Equation
+    let bmr = (10 * w) + (6.25 * h) - (5 * a)
+    bmr = gender === "male" ? bmr + 5 : bmr - 161
+
+    const tdee = bmr * activity
+    
+    let targetCalories = tdee
+    if (goal === "cutting") targetCalories -= 500
+    if (goal === "bulking") targetCalories += 400
+
+    const protein = w * 1.8 // g/kg
+    const fats = (targetCalories * 0.25) / 9
+    const carbs = (targetCalories - (protein * 4) - (fats * 9)) / 4
+
+    return {
+      calories: Math.round(targetCalories),
+      protein: Math.round(protein),
+      carbs: Math.round(carbs),
+      fats: Math.round(fats)
+    }
+  }
+
+  const results = calculateResults()
+
+  const addAllergy = () => {
+    if (allergyInput && !allergies.includes(allergyInput)) {
+      setAllergies([...allergies, allergyInput])
+      setAllergyInput("")
+    }
+  }
+
+  const removeAllergy = (tag: string) => {
+    setAllergies(allergies.filter(a => a !== tag))
+  }
 
   return (
-    <div className="flo-card p-8 md:p-10 rounded-[2rem] space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <label className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <Scale className="w-4 h-4" /> Current Weight (kg)
-          </label>
-          <input
-            type="number"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="e.g. 75"
-            className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-xl font-black text-slate-800 outline-none focus:border-pastel-blue transition-all"
-          />
+    <div className="space-y-8 pb-10">
+      <div className="flo-card p-8 md:p-10 rounded-[2.5rem] space-y-10 border border-slate-100 bg-white shadow-xl shadow-slate-200/50">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Gender & Age */}
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gender</label>
+              <div className="flex p-1 bg-slate-50 rounded-xl">
+                <button
+                  onClick={() => setGender("male")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-black transition-all ${gender === "male" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400"}`}
+                >
+                  Male
+                </button>
+                <button
+                  onClick={() => setGender("female")}
+                  className={`flex-1 py-2 rounded-lg text-sm font-black transition-all ${gender === "female" ? "bg-white text-slate-900 shadow-sm" : "text-slate-400"}`}
+                >
+                  Female
+                </button>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Age (Years)</label>
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="e.g. 25"
+                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-3 text-lg font-bold outline-none focus:bg-white focus:border-pastel-blue transition-all"
+              />
+            </div>
+          </div>
+
+          {/* Weight & Height */}
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weight (kg)</label>
+              <input
+                type="number"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="e.g. 75"
+                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-3 text-lg font-bold outline-none focus:bg-white focus:border-pastel-blue transition-all"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Height (cm)</label>
+              <input
+                type="number"
+                value={height}
+                onChange={(e) => setHeight(e.target.value)}
+                placeholder="e.g. 175"
+                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-5 py-3 text-lg font-bold outline-none focus:bg-white focus:border-pastel-blue transition-all"
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <label className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-            <Target className="w-4 h-4" /> Fitness Goal
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {(["cutting", "maintenance", "bulking"] as const).map((g) => (
-              <button
-                key={g}
-                onClick={() => setGoal(g)}
-                className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-2 transition-all ${
-                  goal === g ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/20" : "bg-white border-slate-100 text-slate-400 hover:border-slate-200"
-                }`}
-              >
-                {g}
-              </button>
-            ))}
+        <div className="space-y-6 pt-4 border-t border-slate-50">
+          {/* Activity Level */}
+          <div className="space-y-4">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Activity Level</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {activityOptions.map((opt) => (
+                <button
+                  key={opt.label}
+                  onClick={() => setActivity(opt.value)}
+                  className={`p-4 rounded-2xl border-2 transition-all text-left space-y-1 ${activity === opt.value ? "border-slate-900 bg-slate-900 text-white shadow-lg" : "border-slate-100 bg-white text-slate-600 hover:border-slate-200"}`}
+                >
+                  <p className="text-xs font-black uppercase tracking-tight">{opt.label}</p>
+                  <p className={`text-[10px] font-bold ${activity === opt.value ? "text-slate-400" : "text-slate-400"}`}>{opt.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Goal & Allergies */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fitness Goal</label>
+              <div className="flex gap-2">
+                {(["cutting", "maintenance", "bulking"] as const).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGoal(g)}
+                    className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${goal === g ? "bg-pastel-pink/10 border-pastel-pink text-pastel-pink" : "bg-white border-slate-100 text-slate-400"}`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Allergies / Restrictions</label>
+              <div className="flex gap-2">
+                <input
+                  value={allergyInput}
+                  onChange={(e) => setAllergyInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addAllergy()}
+                  placeholder="e.g. Peanuts, Dairy..."
+                  className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-sm font-bold outline-none"
+                />
+                <button onClick={addAllergy} className="px-4 py-2 bg-slate-100 rounded-xl font-black text-xs uppercase hover:bg-slate-200">Add</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {allergies.map(a => (
+                  <span key={a} className="flex items-center gap-2 px-3 py-1 bg-rose-50 text-rose-500 rounded-lg text-xs font-bold border border-rose-100">
+                    {a} <button onClick={() => removeAllergy(a)}><Ban className="w-3 h-3" /></button>
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="p-8 bg-blue-50/50 rounded-3xl border border-blue-100/50 space-y-4">
-        <h4 className="text-blue-600 font-black uppercase tracking-widest text-xs">Estimated Daily Intake</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase">Calories</p>
-            <p className="text-2xl font-black text-slate-800">
-              {weight ? (goal === "cutting" ? Math.round(Number(weight) * 25) : goal === "bulking" ? Math.round(Number(weight) * 35) : Math.round(Number(weight) * 30)) : "0"}
-            </p>
+      {results && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-8 md:p-12 bg-gradient-to-br from-slate-900 to-indigo-950 rounded-[3rem] text-white shadow-2xl shadow-indigo-900/30 space-y-10"
+        >
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-3xl font-black">Your Personalized Plan</h3>
+              <p className="text-indigo-200 font-bold">Scientifically calculated daily targets.</p>
+            </div>
+            <Target className="w-12 h-12 text-pastel-pink opacity-50" />
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase">Protein</p>
-            <p className="text-2xl font-black text-slate-800">{weight ? Math.round(Number(weight) * 1.8) : "0"}g</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 space-y-2">
+              <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Daily Calories</p>
+              <p className="text-4xl font-black">{results.calories} <span className="text-sm text-indigo-300">kcal</span></p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 space-y-2">
+              <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Protein</p>
+              <p className="text-4xl font-black">{results.protein} <span className="text-sm text-indigo-300">g</span></p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 space-y-2">
+              <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Carbohydrates</p>
+              <p className="text-4xl font-black">{results.carbs} <span className="text-sm text-indigo-300">g</span></p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 space-y-2">
+              <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">Fats</p>
+              <p className="text-4xl font-black">{results.fats} <span className="text-sm text-indigo-300">g</span></p>
+            </div>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase">Carbs</p>
-            <p className="text-2xl font-black text-slate-800">{weight ? Math.round(Number(weight) * 3) : "0"}g</p>
+
+          {allergies.length > 0 && (
+            <div className="p-6 bg-rose-500/10 border border-rose-500/20 rounded-3xl flex items-center gap-4">
+              <AlertCircle className="w-6 h-6 text-rose-400 shrink-0" />
+              <p className="text-sm font-bold text-rose-200">
+                Warning: Your plan excludes {allergies.join(", ")}. Ensure you find safe high-protein alternatives for these restrictions.
+              </p>
+            </div>
+          )}
+
+          <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-pastel-green/20 flex items-center justify-center text-pastel-green">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <p className="text-xs text-white/60 font-medium max-w-xs">
+                This plan uses the <b>Mifflin-St Jeor</b> clinical formula with a 1.8g/kg protein ratio.
+              </p>
+            </div>
+            <button className="w-full md:w-auto px-10 py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl">
+              Download Full PDF
+            </button>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase">Fats</p>
-            <p className="text-2xl font-black text-slate-800">{weight ? Math.round(Number(weight) * 0.8) : "0"}g</p>
-          </div>
-        </div>
-      </div>
+        </motion.div>
+      )}
     </div>
   )
 }

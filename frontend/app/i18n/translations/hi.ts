@@ -29,9 +29,10 @@ const hi: Translations = {
   },
   navbar: {
     home: "होम",
-    checkup: "जांच",
-    health: "स्वास्थ्य",
+    checkup: "स्कैन",
+    diet: "आहार",
     library: "पुस्तकालय",
+    reports: "रिपोर्ट",
     notSignedIn: "साइन इन नहीं है",
   },
   agent: {
@@ -171,10 +172,11 @@ const hi: Translations = {
       startDiagnosis: "निदान शुरू करें",
     },
   },
-  wellness: {
+  // Diet page
+  diet: {
     title: "आपका स्वास्थ्य",
-    titleHighlight: "और कल्याण",
-    subtitle: "भोजन, जीवनशैली और आदतों के लिए सरल सुझाव जो आपको बेहतर महसूस कराने में मदद करेंगे।",
+    titleHighlight: "और पोषण",
+    subtitle: "भोजन, जीवनशैली और आदतों के लिए व्यावहारिक योजनाएं जो आपको बेहतर महसूस कराने में मदद करेंगी।",
   },
   communication: {
     consultations: "परामर्श",

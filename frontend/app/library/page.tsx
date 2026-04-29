@@ -22,12 +22,22 @@ export default function LibraryPage() {
   const [data, setData] = useState<MedicalContext | null>(null)
   const [error, setError] = useState("")
 
-  const fetchKnowledge = async () => {
-    if (!query.trim()) return
+  const commonDiseases = [
+    "Pneumonia", "Eczema", "Psoriasis", "Melanoma", "Ringworm", "Acne", "Rosacea", "Vitiligo"
+  ]
+
+  const fetchKnowledge = async (diseaseName?: string) => {
+    const searchTarget = diseaseName || query
+    if (!searchTarget.trim()) return
+    
+    if (diseaseName) setQuery(diseaseName)
+    
     setLoading(true)
     setError("")
+    setData(null)
+
     try {
-      const res = await fetch(`${API_BASE_URL}/medical/context?disease=${encodeURIComponent(query)}`)
+      const res = await fetch(`${API_BASE_URL}/medical/context?disease=${encodeURIComponent(searchTarget)}`)
       if (!res.ok) throw new Error("Failed to fetch medical context")
       const json = await res.json()
       setData(json)
@@ -47,26 +57,43 @@ export default function LibraryPage() {
         </p>
       </header>
 
-      {/* Search Bar */}
-      <div className="flo-card p-6 md:p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 bg-white/80 backdrop-blur-sm">
-        <div className="flex gap-3">
-          <div className="flex-1 flex items-center gap-4 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 focus-within:bg-white focus-within:border-pastel-violet focus-within:shadow-lg transition-all">
-            <Search className="w-6 h-6 text-slate-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchKnowledge()}
-              placeholder="Search diseases (e.g. Psoriasis, Pneumonia)..."
-              className="w-full bg-transparent outline-none text-lg font-bold text-slate-700 placeholder:text-slate-300"
-            />
+      {/* Search Bar & Suggestions */}
+      <div className="space-y-6">
+        <div className="flo-card p-6 md:p-8 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 bg-white/80 backdrop-blur-sm">
+          <div className="flex gap-3">
+            <div className="flex-1 flex items-center gap-4 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 focus-within:bg-white focus-within:border-pastel-violet focus-within:shadow-lg transition-all">
+              <Search className="w-6 h-6 text-slate-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && fetchKnowledge()}
+                placeholder="Search diseases (e.g. Psoriasis, Pneumonia)..."
+                className="w-full bg-transparent outline-none text-lg font-bold text-slate-700 placeholder:text-slate-300"
+              />
+            </div>
+            <button
+              onClick={() => fetchKnowledge()}
+              disabled={loading}
+              className="bg-slate-900 text-white px-8 rounded-2xl font-black uppercase tracking-widest hover:bg-black active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center min-w-[120px]"
+            >
+              {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Search"}
+            </button>
           </div>
-          <button
-            onClick={fetchKnowledge}
-            disabled={loading}
-            className="bg-slate-900 text-white px-8 rounded-2xl font-black uppercase tracking-widest hover:bg-black active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center min-w-[120px]"
-          >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Search"}
-          </button>
+
+          <div className="mt-6">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Popular Searches</p>
+            <div className="flex flex-wrap gap-2">
+              {commonDiseases.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => fetchKnowledge(d)}
+                  className="px-4 py-2 rounded-xl bg-white border border-slate-100 text-xs font-bold text-slate-600 hover:border-pastel-violet hover:text-pastel-violet transition-all shadow-sm"
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

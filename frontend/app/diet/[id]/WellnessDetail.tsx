@@ -200,7 +200,7 @@ export default function WellnessDetail({ condition, id }: { condition: WellnessC
     <div className="max-w-4xl mx-auto px-4 md:px-6 space-y-12 md:space-y-16 pb-32 pt-12">
       <header className="space-y-8">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/wellness" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black/40 hover:text-black transition-colors">
+          <Link href="/diet" className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-black/40 hover:text-black transition-colors">
             <ArrowLeft className="w-4 h-4" /> Back
           </Link>
           <div className="flex-1 h-px bg-black/5 hidden md:block"></div>
