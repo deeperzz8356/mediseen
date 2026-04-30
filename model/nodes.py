@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List
 import json
 import cv2
@@ -62,7 +63,6 @@ def analysis_node(state: AgentState):
         print(f"--- [AI RAW RESPONSE] ---\n{response_text}\n-----------------------")
         
         # More robust JSON extraction
-        import re
         json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
         if json_match:
             clean_text = json_match.group(0)
@@ -93,7 +93,6 @@ def analysis_node(state: AgentState):
         print(f"CRITICAL: Vision analysis failed. Error: {e}")
         # If it failed because of a parsing error but we have the response, try a "lazy" parse
         try:
-            import json
             # Extract anything that looks like JSON if Pydantic failed
             match = re.search(r'\{.*\}', response_text, re.DOTALL)
             lazy_data = json.loads(match.group(0))

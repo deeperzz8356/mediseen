@@ -159,9 +159,6 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
           </button>
         )}
       </div>
-    </div>
-  );
-}
 
       {/* --- CLINICAL REPORT MODAL --- */}
       <AnimatePresence>
@@ -193,7 +190,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
               {/* Iframe Viewport */}
               <div className="flex-1 bg-white relative">
                 <iframe
-                  src={fullReportUrl}
+                  src={resolveBackendAssetUrl(result.reportUrl)}
                   className="w-full h-full border-none"
                   title="AI Clinical Asset"
                   sandbox="allow-same-origin allow-popups"
@@ -219,7 +216,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
                   </button>
 
                   <a
-                    href={fullReportUrl} download target="_blank" rel="noopener noreferrer"
+                    href={resolveBackendAssetUrl(result.reportUrl)} download target="_blank" rel="noopener noreferrer"
                     className="flex-1 md:flex-none px-10 py-5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-105 hover:bg-slate-900 transition shadow-2xl flex items-center justify-center gap-3 active:scale-95"
                   >
                     <ExternalLink className="w-4 h-4 text-emerald-400" />
@@ -232,5 +229,5 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
