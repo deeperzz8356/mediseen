@@ -36,17 +36,19 @@ export default function Home() {
       if (user) {
         const name = user.displayName || user.email?.split("@")[0] || "there"
         setUsername(name)
+      } else {
+        router.push("/login")
       }
     })
     return () => unsubscribe()
-  }, [])
+  }, [router])
 
   // Auto-fetch data if already connected
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (healthService.getSyncStatus()) {
       fetchLiveStats();
-      interval = setInterval(fetchLiveStats, 5000); // Poll every 5s for 'real-time' effect
+      interval = setInterval(fetchLiveStats, 10000); // Polling slower to be kind to the backend
     }
     return () => clearInterval(interval);
   }, []);
@@ -62,12 +64,31 @@ export default function Home() {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    const success = await healthService.requestPermissions();
-    if (success) {
-      const data = await healthService.fetchRealTimeData();
-      setHealthData(data);
+    try {
+      const success = await healthService.requestPermissions();
+      if (success) {
+        const data = await healthService.fetchRealTimeData();
+        setHealthData(data);
+        
+        // Push to Backend
+        const token = await auth?.currentUser?.getIdToken();
+        if (token) {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/health/sync`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+          });
+          if (!res.ok) console.error("Backend sync failed");
+        }
+      }
+    } catch (err) {
+      console.error("Sync error:", err);
+    } finally {
+      setIsSyncing(false);
     }
-    setIsSyncing(false);
   }
 
   const quickActions = [

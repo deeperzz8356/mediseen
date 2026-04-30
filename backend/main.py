@@ -207,6 +207,34 @@ async def generate_diet_plan(req: "DietGenerateRequest"):
     plan = generate_meal_plan(calories, disease_data.diet_rules, req)
     return plan
 
+@app.post("/health/sync")
+async def sync_health_data(
+    data: dict,
+    _decoded_token: dict = Depends(verify_bearer_token)
+):
+    """
+    Syncs health data (steps, calories, sleep, etc.) to Firestore.
+    """
+    uid = _decoded_token.get("uid")
+    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+        
+    try:
+        db.collection("users").document(uid).collection("health_history").add({
+            **data,
+            "timestamp": firestore.SERVER_TIMESTAMP
+        })
+        # Also update the latest stats on the user profile
+        db.collection("users").document(uid).update({
+            "latest_health": data,
+            "last_sync": firestore.SERVER_TIMESTAMP
+        })
+        return {"status": "success", "message": "Health data synced successfully"}
+    except Exception as e:
+        print(f"Sync error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to sync health data")
+
 @app.post("/diet/swap")
 async def swap_food_item(req: "SwapRequest"):
     # Logic to return alternative foods with similar macros

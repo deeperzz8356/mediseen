@@ -107,20 +107,71 @@ def calculate_calories(req: DietGenerateRequest) -> float:
         return tdee + 400
     return tdee
 
+from backend.services.firebase_svc import get_db
+
 def generate_meal_plan(calories: float, disease_rules: DietRules, req: DietGenerateRequest) -> DietResponse:
     """
     Algorithm:
-    1. Determine target macros.
-    2. Filter food database by diet_type, budget, and disease.avoid.
-    3. Construct meals.
+    1. Fetch all food items from DB.
+    2. Filter by diet_type (veg/non-veg) and avoid list.
+    3. Score foods based on 'recommended' list and therapeutic tags.
+    4. Balance meals across categories (Breakfast, Lunch, Snack, Dinner).
     """
-    # Default macros: 30% P, 40% C, 30% F
-    # Adjust based on disease restrictions
-    p_percent, c_percent, f_percent = 0.30, 0.40, 0.30
+    db = get_db()
+    food_docs = db.collection("foods").get()
+    all_foods = []
+    for doc in food_docs:
+        all_foods.append(FoodItem(id=doc.id, **doc.to_dict()))
+
+    # 1. Filter phase
+    filtered_foods = []
+    avoid_lower = [a.lower() for a in disease_rules.avoid]
+    recommended_lower = [r.lower() for r in disease_rules.recommended]
     
+    for food in all_foods:
+        # Diet type check
+        if req.diet_type == "veg" and "non-veg" in food.tags:
+            continue
+        
+        # Avoid list check (name or tags)
+        is_avoided = False
+        for a in avoid_lower:
+            if a in food.name.lower() or any(a in t.lower() for t in food.tags):
+                is_avoided = True
+                break
+        if is_avoided:
+            continue
+            
+        filtered_foods.append(food)
+
+    # 2. Scoring phase
+    # Higher score = more recommended
+    scored_foods = []
+    for food in filtered_foods:
+        score = 10 # Base score
+        # Priority for recommended items
+        for r in recommended_lower:
+            if r in food.name.lower() or any(r in t.lower() for t in food.tags):
+                score += 50
+        
+        # Specific therapeutic tag matches (e.g. "low-acid" if acidity)
+        if "acidity" in req.disease.lower() and "low-acid" in food.tags:
+            score += 30
+        if "diabetes" in req.disease.lower() and "low-gi" in food.tags:
+            score += 30
+        if "hypertension" in req.disease.lower() and "low-sodium" in food.tags:
+            score += 30
+
+        scored_foods.append((score, food))
+    
+    # Sort by score descending
+    scored_foods.sort(key=lambda x: x[0], reverse=True)
+    best_foods = [f for s, f in scored_foods]
+
+    # 3. Macro Target Calculation
+    p_percent, c_percent, f_percent = 0.30, 0.40, 0.30
     if disease_rules.restrictions.carb_cap_percent:
         c_percent = disease_rules.restrictions.carb_cap_percent / 100
-        # Re-balance remaining 
         rem = 1.0 - c_percent
         p_percent = rem * 0.5
         f_percent = rem * 0.5
@@ -129,14 +180,43 @@ def generate_meal_plan(calories: float, disease_rules: DietRules, req: DietGener
     carbs_g = (calories * c_percent) / 4
     fats_g = (calories * f_percent) / 9
 
-    # Mock Meal Mapping (In production, this queries the Food DB)
-    # We will simulate a response for now to demonstrate the flow
+    # 4. Meal Composition (Simplified selection)
+    def pick_items(category_tags, count=2):
+        items = []
+        for f in best_foods:
+            if any(t in f.tags for t in category_tags):
+                items.append(f.name)
+                if len(items) >= count:
+                    break
+        return items if items else ["Safe Balanced Meal"]
+
     meals = [
-        MealItem(meal="Breakfast", items=["Oats with Nuts", "Banana"], calories=calories * 0.25),
-        MealItem(meal="Lunch", items=["Brown Rice", "Dal", "Salad"], calories=calories * 0.35),
-        MealItem(meal="Snack", items=["Greek Yogurt" if req.diet_type == "veg" else "Boiled Egg"], calories=calories * 0.15),
-        MealItem(meal="Dinner", items=["Paneer Tikka" if req.diet_type == "veg" else "Grilled Chicken", "Sautéed Veggies"], calories=calories * 0.25),
+        MealItem(
+            meal="Breakfast", 
+            items=pick_items(["breakfast", "energy", "fruit", "easy-digest"]), 
+            calories=round(calories * 0.25)
+        ),
+        MealItem(
+            meal="Lunch", 
+            items=pick_items(["staple", "lunch", "protein", "fiber"], 3), 
+            calories=round(calories * 0.35)
+        ),
+        MealItem(
+            meal="Snack", 
+            items=pick_items(["snack", "fruit", "cooling", "hydrating"], 1), 
+            calories=round(calories * 0.15)
+        ),
+        MealItem(
+            meal="Dinner", 
+            items=pick_items(["staple", "dinner", "protein", "easy-digest"], 2), 
+            calories=round(calories * 0.25)
+        ),
     ]
+
+    # Validation: Check for empty meals
+    for meal in meals:
+        if not meal.items:
+            meal.items = ["Steamed Vegetables", "Lentil Soup (Dal)"]
 
     return DietResponse(
         calories=round(calories),

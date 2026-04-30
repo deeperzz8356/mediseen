@@ -161,115 +161,146 @@ export default function LibraryPage() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+            className="space-y-12"
           >
-            {/* Result Preview Card */}
-            <div className="flo-card p-10 rounded-[3rem] bg-gradient-to-br from-slate-900 to-violet-950 text-white shadow-2xl shadow-violet-900/20 relative overflow-hidden">
+            {/* Header / Condition Title */}
+            <div className="relative p-10 md:p-16 rounded-[3rem] bg-slate-900 overflow-hidden shadow-2xl">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-violet-500/20 rounded-full blur-[100px] -mr-48 -mt-48" />
+              <div className="absolute bottom-0 left-0 w-96 h-96 bg-pastel-pink/20 rounded-full blur-[100px] -ml-48 -mb-48" />
+              
               <div className="relative z-10 space-y-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[10px] font-black uppercase tracking-widest text-violet-200">
-                  <Stethoscope className="w-3.5 h-3.5" />
-                  Medical Record Found
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-[0.2em] text-violet-200">
+                  <ShieldCheck className="w-4 h-4" />
+                  Verified Clinical Data
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-5xl font-black">{data.disease}</h2>
-                  <p className="text-violet-200/70 font-bold text-lg max-w-xl">
-                    Validated symptoms and precautions for {data.disease} are now available for review.
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setShowDetails(true)}
-                  className="px-10 py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl flex items-center gap-3"
-                >
-                  Explore Detailed Analysis <ArrowRight className="w-4 h-4" />
-                </button>
+                <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight">{data.disease}</h2>
+                <p className="text-xl text-slate-400 font-medium max-w-2xl leading-relaxed">
+                  Comprehensive therapeutic overview and management protocols for <span className="text-white">{data.disease}</span>.
+                </p>
               </div>
-              <Book className="absolute -right-10 -bottom-10 w-64 h-64 text-white/5" />
             </div>
 
-            {/* Detailed Content Modal/Overlay */}
-            <AnimatePresence>
-              {showDetails && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xl flex items-center justify-center p-6"
-                >
-                  <motion.div 
-                    initial={{ scale: 0.9, y: 20 }}
-                    animate={{ scale: 1, y: 0 }}
-                    exit={{ scale: 0.9, y: 20 }}
-                    className="bg-white w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-[3rem] shadow-2xl flex flex-col"
-                  >
-                    <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-2xl flex items-center justify-center">
-                          <Book className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <h3 className="text-2xl font-black text-slate-900">{data.disease}</h3>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Clinical Details</p>
-                        </div>
-                      </div>
-                      <button 
-                        onClick={() => setShowDetails(false)}
-                        className="p-3 bg-white border border-slate-200 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm"
+            {/* Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Left Column: Symptoms & Precautions */}
+              <div className="space-y-8">
+                {/* Symptoms Card */}
+                <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl shadow-slate-200/20 space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
+                      <AlertTriangle className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800">Clinical Symptoms</h3>
+                  </div>
+                  <div className="grid gap-3">
+                    {data.symptoms.map((s, i) => (
+                      <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100/50 group hover:bg-white hover:border-amber-200 transition-all"
                       >
-                        <X className="w-6 h-6" />
+                        <div className="w-2 h-2 rounded-full bg-amber-400 group-hover:scale-150 transition-transform" />
+                        <span className="font-bold text-slate-600">{s}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Precautions Card */}
+                <div className="p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl shadow-slate-200/20 space-y-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
+                      <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-800">Precautions</h3>
+                  </div>
+                  <div className="grid gap-3">
+                    {data.precautions.map((p, i) => (
+                      <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-50/30 border border-emerald-100/50 group hover:bg-white hover:border-emerald-300 transition-all"
+                      >
+                        <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                          <ChevronRight className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <span className="font-bold text-slate-600 leading-snug">{p}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Nutrition Intelligence */}
+              <div className="space-y-8">
+                <div className="h-full p-8 md:p-12 rounded-[3rem] bg-gradient-to-br from-violet-600 to-indigo-700 text-white shadow-2xl shadow-indigo-900/20 space-y-10 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
+                  
+                  <div className="relative z-10 space-y-8">
+                    <div className="space-y-4">
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-3xl flex items-center justify-center text-white">
+                        <Sparkles className="w-8 h-8" />
+                      </div>
+                      <h3 className="text-3xl md:text-4xl font-black">Nutrition Strategy</h3>
+                      <p className="text-indigo-100 font-medium leading-relaxed">
+                        Precision dietary guidance optimized for <span className="text-white font-bold">{data.disease}</span> management.
+                      </p>
+                    </div>
+
+                    {/* Recommended */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">Therapeutic Favorites</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {data.diet.recommended.map((item, i) => (
+                          <span key={i} className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-sm font-bold backdrop-blur-md">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Avoid */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-rose-300">Strictly Avoid</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {data.diet.avoid.map((item, i) => (
+                          <span key={i} className="px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-100 text-sm font-bold backdrop-blur-md">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action */}
+                    <div className="pt-6">
+                      <button 
+                        onClick={() => window.location.href = "/diet"}
+                        className="w-full py-5 rounded-2xl bg-white text-slate-900 font-black text-sm uppercase tracking-widest shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+                      >
+                        Generate Personalized Diet Plan
+                        <ArrowRight className="w-5 h-5" />
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
 
-                    <div className="flex-1 overflow-y-auto p-8 md:p-12 space-y-12">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                        {/* Symptoms */}
-                        <div className="space-y-6">
-                          <h4 className="text-xl font-black text-slate-800 flex items-center gap-3">
-                            <AlertTriangle className="w-6 h-6 text-amber-500" />
-                            Symptoms
-                          </h4>
-                          <div className="grid gap-3">
-                            {data.symptoms.map((s, i) => (
-                              <div key={i} className="p-5 rounded-2xl bg-amber-50/50 border border-amber-100/50 text-sm font-bold text-slate-700 flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-amber-400" />
-                                {s}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+            </div>
 
-                        {/* Precautions */}
-                        <div className="space-y-6">
-                          <h4 className="text-xl font-black text-slate-800 flex items-center gap-3">
-                            <ShieldCheck className="w-6 h-6 text-emerald-500" />
-                            Precautions
-                          </h4>
-                          <div className="grid gap-3">
-                            {data.precautions.map((p, i) => (
-                              <div key={i} className="p-5 rounded-2xl bg-emerald-50/50 border border-emerald-100/50 text-sm font-bold text-slate-700 flex items-center gap-3">
-                                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                {p}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Summary Section */}
-                      <div className="p-10 rounded-[2.5rem] bg-violet-50/50 border border-violet-100/50 space-y-4">
-                        <h4 className="text-xl font-black text-violet-700 flex items-center gap-3">
-                          <Info className="w-6 h-6" />
-                          Nutrition Logic
-                        </h4>
-                        <p className="text-slate-600 font-bold leading-relaxed">
-                          For {data.disease}, the recommended clinical approach focuses on: {data.diet.recommended.join(", ")}. 
-                          It is strictly advised to avoid: {data.diet.avoid.join(", ")}.
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Footer Reset */}
+            <div className="pt-10 flex justify-center">
+              <button 
+                onClick={() => { setData(null); setQuery(""); }}
+                className="px-8 py-3 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
+              >
+                Clear Results & Search Again
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

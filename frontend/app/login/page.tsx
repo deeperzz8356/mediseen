@@ -23,20 +23,31 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!auth) return
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) router.push("/home")
+
+    const checkRedirect = async () => {
+      const { handleGoogleRedirectResult } = await import("@/lib/firebase")
+      const user = await handleGoogleRedirectResult()
+      if (user) {
+        await verifyAndRedirect(user)
+      }
+    }
+
+    checkRedirect()
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      // We only auto-redirect if we already verified them or if they're already logged in on mount
+      // But to be safe, we always verify against backend
+      if (user && !loading) {
+        // await verifyAndRedirect(user) // This might cause loops if not careful
+      }
     })
     return () => unsub()
   }, [router])
 
-  const handleGoogleLogin = async () => {
+  const verifyAndRedirect = async (user: any) => {
     try {
       setLoading(true)
-      setError("")
-      const user = await signInWithGoogle()
-      if (!user) return // redirect triggered on Capacitor
       const token = await user.getIdToken()
-
       const res = await fetch(`${API_BASE_URL}/auth/verify`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
@@ -50,9 +61,28 @@ export default function LoginPage() {
       } else {
         router.push("/register")
       }
-    } catch {
-      setError(t.login.errors.googleFailed)
+    } catch (err) {
+      console.error("Verification error:", err)
+      setError(t.login.errors.loginFailed)
     } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true)
+      setError("")
+      const { signInWithGoogle } = await import("@/lib/firebase")
+      const user = await signInWithGoogle()
+      
+      if (user) {
+        // This is for Native or Popup
+        await verifyAndRedirect(user)
+      }
+      // If user is null, it means a redirect was triggered (Web)
+    } catch (err: any) {
+      setError(t.login.errors.googleFailed)
       setLoading(false)
     }
   }
