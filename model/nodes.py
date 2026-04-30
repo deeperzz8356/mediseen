@@ -54,7 +54,7 @@ def analysis_node(state: AgentState):
     )
 
     try:
-        response_text = call_llm(prompt, image=img, preferred_provider="openrouter")
+        response_text = call_llm(prompt, image=img, preferred_provider="gemini")
         
         # More robust JSON extraction
         import re
@@ -64,6 +64,26 @@ def analysis_node(state: AgentState):
         else:
             clean_text = response_text.strip().replace('```json', '').replace('```', '')
             
+        # Pre-process confidence if it's a string like "High"
+        try:
+            temp_data = json.loads(clean_text)
+            conf = str(temp_data.get("confidence", "0.7")).lower()
+            if "high" in conf: temp_data["confidence"] = 0.9
+            elif "medium" in conf: temp_data["confidence"] = 0.7
+            elif "low" in conf: temp_data["confidence"] = 0.4
+            
+            # Ensure it's a float if it's a string number
+            if isinstance(temp_data.get("confidence"), str):
+                try:
+                    temp_data["confidence"] = float(re.findall(r"\d+\.\d+|\d+", temp_data["confidence"])[0])
+                    if temp_data["confidence"] > 1.0: temp_data["confidence"] /= 100.0
+                except:
+                    temp_data["confidence"] = 0.8
+            
+            clean_text = json.dumps(temp_data)
+        except:
+            pass # Fallback to standard validation if pre-processing fails
+
         data = GeminiDiagnosisResponse.model_validate_json(clean_text)
     except Exception as e:
         print(f"WARNING: Vision analysis failed for {state['session_id']}, attempting symptom-only fallback. Error: {e}")

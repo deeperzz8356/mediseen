@@ -440,6 +440,9 @@ async def diagnose(
             "diagnosis": result["prediction"],
             "confidence": result["confidence_score"],
             "explanation": result["final_report"],
+            "rootCause": result.get("root_cause_reason"),
+            "laymanExplanation": result.get("patient_friendly_explanation"),
+            "managementSteps": result.get("management_steps"),
             "heatmap_url": result.get("heatmap_url", f"/uploads/{heatmap_file}"),
             "report_url": result.get("report_url", f"/uploads/{report_file}"),
             "image_url": image_url,
@@ -447,7 +450,12 @@ async def diagnose(
         }
 
         # ── 9. Save to cache + data collection ───────────────────────────
-        save_diagnosis_cache(cache_key, response)
+        if response["diagnosis"] != "Analysis Error":
+            save_diagnosis_cache(cache_key, response)
+            print(f"OK: Saved successful diagnosis to cache for {session_id}")
+        else:
+            print(f"WARNING: Skipping cache save for failed analysis in session {session_id}")
+            
         save_diagnosis_record(uid, session_id, symptoms, response, image_url, platform=client_platform)
 
         return response

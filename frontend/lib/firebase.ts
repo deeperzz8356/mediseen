@@ -1,7 +1,7 @@
 import { Capacitor } from "@capacitor/core"
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication"
 import { initializeApp, getApps, getApp } from "firebase/app"
-import { indexedDBLocalPersistence, getAuth, getRedirectResult, GoogleAuthProvider, signInWithCredential, signInWithPopup, initializeAuth } from "firebase/auth"
+import { indexedDBLocalPersistence, getAuth, getRedirectResult, GoogleAuthProvider, signInWithCredential, signInWithRedirect, signInWithPopup, initializeAuth } from "firebase/auth"
 
 export const googleProvider = new GoogleAuthProvider()
 
@@ -38,7 +38,7 @@ export const auth = createAuth()
 
 /**
  * Sign in with Google.
- * Uses popup on web, redirect on Capacitor/Android (no popup support).
+ * Uses redirect for web to avoid COOP popup blocks, and native plugin for Capacitor.
  */
 export async function signInWithGoogle() {
   if (!auth || !isFirebaseConfigured) {
@@ -57,14 +57,12 @@ export async function signInWithGoogle() {
         throw new Error("Missing Google ID token")
       }
 
-      // Minimal approach: only link to Firebase JS SDK if we need local state persistence
       const credential = GoogleAuthProvider.credential(idToken)
       const userCredential = await signInWithCredential(auth, credential)
       
       return userCredential.user
     } catch (err: any) {
       console.error("Native Google Sign-In Exception:", JSON.stringify(err, Object.getOwnPropertyNames(err)))
-      // Return a descriptive error if possible
       if (err.message?.includes("10")) {
         throw new Error("Google Sign-In Error (10): Ensure SHA-1 is registered in Firebase.")
       }
@@ -73,8 +71,9 @@ export async function signInWithGoogle() {
   }
 
   try {
-    const result = await signInWithPopup(auth, googleProvider)
-    return result.user
+    // Switching to Redirect to avoid Cross-Origin-Opener-Policy blocks
+    await signInWithRedirect(auth, googleProvider)
+    return null // Page will redirect
   } catch (err: any) {
     console.error("Web Google Sign-In Error:", err)
     throw err
