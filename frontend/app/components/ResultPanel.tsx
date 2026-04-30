@@ -18,13 +18,12 @@ import {
 } from "lucide-react"
 
 export interface DiagnosisResult {
-  prediction: string
+  disease_identification: string
   confidence: number
-  explanation: string
-  rootCause: string
-  laymanExplanation: string
-  managementSteps: string[]
-  likelySymptoms?: string[]
+  patient_friendly_explanation: string
+  root_cause_reason: string
+  steps_to_understand_and_manage: string[]
+  likely_symptoms?: string[]
   diet?: {
     recommended: string[]
     avoid: string[]
@@ -48,6 +47,11 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
   const showReport = showReportProp !== undefined ? showReportProp : showReportInternal;
   const setShowReport = setShowReportProp !== undefined ? setShowReportProp : setShowReportInternal;
 
+  // 5. Add Debug Logging
+  useEffect(() => {
+    console.log("RESULT PANEL DATA:", result);
+  }, [result]);
+
   if (!result) return null;
 
   const confidenceValue = typeof result.confidence === 'number' ? result.confidence : 0
@@ -66,7 +70,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
         </div>
         
         <h2 className="text-5xl md:text-8xl font-black text-slate-900 tracking-tighter uppercase leading-none">
-          {result.prediction}
+          {result.disease_identification}
         </h2>
 
         <div className="max-w-md mx-auto space-y-4">
@@ -96,7 +100,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
           className="relative pl-8 border-l-[6px] border-black py-2"
         >
           <p className="text-xl md:text-3xl font-black text-slate-800 italic leading-tight whitespace-pre-line">
-            &quot;{result.explanation}&quot;
+            &quot;{result.patient_friendly_explanation}&quot;
           </p>
         </motion.div>
 
@@ -139,7 +143,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
         )}
 
         {/* LIKELY SYMPTOMS */}
-        {result.likelySymptoms && result.likelySymptoms.length > 0 && (
+        {result.likely_symptoms && result.likely_symptoms.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -151,7 +155,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
               <div className="flex-1 h-px bg-slate-100" />
             </div>
             <div className="flex flex-wrap gap-3">
-              {result.likelySymptoms.map((symptom, i) => (
+              {result.likely_symptoms.map((symptom, i) => (
                 <span key={i} className="px-5 py-3 bg-white border border-slate-200 rounded-2xl text-xs font-black text-slate-600 uppercase tracking-widest hover:border-black transition-colors shadow-sm">
                   {symptom}
                 </span>
@@ -174,7 +178,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
             <h3 className="text-sm font-black uppercase tracking-[0.3em] text-slate-900">Clinical Pathophysiology</h3>
           </div>
           <p className="text-lg md:text-xl font-bold text-slate-600 leading-relaxed whitespace-pre-line">
-            {result.rootCause}
+            {result.root_cause_reason}
           </p>
         </motion.div>
 
@@ -190,11 +194,10 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
             <h3 className="text-sm font-black uppercase tracking-[0.3em]">The Simple Interpretation</h3>
           </div>
           <p className="text-lg md:text-2xl font-black text-indigo-900/60 leading-relaxed italic whitespace-pre-line">
-            {result.laymanExplanation}
+            {result.patient_friendly_explanation}
           </p>
         </motion.div>
 
-        {/* ACTION ROADMAP */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -206,7 +209,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
             <div className="flex-1 h-px bg-slate-100" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(result.managementSteps || []).map((step, idx) => (
+            {(result.steps_to_understand_and_manage || []).map((step, idx) => (
               <div key={idx} className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
                 <div className="text-4xl font-black text-slate-100 group-hover:text-black transition-colors mb-6">0{idx + 1}</div>
                 <p className="text-sm font-bold text-slate-600 leading-relaxed">{step}</p>

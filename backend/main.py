@@ -437,12 +437,13 @@ async def diagnose(
         # ── 8. Build response ─────────────────────────────────────────────
         response = {
             "session_id": session_id,
-            "diagnosis": result["prediction"],
-            "confidence": result["confidence_score"],
-            "explanation": result["final_report"],
-            "rootCause": result.get("root_cause_reason"),
-            "laymanExplanation": result.get("patient_friendly_explanation"),
-            "managementSteps": result.get("management_steps"),
+            "disease_identification": result.get("disease_identification") or result.get("prediction"),
+            "confidence": result.get("confidence") or result.get("confidence_score") or 0.0,
+            "patient_friendly_explanation": result.get("patient_friendly_explanation"),
+            "root_cause_reason": result.get("root_cause_reason"),
+            "steps_to_understand_and_manage": result.get("steps_to_understand_and_manage"),
+            "likely_symptoms": result.get("likely_symptoms"),
+            "diet": result.get("diet"),
             "heatmap_url": result.get("heatmap_url", f"/uploads/{heatmap_file}"),
             "report_url": result.get("report_url", f"/uploads/{report_file}"),
             "image_url": image_url,
@@ -450,7 +451,7 @@ async def diagnose(
         }
 
         # ── 9. Save to cache + data collection ───────────────────────────
-        if response["diagnosis"] != "Analysis Error":
+        if response["disease_identification"] != "Analysis Error":
             save_diagnosis_cache(cache_key, response)
             print(f"OK: Saved successful diagnosis to cache for {session_id}")
         else:

@@ -19,7 +19,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
   const [preview, setPreview] = useState<string | null>(null)
   const [symptoms, setSymptoms] = useState("")
   const [isDragging, setIsDragging] = useState(false)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -135,66 +135,11 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     }
   }
 
-  const handleDiagnose = async () => {
-    if (!preview) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      // 1. Upload to Cloudinary first
-      const formData = new FormData();
-      const blob = await (await fetch(preview)).blob();
-      formData.append("file", blob);
-      formData.append("upload_preset", "mediseen_uploads");
-
-      const uploadRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: "POST", body: formData }
-      );
-      const uploadData = await uploadRes.json();
-
-      if (!uploadData.secure_url) throw new Error("Upload failed");
-
-      // 2. Call our unified backend pipeline
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/diagnose`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_url: uploadData.secure_url,
-          user_symptoms: symptoms
-        }),
-      });
-
-      if (!response.ok) throw new Error("Analysis failed");
-      
-      const result = await response.json();
-      
-      // Pass the clean, merged JSON to the parent
-      onAnalysisComplete?.({
-        prediction: result.disease_identification,
-        confidence: result.confidence,
-        explanation: result.patient_friendly_explanation,
-        rootCause: result.root_cause_reason,
-        laymanExplanation: result.patient_friendly_explanation,
-        managementSteps: result.steps_to_understand_and_manage,
-        likelySymptoms: result.likely_symptoms,
-        diet: result.diet, // Pass the new diet data
-        reportUrl: result.report_url || "",
-        heatmapUrl: result.heatmap_url || "",
-        diseaseId: result.disease_id || ""
-      });
-
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed redundant handleDiagnose to consolidate logic in runAnalysis
 
   const runAnalysis = async () => {
     if (!file) return
-    setIsAnalyzing(true)
+    setLoading(true)
     setResult(null)
 
     try {
@@ -215,6 +160,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000)
 
+      console.log("SENDING REQUEST TO:", `${API_BASE_URL}/diagnose`);
       const response = await fetch(`${API_BASE_URL}/diagnose`, {
         method: "POST",
         headers: {
@@ -228,57 +174,35 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
 
       if (!response.ok) {
         const text = await response.text().catch(() => null)
-        let errorDetail: string | undefined
-        try {
-          const parsed = text ? JSON.parse(text) : {}
-          errorDetail = parsed.detail || parsed.message
-        } catch (_) {
-          // response was not JSON
-        }
-        console.error("Diagnosis API error:", {
-          status: response.status,
-          statusText: response.statusText,
-          body: text,
-          url: `${API_BASE_URL}/diagnose`,
-        })
-        throw new Error(
-          errorDetail
-            ? `Backend returned ${response.status} ${response.statusText || "Error"}: ${errorDetail}`
-            : `Backend returned ${response.status} ${response.statusText || "Error"}${text ? `: ${text.slice(0, 400)}` : ""}`
-        )
+        console.error("Diagnosis API error:", response.status, text);
+        throw new Error(`Backend Error ${response.status}: ${text || "Unknown"}`);
       }
 
       const apiResult = await response.json()
+      console.log("API RESPONSE RECEIVED:", apiResult);
       
-      // Ensure we always have a numeric confidence
-      const rawConfidence = apiResult.confidence || apiResult.confidence_score || 0
-      const confidence = typeof rawConfidence === 'number' ? rawConfidence : parseFloat(rawConfidence) || 0
-
+      // 7. Verify Field Mapping
       const res: DiagnosisResult = {
-        diseaseId: apiResult.session_id || `session_${Date.now()}`,
-        prediction: apiResult.diagnosis || apiResult.prediction || "Analysis Complete",
-        confidence: confidence,
-        explanation: apiResult.explanation || apiResult.patient_friendly_explanation || "No detailed explanation available.",
-        severity: apiResult.severity || "medium",
+        disease_identification: apiResult.disease_identification || "Unknown Condition",
+        confidence: typeof apiResult.confidence === 'number' ? apiResult.confidence : 0,
+        patient_friendly_explanation: apiResult.patient_friendly_explanation || "Analysis completed.",
+        root_cause_reason: apiResult.root_cause_reason || "Visual inspection of report data.",
+        steps_to_understand_and_manage: apiResult.steps_to_understand_and_manage || apiResult.management_steps || [],
+        likely_symptoms: apiResult.likely_symptoms || [],
+        diet: apiResult.diet,
         heatmapUrl: apiResult.heatmap_url,
         reportUrl: apiResult.report_url,
-        affectedArea: apiResult.affectedArea,
-        likelySymptoms: apiResult.likely_symptoms,
-        rootCause: apiResult.root_cause_reason,
-        laymanExplanation: apiResult.patient_friendly_explanation,
-        managementSteps: apiResult.management_steps || apiResult.next_steps || [
-          "Consult specialist for confirmation",
-          "Monitor area for changes",
-          "Follow clinical pathway"
-        ]
+        diseaseId: apiResult.session_id || `session_${Date.now()}`
       }
-      setResult(`Analysis complete. AI detected: ${res.prediction}`)
+
+      console.log("MAPPED DATA STATE:", res);
+      setResult(`Analysis complete: ${res.disease_identification}`)
       if (onAnalysisComplete) onAnalysisComplete(res)
     } catch (error) {
-      console.error("Backend fetch failed:", error)
+      console.error("DIAGNOSIS PIPELINE FAILURE:", error)
       setResult(buildDetailedErrorMessage(error))
     } finally {
-      setIsAnalyzing(false)
+      setLoading(false)
     }
   }
 
@@ -365,14 +289,14 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
         <div className="pt-4">
           <button
             onClick={runAnalysis}
-            disabled={!preview || isAnalyzing}
+            disabled={!preview || loading}
             className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.3em] transition-all shadow-xl flex items-center justify-center gap-4
-              ${preview && !isAnalyzing ? "bg-black text-white" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}
+              ${preview && !loading ? "bg-black text-white" : "bg-slate-100 text-slate-300 cursor-not-allowed"}`}
           >
-            {isAnalyzing ? (
+            {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Analyzing...</span>
+                <span>Analyzing Report...</span>
               </>
             ) : (
               <span>Start AI Analysis</span>

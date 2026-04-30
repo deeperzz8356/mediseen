@@ -18,21 +18,29 @@ class AgentState(TypedDict, total=False):
     # -------------------------
     # AI Analysis
     # -------------------------
+    disease_identification: Optional[str]
+    confidence: Optional[float]
+    likely_symptoms: Optional[list]
+    patient_friendly_explanation: Optional[str]
+    root_cause_reason: Optional[str]
+    steps_to_understand_and_manage: Optional[list]
+    diet: Optional[dict]
+    
+    # Legacy fields for backward compatibility if needed by other nodes
     prediction: Optional[str]
     confidence_score: Optional[float]
-    confidence: Optional[str]
-    explanation: Optional[str]
-    bounding_box: Optional[list]
 
     # -------------------------
     # Medical Knowledge Context
     # -------------------------
     db_context: Optional[str]
+    medical_context: Optional[dict]
 
     # -------------------------
     # Explainable AI Outputs
     # -------------------------
     heatmap_path: Optional[str]
+    heatmap_url: Optional[str]
 
     # -------------------------
     # Final AI Report
