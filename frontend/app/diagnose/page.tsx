@@ -119,40 +119,39 @@ export default function DiagnosePage() {
         </div>
       </header>
 
-      {/* --- MAIN WORKFLOW GRID --- */}
-      <main className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
-        {/* Left Col: Workflow Input */}
-        <div className="lg:col-span-5 flex flex-col h-full">
-          <UploadPanel
-            onAnalysisComplete={handleAnalysisComplete}
-            onImageUpload={(img) => setUploadedImage(img)}
-            externalPreview={uploadedImage}
-          />
-        </div>
-
-        {/* Right Col: AI Output */}
-        <div className="lg:col-span-7 flex flex-col h-full min-h-[500px]">
-          {analysisResult ? (
-            <ResultPanel 
-              result={analysisResult} 
-              onReset={handleReset} 
-              showReport={showReport}
-              setShowReport={setShowReport}
-            />
+      {/* --- MAIN WORKFLOW --- */}
+      <main className="space-y-12">
+        <AnimatePresence mode="wait">
+          {!analysisResult ? (
+            <motion.div 
+              key="upload"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-4xl mx-auto w-full"
+            >
+              <UploadPanel
+                onAnalysisComplete={handleAnalysisComplete}
+                onImageUpload={(img) => setUploadedImage(img)}
+                externalPreview={uploadedImage}
+              />
+            </motion.div>
           ) : (
-            <div className="flex-1 bg-white rounded-[2rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center p-12 space-y-8">
-              <div className="w-24 h-24 rounded-full bg-pastel-blue/10 flex items-center justify-center">
-                <ClipboardCheck className="w-12 h-12 text-pastel-blue/40" />
-              </div>
-              <div className="space-y-4 max-w-xs">
-                <h3 className="text-2xl font-black text-slate-300 uppercase tracking-widest">{t.diagnose.waiting.title}</h3>
-                <p className="text-slate-400 font-bold text-sm uppercase tracking-tight leading-relaxed">
-                  {t.diagnose.waiting.subtitle}
-                </p>
-              </div>
-            </div>
+            <motion.div 
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full"
+            >
+              <ResultPanel 
+                result={analysisResult} 
+                onReset={handleReset} 
+                showReport={showReport}
+                setShowReport={setShowReport}
+              />
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </main>
 
       {/* --- ADVANCED VISUALIZATION --- */}

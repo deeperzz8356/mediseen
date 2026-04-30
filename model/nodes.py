@@ -119,7 +119,6 @@ def analysis_node(state: AgentState):
             )
             fallback_response = call_llm(fallback_prompt, preferred_provider="gemini")
             
-            import re
             json_match = re.search(r'\{.*\}', fallback_response, re.DOTALL)
             clean_text = json_match.group(0) if json_match else fallback_response
             data = GeminiDiagnosisResponse.model_validate_json(clean_text)
