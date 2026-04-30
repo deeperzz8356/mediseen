@@ -135,6 +135,63 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     }
   }
 
+  const handleDiagnose = async () => {
+    if (!preview) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Upload to Cloudinary first
+      const formData = new FormData();
+      const blob = await (await fetch(preview)).blob();
+      formData.append("file", blob);
+      formData.append("upload_preset", "mediseen_uploads");
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData }
+      );
+      const uploadData = await uploadRes.json();
+
+      if (!uploadData.secure_url) throw new Error("Upload failed");
+
+      // 2. Call our unified backend pipeline
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ""}/diagnose`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_url: uploadData.secure_url,
+          user_symptoms: symptoms
+        }),
+      });
+
+      if (!response.ok) throw new Error("Analysis failed");
+      
+      const result = await response.json();
+      
+      // Pass the clean, merged JSON to the parent
+      onAnalysisComplete?.({
+        prediction: result.disease_identification,
+        confidence: result.confidence,
+        explanation: result.patient_friendly_explanation,
+        rootCause: result.root_cause_reason,
+        laymanExplanation: result.patient_friendly_explanation,
+        managementSteps: result.steps_to_understand_and_manage,
+        likelySymptoms: result.likely_symptoms,
+        diet: result.diet, // Pass the new diet data
+        reportUrl: result.report_url || "",
+        heatmapUrl: result.heatmap_url || "",
+        diseaseId: result.disease_id || ""
+      });
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const runAnalysis = async () => {
     if (!file) return
     setIsAnalyzing(true)

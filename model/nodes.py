@@ -37,6 +37,24 @@ def _escape_html_text(value: str) -> str:
 
 # --- NODES ---
 
+def extract_json_from_text(text: str):
+    """Cleanly extracts JSON from AI response, handling markdown blocks."""
+    try:
+        # Try to find JSON inside markdown code blocks
+        match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(1))
+        
+        # Fallback to finding the first { and last }
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+            
+        return json.loads(text)
+    except Exception as e:
+        print(f"JSON extraction failed: {e}")
+        return None
+
 def analysis_node(state: AgentState):
     print(f"--- [STEP 1: Deep Analysis] Session: {state['session_id']} ---")
     
@@ -45,102 +63,52 @@ def analysis_node(state: AgentState):
     
     prompt = (
         "Role: Senior Medical Consultant. "
-        "Task: SCAN AND ANALYZE THE ATTACHED MEDICAL REPORT IMAGE AND ANY URLS PROVIDED. "
-        f"Primary Image URL: {state.get('image_url', 'Not provided')} "
-        "Instructions: If the user has provided a Cloudinary or image link in the 'Context Symptoms' below, navigate to it and include its data in your analysis. "
-        "Return ONLY valid JSON with these keys: "
-        "disease_identification (clean name), "
-        "confidence (0.0-1.0), "
-        "likely_symptoms (list), "
-        "root_cause_reason (Detailed pathophysiology from report), "
-        "patient_friendly_explanation (Simple analogy), "
-        "steps_to_understand_and_manage (Specific actions). "
-        f"Context Symptoms/Links: {json.dumps(state.get('user_symptoms', ''))}"
+        "Task: ANALYZE ATTACHED REPORT PIXELS AND URLS. "
+        "Return ONLY a JSON object. NO markdown blocks. NO preamble. "
+        "Structure: { \"disease_identification\": \"string\", \"confidence\": float, \"likely_symptoms\": [], \"root_cause_reason\": \"string\", \"patient_friendly_explanation\": \"string\", \"steps_to_understand_and_manage\": [] }"
     )
 
     try:
-        response_text = call_llm(prompt, image=img, image_url=state.get("image_url"), preferred_provider="gemini")
-        print(f"--- [AI RAW RESPONSE] ---\n{response_text}\n-----------------------")
+        raw_response = call_llm(prompt, image=img, image_url=state.get("image_url"), preferred_provider="gemini")
+        print(f"--- [AI RAW RESPONSE] ---\n{raw_response}\n-----------------------")
         
-        # More robust JSON extraction
-        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-        if json_match:
-            clean_text = json_match.group(0)
-        else:
-            clean_text = response_text.strip().replace('```json', '').replace('```', '')
-            
-        # Pre-process confidence
-        try:
-            temp_data = json.loads(clean_text)
-            conf = str(temp_data.get("confidence", "0.7")).lower()
-            if "high" in conf: temp_data["confidence"] = 0.9
-            elif "medium" in conf: temp_data["confidence"] = 0.7
-            elif "low" in conf: temp_data["confidence"] = 0.4
-            
-            if isinstance(temp_data.get("confidence"), str):
-                try:
-                    temp_data["confidence"] = float(re.findall(r"\d+\.\d+|\d+", temp_data["confidence"])[0])
-                    if temp_data["confidence"] > 1.0: temp_data["confidence"] /= 100.0
-                except:
-                    temp_data["confidence"] = 0.8
-            
-            clean_text = json.dumps(temp_data)
-        except:
-            pass
+        clean_data = extract_json_from_text(raw_response)
+        
+        if not clean_data:
+            raise ValueError("Failed to extract valid JSON from AI response")
 
-        data = GeminiDiagnosisResponse.model_validate_json(clean_text)
+        # Step 2: Merge Diet/Medical Context from DB
+        disease_name = clean_data.get("disease_identification", "General Assessment")
+        context = fetch_medical_context(disease_name)
+        
+        # Build final unified response
+        final_data = {
+            "disease_identification": disease_name,
+            "confidence": float(clean_data.get("confidence", 0.7)),
+            "likely_symptoms": clean_data.get("likely_symptoms", []),
+            "root_cause_reason": clean_data.get("root_cause_reason", "Analysis of report data."),
+            "patient_friendly_explanation": clean_data.get("patient_friendly_explanation", "Standard clinical assessment."),
+            "steps_to_understand_and_manage": clean_data.get("steps_to_understand_and_manage", ["Consult your physician"]),
+            "diet": {
+                "recommended": context.get("diet_recommended", ["Balanced nutrition"]),
+                "avoid": context.get("diet_avoid", ["Excessive processed foods"])
+            }
+        }
+        
+        return final_data
+
     except Exception as e:
-        print(f"CRITICAL: Vision analysis failed. Error: {e}")
-        # If it failed because of a parsing error but we have the response, try a "lazy" parse
-        try:
-            # Extract anything that looks like JSON if Pydantic failed
-            match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            lazy_data = json.loads(match.group(0))
-            data = GeminiDiagnosisResponse(
-                disease_identification=lazy_data.get("disease_identification", "Preliminary Assessment"),
-                confidence=0.7,
-                likely_symptoms=lazy_data.get("likely_symptoms", []),
-                root_cause_reason=lazy_data.get("root_cause_reason", f"Scan results: {response_text[:200]}..."),
-                patient_friendly_explanation=lazy_data.get("patient_friendly_explanation", "Please check your report details."),
-                steps_to_understand_and_manage=lazy_data.get("steps_to_understand_and_manage", ["Consult a doctor"])
-            )
-        except:
-            print(f"WARNING: Lazy parse failed, attempting symptom-only fallback.")
-        
-        # Fallback: Try a text-only call based on symptoms if vision fails
-        try:
-            fallback_prompt = (
-                "Role: Medical Expert. Context: A clinical scan was provided but was unreadable. "
-                f"Patient symptoms: {state.get('user_symptoms', 'None')}. "
-                "Task: Provide a preliminary assessment based ONLY on the symptoms. "
-                "Return ONLY valid JSON with keys: "
-                "disease_identification, confidence (float 0.1-0.5), likely_symptoms (list), "
-                "root_cause_reason, patient_friendly_explanation, steps_to_understand_and_manage (list)."
-            )
-            fallback_response = call_llm(fallback_prompt, preferred_provider="gemini")
-            
-            json_match = re.search(r'\{.*\}', fallback_response, re.DOTALL)
-            clean_text = json_match.group(0) if json_match else fallback_response
-            data = GeminiDiagnosisResponse.model_validate_json(clean_text)
-        except Exception as fallback_e:
-            print(f"ERROR: Fallback analysis also failed: {fallback_e}")
-            data = GeminiDiagnosisResponse(
-                disease_identification="Analysis Error",
-                confidence=0.0,
-                likely_symptoms=[],
-                root_cause_reason=f"Technical Error: {str(fallback_e)} (Original: {str(e)[:100]})",
-                patient_friendly_explanation="MediSeen encountered a technical issue while analyzing your report. This usually means the AI service is temporarily unavailable or blocked by safety filters.",
-                steps_to_understand_and_manage=["Check your internet connection", "Ensure the photo is clear and contains medical text", "Check backend logs for API key or safety filter errors"]
-            )
-        
-    return {
-        "prediction": data.disease_identification,
-        "confidence_score": float(data.confidence),
-        "likely_symptoms": data.likely_symptoms,
-        "root_cause_reason": data.root_cause_reason,
-        "patient_friendly_explanation": data.patient_friendly_explanation,
-        "management_steps": data.steps_to_understand_and_manage
-    }
+        print(f"CRITICAL: Pipeline failed. Error: {e}")
+        # Return a safe, valid JSON fallback instead of crashing
+        return {
+            "disease_identification": "Analysis Error",
+            "confidence": 0.0,
+            "likely_symptoms": [],
+            "root_cause_reason": f"Processing error: {str(e)}",
+            "patient_friendly_explanation": "A technical error occurred. Please ensure the image is clear.",
+            "steps_to_understand_and_manage": ["Retry upload", "Contact support"],
+            "diet": {"recommended": [], "avoid": []}
+        }
 
 def heatmap_node(state: AgentState):
     print("--- [STEP 2: Generating Heatmap] ---")

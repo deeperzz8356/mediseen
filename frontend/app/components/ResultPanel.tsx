@@ -18,26 +18,29 @@ import {
 } from "lucide-react"
 
 export interface DiagnosisResult {
-  diseaseId: string
   prediction: string
   confidence: number
   explanation: string
-  severity: "low" | "medium" | "high"
-  heatmapUrl?: string
-  reportUrl?: string
-  affectedArea?: number
-  nextSteps?: string[]
+  rootCause: string
+  laymanExplanation: string
+  managementSteps: string[]
   likelySymptoms?: string[]
-  rootCause?: string
-  laymanExplanation?: string
-  managementSteps?: string[]
+  diet?: {
+    recommended: string[]
+    avoid: string[]
+  }
+  reportUrl?: string
+  heatmapUrl?: string
+  severity?: string
+  affectedArea?: string
+  diseaseId?: string
 }
 
 interface ResultPanelProps {
-  result: DiagnosisResult | null;
-  onReset?: () => void;
-  showReport?: boolean;
-  setShowReport?: (show: boolean) => void;
+  result: DiagnosisResult
+  onReset: () => void
+  showReport?: boolean
+  setShowReport?: (show: boolean) => void
 }
 
 export default function ResultPanel({ result, onReset, showReport: showReportProp, setShowReport: setShowReportProp }: ResultPanelProps) {
@@ -96,6 +99,44 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
             &quot;{result.explanation}&quot;
           </p>
         </motion.div>
+
+        {/* DIET & NUTRITION */}
+        {result.diet && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-8"
+          >
+            <div className="bg-emerald-50 rounded-[2rem] p-10 border border-emerald-100 space-y-6">
+              <div className="flex items-center gap-3 text-emerald-600">
+                <ClipboardCheck className="w-6 h-6" />
+                <h3 className="text-xs font-black uppercase tracking-[0.3em]">Recommended Foods</h3>
+              </div>
+              <ul className="space-y-3">
+                {result.diet.recommended.map((food, i) => (
+                  <li key={i} className="text-sm font-bold text-emerald-800 flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> {food}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-rose-50 rounded-[2rem] p-10 border border-rose-100 space-y-6">
+              <div className="flex items-center gap-3 text-rose-600">
+                <X className="w-6 h-6" />
+                <h3 className="text-xs font-black uppercase tracking-[0.3em]">Foods to Avoid</h3>
+              </div>
+              <ul className="space-y-3">
+                {result.diet.avoid.map((food, i) => (
+                  <li key={i} className="text-sm font-bold text-rose-800 flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400" /> {food}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        )}
 
         {/* LIKELY SYMPTOMS */}
         {result.likelySymptoms && result.likelySymptoms.length > 0 && (
