@@ -47,22 +47,33 @@ class GeminiProvider:
             logger.error(f"Failed to initialize Gemini: {e}")
             self.available = False
     
-    def call(self, prompt: str, image: Optional[Image] = None, model: str = GEMINI_TEXT_MODEL) -> str:
+    def call(self, prompt: str, image: Optional[Image] = None, image_url: Optional[str] = None, model: str = GEMINI_TEXT_MODEL) -> str:
         """Call Gemini API"""
         if not self.available:
             raise LLMError("Gemini client initialization failed. Check your API key and google-genai installation.")
         
         try:
+            contents = [prompt]
+            
+            # If a URL is provided, let's fetch it so Gemini can 'see' it
+            if image_url and not image:
+                try:
+                    import httpx
+                    from PIL import Image as PILImage
+                    resp = httpx.get(image_url)
+                    if resp.status_code == 200:
+                        image = PILImage.open(io.BytesIO(resp.content))
+                        logger.info(f"Successfully fetched image from {image_url}")
+                except Exception as fetch_err:
+                    logger.warning(f"Failed to fetch image from URL {image_url}: {fetch_err}")
+
             if image:
-                response = self.client.models.generate_content(
-                    model=model,
-                    contents=[prompt, image]
-                )
-            else:
-                response = self.client.models.generate_content(
-                    model=model,
-                    contents=prompt
-                )
+                contents.append(image)
+            
+            response = self.client.models.generate_content(
+                model=model,
+                contents=contents
+            )
             
             if not response or not hasattr(response, 'text'):
                 # Handle safety blocks or empty responses
@@ -105,21 +116,20 @@ class OpenRouterProvider:
         encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
         return f"data:image/jpeg;base64,{encoded}"
 
-    def call(self, prompt: str, image: Optional[Image] = None, model: str = OPENROUTER_TEXT_MODEL) -> str:
+    def call(self, prompt: str, image: Optional[Image] = None, image_url: Optional[str] = None, model: str = OPENROUTER_TEXT_MODEL) -> str:
         """Call OpenRouter API"""
         if not self.available:
             raise LLMError("OpenRouter not initialized. Check your API key.")
         
         try:
+            model_to_use = model or (OPENROUTER_VISION_MODEL if (image or image_url) else OPENROUTER_TEXT_MODEL)
+            content = [{"type": "text", "text": prompt}]
+            
             if image:
-                model_to_use = model or OPENROUTER_VISION_MODEL
-                content = [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": self._image_to_data_url(image)}}
-                ]
-            else:
-                model_to_use = model or OPENROUTER_TEXT_MODEL
-                content = prompt
+                content.append({"type": "image_url", "image_url": {"url": self._image_to_data_url(image)}})
+            
+            if image_url:
+                content.append({"type": "image_url", "image_url": {"url": image_url}})
             
             response = self.httpx.post(
                 f"{self.base_url}/chat/completions",
@@ -243,13 +253,14 @@ class LLMFallbackService:
         if not self.providers:
             raise LLMError("No LLM providers available! Check your API keys in config.")
     
-    def call(self, prompt: str, image: Optional[Image] = None, preferred_provider: Optional[str] = None) -> str:
+    def call(self, prompt: str, image: Optional[Image] = None, image_url: Optional[str] = None, preferred_provider: Optional[str] = None) -> str:
         """
         Call LLM with automatic fallback.
         
         Args:
             prompt: The prompt to send to the LLM
             image: Optional PIL Image object
+            image_url: Optional direct image URL
             preferred_provider: Optional preferred provider name (gemini/openrouter/huggingface)
         
         Returns:
@@ -268,9 +279,9 @@ class LLMFallbackService:
                 
                 # Select model based on provider
                 if provider.name == "gemini":
-                    response = provider.call(prompt, image, model=GEMINI_TEXT_MODEL)
+                    response = provider.call(prompt, image, image_url, model=GEMINI_TEXT_MODEL)
                 elif provider.name == "openrouter":
-                    response = provider.call(prompt, image, model=OPENROUTER_VISION_MODEL if image else OPENROUTER_TEXT_MODEL)
+                    response = provider.call(prompt, image, image_url, model=OPENROUTER_VISION_MODEL if (image or image_url) else OPENROUTER_TEXT_MODEL)
                 elif provider.name == "huggingface":
                     response = provider.call(prompt, image, model="mistralai/Mistral-7B-Instruct-v0.1")
                 else:
@@ -310,17 +321,9 @@ def get_llm_service() -> LLMFallbackService:
     return _llm_service
 
 
-def call_llm(prompt: str, image: Optional[Image] = None, preferred_provider: Optional[str] = None) -> str:
+def call_llm(prompt: str, image: Optional[Image] = None, image_url: Optional[str] = None, preferred_provider: Optional[str] = None) -> str:
     """
     Convenience function to call the LLM with fallback.
-    
-    Args:
-        prompt: The prompt to send
-        image: Optional PIL Image
-        preferred_provider: Optional preferred provider
-    
-    Returns:
-        The LLM response
     """
     service = get_llm_service()
-    return service.call(prompt, image, preferred_provider)
+    return service.call(prompt, image, image_url, preferred_provider)

@@ -47,156 +47,121 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
 
   if (!result) return null;
 
-  const getSeverityStyles = (severity: string) => {
-    switch (severity) {
-      case "high": return { badge: "bg-rose-50 text-rose-500 border-rose-100", icon: <AlertCircle className="w-4 h-4" /> }
-      case "medium": return { badge: "bg-amber-50 text-amber-500 border-amber-100", icon: <AlertCircle className="w-4 h-4" /> }
-      default: return { badge: "bg-emerald-50 text-emerald-500 border-emerald-100", icon: <CheckCircle2 className="w-4 h-4" /> }
-    }
-  }
-
-  const { badge, icon } = getSeverityStyles(result.severity)
   const confidenceValue = typeof result.confidence === 'number' ? result.confidence : 0
   const confidencePercent = Math.round(confidenceValue * 100)
-  const fullReportUrl = resolveBackendAssetUrl(result.reportUrl)
 
   return (
-    <div className="w-full h-full flex flex-col">
-      {/* AI OUTPUT CARD */}
+    <div className="w-full max-w-3xl mx-auto space-y-12 py-8">
+      {/* 1. TOP LINEAR HEADER */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex-1 bg-gradient-to-br from-white to-slate-50 rounded-2xl p-10 md:p-12 shadow-xl border border-black/5 flex flex-col items-center justify-center text-center space-y-12 relative overflow-hidden"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-6 text-center"
       >
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-black/10"></div>
-        <div className="absolute top-0 left-0 h-1.5 bg-black transition-all duration-1000" style={{ width: `${confidencePercent}%` }}></div>
-
-        {/* Diagnostic Label */}
-        <div className="space-y-4 w-full">
-          <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-black/5 border border-black/5">
-            <Zap className="w-3.5 h-3.5 text-black" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-black">Diagnostic Analysis Active</span>
-          </div>
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-black uppercase tracking-tighter leading-tight max-w-2xl mx-auto">
-            {result.prediction}
-          </h2>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+          <Activity className="w-3 h-3" /> AI Scan Result
         </div>
+        
+        <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter uppercase leading-none">
+          {result.prediction}
+        </h2>
 
-        {/* Centered Confidence Metric */}
-        <div className="relative w-64 h-64 md:w-72 md:h-72 flex items-center justify-center">
-          <svg className="absolute inset-0 w-full h-full -rotate-90 scale-110">
-            <circle cx="50%" cy="50%" r="44%" fill="transparent" stroke="#E2E8F0" strokeWidth="12" />
-            <motion.circle
-              cx="50%" cy="50%" r="44%"
-              fill="transparent"
-              stroke="black"
-              strokeWidth="12"
-              strokeDasharray="276%"
-              initial={{ strokeDashoffset: "276%" }}
-              animate={{ strokeDashoffset: `${276 * (1 - confidenceValue)}%` }}
-              transition={{ duration: 2, ease: "easeOut" }}
-              strokeLinecap="round"
+        {/* Linear Certainty Bar */}
+        <div className="max-w-xs mx-auto space-y-2">
+          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <span>Certainty</span>
+            <span>{confidencePercent}%</span>
+          </div>
+          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${confidencePercent}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="h-full bg-black rounded-full"
             />
-          </svg>
-          <div className="relative z-10 flex flex-col items-center justify-center">
-            <span className="text-6xl md:text-7xl font-black text-black leading-none">{confidencePercent}%</span>
-            <div className="mt-4 flex flex-col items-center gap-1">
-              <span className="text-[10px] font-black text-black uppercase tracking-[0.3em] opacity-40">Probability Score</span>
-              <div className="w-12 h-1 bg-black/5 rounded-full overflow-hidden">
-                <div className="h-full bg-black/20 w-full animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Insight & Description */}
-        <div className="max-w-xl mx-auto space-y-8">
-          <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-xl border ${badge} font-black text-[10px] uppercase tracking-widest shadow-sm`}>
-            {icon}
-            <span>Clinical {result.severity} Urgency Level</span>
-          </div>
-          
-          <div className="relative">
-            <div className="absolute -left-6 -top-2 text-6xl font-serif text-black opacity-5">&quot;</div>
-            <p className="text-black text-base md:text-lg font-bold leading-relaxed opacity-80 italic px-4 whitespace-pre-line">
-              {result.explanation}
-            </p>
-            <div className="absolute -right-6 -bottom-8 text-6xl font-serif text-black opacity-5">&quot;</div>
-          </div>
-        </div>
-
-        {/* Action Panel Group */}
-        <div className="pt-8 w-full flex flex-wrap justify-center gap-4">
-          {onReset && (
-            <button
-              onClick={onReset}
-              className="px-10 py-4 bg-white border border-black/10 text-black font-black text-xs uppercase tracking-[0.2em] rounded-xl hover:bg-slate-50 transition-all flex items-center gap-3 shadow-lg active:scale-95"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset Cycle
-            </button>
-          )}
-          <div className="flex items-center gap-3 px-8 py-4 rounded-xl bg-black/5 border border-black/5 opacity-50 select-none">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-black">Verified Pipeline v4.2</span>
           </div>
         </div>
       </motion.div>
 
-      {/* DEEP KNOWLEDGE SECTIONS */}
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-3xl p-8 border border-black/5 shadow-sm space-y-4"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500">
-            <Zap className="w-6 h-6" />
-          </div>
-          <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">Why it happened</h3>
-          <p className="text-sm font-bold text-slate-500 leading-relaxed whitespace-pre-line">
-            {result.rootCause || "The system is calculating the exact biological cause. Refer to the full report for details."}
-          </p>
-        </motion.div>
+      {/* 2. CLINICAL SUMMARY */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="relative px-6 border-l-4 border-slate-900"
+      >
+        <p className="text-lg md:text-xl font-bold text-slate-700 italic leading-relaxed whitespace-pre-line">
+          &quot;{result.explanation}&quot;
+        </p>
+      </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-3xl p-8 border border-black/5 shadow-sm space-y-4"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">The Simple Version</h3>
-          <p className="text-sm font-bold text-slate-500 leading-relaxed italic whitespace-pre-line">
-            {result.laymanExplanation || "The AI is summarizing the medical jargon into everyday language."}
-          </p>
-        </motion.div>
+      {/* 3. LINEAR ANALYSIS (THE "WHY") */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="space-y-6"
+      >
+        <div className="flex items-center gap-4">
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Pathophysiology Analysis</h3>
+          <div className="flex-1 h-px bg-slate-100" />
+        </div>
+        <p className="text-base font-bold text-slate-600 leading-relaxed whitespace-pre-line">
+          {result.rootCause}
+        </p>
+      </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="md:col-span-2 bg-black rounded-3xl p-8 shadow-2xl space-y-6"
-        >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-400">
-              <ClipboardCheck className="w-6 h-6" />
+      {/* 4. SIMPLE SUMMARY */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="bg-indigo-50/50 rounded-[2rem] p-8 md:p-10 space-y-4"
+      >
+        <div className="flex items-center gap-3 text-indigo-500">
+          <Sparkles className="w-5 h-5" />
+          <h3 className="text-xs font-black uppercase tracking-[0.3em]">The Simple Explanation</h3>
+        </div>
+        <p className="text-base font-bold text-indigo-900/70 leading-relaxed italic whitespace-pre-line">
+          {result.laymanExplanation}
+        </p>
+      </motion.div>
+
+      {/* 5. ACTIONABLE STEPS */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="space-y-6"
+      >
+        <div className="flex items-center gap-4">
+          <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Recommended Steps</h3>
+          <div className="flex-1 h-px bg-slate-100" />
+        </div>
+        <div className="space-y-4">
+          {(result.managementSteps || []).map((step, idx) => (
+            <div key={idx} className="flex gap-6 items-start group">
+              <span className="text-2xl font-black text-slate-200 group-hover:text-black transition-colors">0{idx + 1}</span>
+              <p className="text-sm font-bold text-slate-600 pt-1.5 leading-relaxed">{step}</p>
             </div>
-            <h3 className="text-xl font-black uppercase tracking-tight text-white">Management & Steps</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(result.managementSteps || ["Monitor symptoms", "Keep records", "Consult doctor"]).map((step, idx) => (
-              <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-start gap-3">
-                <span className="text-emerald-400 font-black">0{idx + 1}</span>
-                <span className="text-white/70 text-xs font-bold leading-tight">{step}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* 6. RESET ACTION */}
+      <div className="pt-12 flex justify-center">
+        {onReset && (
+          <button
+            onClick={onReset}
+            className="px-12 py-5 bg-black text-white font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-2xl"
+          >
+            New Analysis Cycle
+          </button>
+        )}
       </div>
+    </div>
+  );
+}
 
       {/* --- CLINICAL REPORT MODAL --- */}
       <AnimatePresence>

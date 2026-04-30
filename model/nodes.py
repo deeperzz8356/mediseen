@@ -44,19 +44,22 @@ def analysis_node(state: AgentState):
     
     prompt = (
         "Role: Senior Medical Consultant. "
-        "Task: Analyze the provided report/image. "
+        "Task: SCAN AND ANALYZE THE ATTACHED MEDICAL REPORT IMAGE AND ANY URLS PROVIDED. "
+        f"Primary Image URL: {state.get('image_url', 'Not provided')} "
+        "Instructions: If the user has provided a Cloudinary or image link in the 'Context Symptoms' below, navigate to it and include its data in your analysis. "
         "Return ONLY valid JSON with these keys: "
         "disease_identification (clean name), "
         "confidence (0.0-1.0), "
         "likely_symptoms (list), "
-        "root_cause_reason (Detailed medical pathophysiology. Use bullet points for key findings), "
-        "patient_friendly_explanation (Clear, analogy-based explanation. Use simple language), "
-        "steps_to_understand_and_manage (List of 3-5 specific actions). "
-        f"Context Symptoms: {json.dumps(state.get('user_symptoms', ''))}"
+        "root_cause_reason (Detailed pathophysiology from report), "
+        "patient_friendly_explanation (Simple analogy), "
+        "steps_to_understand_and_manage (Specific actions). "
+        f"Context Symptoms/Links: {json.dumps(state.get('user_symptoms', ''))}"
     )
 
     try:
-        response_text = call_llm(prompt, image=img, preferred_provider="gemini")
+        response_text = call_llm(prompt, image=img, image_url=state.get("image_url"), preferred_provider="gemini")
+        print(f"--- [AI RAW RESPONSE] ---\n{response_text}\n-----------------------")
         
         # More robust JSON extraction
         import re
@@ -66,7 +69,7 @@ def analysis_node(state: AgentState):
         else:
             clean_text = response_text.strip().replace('```json', '').replace('```', '')
             
-        # Pre-process confidence if it's a string like "High"
+        # Pre-process confidence
         try:
             temp_data = json.loads(clean_text)
             conf = str(temp_data.get("confidence", "0.7")).lower()
@@ -74,7 +77,6 @@ def analysis_node(state: AgentState):
             elif "medium" in conf: temp_data["confidence"] = 0.7
             elif "low" in conf: temp_data["confidence"] = 0.4
             
-            # Ensure it's a float if it's a string number
             if isinstance(temp_data.get("confidence"), str):
                 try:
                     temp_data["confidence"] = float(re.findall(r"\d+\.\d+|\d+", temp_data["confidence"])[0])
@@ -84,11 +86,27 @@ def analysis_node(state: AgentState):
             
             clean_text = json.dumps(temp_data)
         except:
-            pass # Fallback to standard validation if pre-processing fails
+            pass
 
         data = GeminiDiagnosisResponse.model_validate_json(clean_text)
     except Exception as e:
-        print(f"WARNING: Vision analysis failed for {state['session_id']}, attempting symptom-only fallback. Error: {e}")
+        print(f"CRITICAL: Vision analysis failed. Error: {e}")
+        # If it failed because of a parsing error but we have the response, try a "lazy" parse
+        try:
+            import json
+            # Extract anything that looks like JSON if Pydantic failed
+            match = re.search(r'\{.*\}', response_text, re.DOTALL)
+            lazy_data = json.loads(match.group(0))
+            data = GeminiDiagnosisResponse(
+                disease_identification=lazy_data.get("disease_identification", "Preliminary Assessment"),
+                confidence=0.7,
+                likely_symptoms=lazy_data.get("likely_symptoms", []),
+                root_cause_reason=lazy_data.get("root_cause_reason", f"Scan results: {response_text[:200]}..."),
+                patient_friendly_explanation=lazy_data.get("patient_friendly_explanation", "Please check your report details."),
+                steps_to_understand_and_manage=lazy_data.get("steps_to_understand_and_manage", ["Consult a doctor"])
+            )
+        except:
+            print(f"WARNING: Lazy parse failed, attempting symptom-only fallback.")
         
         # Fallback: Try a text-only call based on symptoms if vision fails
         try:
