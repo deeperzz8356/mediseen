@@ -24,11 +24,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 class GeminiDiagnosisResponse(BaseModel):
-    disease_identification: str = Field(min_length=1, max_length=200)
+    disease_identification: str = Field(min_length=1, max_length=500)
     confidence: float = Field(ge=0.0, le=1.0)
     likely_symptoms: List[str] = Field(default_factory=list)
-    root_cause_reason: str = Field(min_length=1, max_length=1000)
-    patient_friendly_explanation: str = Field(min_length=1, max_length=1000)
+    root_cause_reason: str = Field(min_length=1, max_length=5000)
+    patient_friendly_explanation: str = Field(min_length=1, max_length=5000)
     steps_to_understand_and_manage: List[str] = Field(default_factory=list)
 
 def _escape_html_text(value: str) -> str:
@@ -43,13 +43,15 @@ def analysis_node(state: AgentState):
     img.thumbnail((1024, 1024))
     
     prompt = (
-        "Role: You are a senior medical consultant specializing in diagnostic radiology and internal medicine. "
-        "Your goal is to explain a patient's medical report with the clarity and authority of a doctor. "
-        "Task: Scan the provided medical image/report and extract structured clinical information. "
-        "Treat user symptoms as context but prioritize visual/textual evidence from the report. "
+        "Role: Senior Medical Consultant. "
+        "Task: Analyze the provided report/image. "
         "Return ONLY valid JSON with these keys: "
-        "disease_identification, confidence, likely_symptoms (list), root_cause_reason, "
-        "patient_friendly_explanation (analogy-based), steps_to_understand_and_manage (list of 3 items). "
+        "disease_identification (clean name), "
+        "confidence (0.0-1.0), "
+        "likely_symptoms (list), "
+        "root_cause_reason (Detailed medical pathophysiology. Use bullet points for key findings), "
+        "patient_friendly_explanation (Clear, analogy-based explanation. Use simple language), "
+        "steps_to_understand_and_manage (List of 3-5 specific actions). "
         f"Context Symptoms: {json.dumps(state.get('user_symptoms', ''))}"
     )
 

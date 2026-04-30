@@ -118,7 +118,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
           
           <div className="relative">
             <div className="absolute -left-6 -top-2 text-6xl font-serif text-black opacity-5">&quot;</div>
-            <p className="text-black text-base md:text-lg font-bold leading-relaxed opacity-80 italic px-4">
+            <p className="text-black text-base md:text-lg font-bold leading-relaxed opacity-80 italic px-4 whitespace-pre-line">
               {result.explanation}
             </p>
             <div className="absolute -right-6 -bottom-8 text-6xl font-serif text-black opacity-5">&quot;</div>
@@ -155,7 +155,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
             <Zap className="w-6 h-6" />
           </div>
           <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">Why it happened</h3>
-          <p className="text-sm font-bold text-slate-500 leading-relaxed">
+          <p className="text-sm font-bold text-slate-500 leading-relaxed whitespace-pre-line">
             {result.rootCause || "The system is calculating the exact biological cause. Refer to the full report for details."}
           </p>
         </motion.div>
@@ -170,7 +170,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
             <Sparkles className="w-6 h-6" />
           </div>
           <h3 className="text-xl font-black uppercase tracking-tight text-slate-800">The Simple Version</h3>
-          <p className="text-sm font-bold text-slate-500 leading-relaxed italic">
+          <p className="text-sm font-bold text-slate-500 leading-relaxed italic whitespace-pre-line">
             {result.laymanExplanation || "The AI is summarizing the medical jargon into everyday language."}
           </p>
         </motion.div>

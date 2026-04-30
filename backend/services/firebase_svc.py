@@ -50,10 +50,6 @@ def init_firebase(cred_path: str = "firebase_admin.json"):
                     cred = credentials.Certificate(str(resolved_cred_path))
                     print(f"OK: Firebase initialized from {cred_path}")
                 else:
-                    print(
-                        "WARNING: Firebase credentials not found (no file and no env var); "
-                        "skipping Firebase initialization"
-                    )
                     _db = None
                     return _db
 
@@ -180,7 +176,6 @@ def upload_image(local_path: str, destination_blob_name: str) -> str:
         init_firebase() # Ensure app is initialized
         bucket_name = os.getenv("FIREBASE_STORAGE_BUCKET")
         if not bucket_name:
-            print("WARNING: FIREBASE_STORAGE_BUCKET not set. Skipping Firebase upload.")
             return ""
 
         bucket = storage.bucket()
