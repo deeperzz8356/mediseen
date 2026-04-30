@@ -32,8 +32,9 @@ const ar: Translations = {
   navbar: {
     home: "الرئيسية",
     checkup: "الفحص",
-    health: "الصحة",
+    diet: "النظام الغذائي",
     library: "المكتبة",
+    reports: "التقارير",
     notSignedIn: "غير مسجل الدخول",
   },
   agent: {
@@ -175,7 +176,7 @@ const ar: Translations = {
       startDiagnosis: "بدء التشخيص",
     },
   },
-  wellness: {
+  diet: {
     title: "صحتك",
     titleHighlight: "وعافيتك",
     subtitle: "نصائح بسيطة للغذاء ونمط الحياة والعادات لمساعدتك على الشعور بأفضل حال.",

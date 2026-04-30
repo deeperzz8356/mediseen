@@ -123,7 +123,7 @@ function SmartDietGenerator() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: auth.currentUser?.uid || "anonymous",
+          user_id: auth?.currentUser?.uid || "anonymous",
           disease,
           weight: Number(weight),
           height: Number(height),

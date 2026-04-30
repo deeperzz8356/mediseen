@@ -90,9 +90,9 @@ def analysis_node(state: AgentState):
                 disease_identification="Analysis Error",
                 confidence=0.0,
                 likely_symptoms=[],
-                root_cause_reason=f"Processing failed: {str(e)[:100]}",
-                patient_friendly_explanation="We couldn't read your report or assess your symptoms clearly. Please provide more detail or a clearer photo.",
-                steps_to_understand_and_manage=["Re-upload a high-quality image", "Describe symptoms in more detail", "Consult a doctor for severe symptoms like heart pain"]
+                root_cause_reason=f"Technical Error: {str(fallback_e)} (Original: {str(e)[:100]})",
+                patient_friendly_explanation="MediSeen encountered a technical issue while analyzing your report. This usually means the AI service is temporarily unavailable or blocked by safety filters.",
+                steps_to_understand_and_manage=["Check your internet connection", "Ensure the photo is clear and contains medical text", "Check backend logs for API key or safety filter errors"]
             )
         
     return {
