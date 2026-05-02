@@ -19,6 +19,7 @@ export default function AgentFAB() {
   const handleSend = async () => {
     if (!input.trim() || isTyping) return
     
+    console.log("DEBUG: handleSend called with:", input)
     const userMessage = { role: 'user', text: input }
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
@@ -27,7 +28,10 @@ export default function AgentFAB() {
 
     try {
       const user = auth?.currentUser
-      if (!user) throw new Error("Not authenticated")
+      if (!user) {
+        alert("Not logged in! Please log in first.")
+        throw new Error("Not authenticated")
+      }
       const token = await user.getIdToken()
 
       // Format messages for OpenRouter (role + content)
@@ -36,6 +40,7 @@ export default function AgentFAB() {
         content: m.text
       }))
 
+      console.log("DEBUG: Calling backend at:", `${API_BASE_URL}/chat`)
       const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: {
@@ -46,14 +51,17 @@ export default function AgentFAB() {
       })
 
       if (!res.ok) {
+        console.error("DEBUG: Backend returned error status:", res.status)
         if (res.status === 404) throw new Error("The AI service is still being deployed. Please try again in 2 minutes.")
-        throw new Error("Chat failed")
+        throw new Error(`Chat failed with status ${res.status}`)
       }
       const data = await res.json()
+      console.log("DEBUG: Got response:", data.response)
 
       setMessages(prev => [...prev, { role: 'assistant', text: data.response }])
     } catch (err: any) {
-      console.error("Chat error:", err)
+      console.error("DEBUG: Chat error caught:", err)
+      alert("Chat Error: " + err.message)
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         text: err.message || "I'm sorry, I'm having trouble connecting right now. Please try again later." 
