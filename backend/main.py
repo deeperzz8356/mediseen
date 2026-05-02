@@ -277,6 +277,26 @@ async def verify_token(_decoded_token: dict = Depends(verify_bearer_token)):
         "profile": profile_data
     }
 
+@app.post("/chat")
+async def chat_with_ai(
+    request: dict,
+    _decoded_token: dict = Depends(verify_bearer_token)
+):
+    """
+    Handles medical chat queries using OpenRouter.
+    """
+    try:
+        from backend.services.chat_svc import get_chat_response
+    except ModuleNotFoundError:
+        from services.chat_svc import get_chat_response
+
+    messages = request.get("messages", [])
+    if not messages:
+        raise HTTPException(status_code=400, detail="No messages provided")
+
+    response_text = await get_chat_response(messages)
+    return {"response": response_text}
+
 
 @app.post("/auth/register")
 async def register_user(

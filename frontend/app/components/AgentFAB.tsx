@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { MessageSquare, X, Send, Sparkles, Brain } from "lucide-react"
 import { useState } from "react"
 import { useLocale } from "../i18n/LocaleContext"
+import { auth } from "@/lib/firebase"
+import { API_BASE_URL } from "../config"
 
 export default function AgentFAB() {
   const { t } = useLocale()
@@ -12,14 +14,50 @@ export default function AgentFAB() {
     { role: 'assistant', text: t.agent.greeting }
   ])
   const [input, setInput] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
 
-  const handleSend = () => {
-    if (!input.trim()) return
-    setMessages([...messages, { role: 'user', text: input }])
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return
+    
+    const userMessage = { role: 'user', text: input }
+    const newMessages = [...messages, userMessage]
+    setMessages(newMessages)
     setInput('')
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', text: t.agent.analyzing }])
-    }, 1000)
+    setIsTyping(true)
+
+    try {
+      const user = auth?.currentUser
+      if (!user) throw new Error("Not authenticated")
+      const token = await user.getIdToken()
+
+      // Format messages for OpenRouter (role + content)
+      const apiMessages = newMessages.map(m => ({
+        role: m.role,
+        content: m.text
+      }))
+
+      const res = await fetch(`${API_BASE_URL}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ messages: apiMessages })
+      })
+
+      if (!res.ok) throw new Error("Chat failed")
+      const data = await res.json()
+
+      setMessages(prev => [...prev, { role: 'assistant', text: data.response }])
+    } catch (err) {
+      console.error("Chat error:", err)
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        text: "I'm sorry, I'm having trouble connecting right now. Please try again later." 
+      }])
+    } finally {
+      setIsTyping(false)
+    }
   }
 
   return (
@@ -73,6 +111,20 @@ export default function AgentFAB() {
                   </div>
                 </motion.div>
               ))}
+
+              {isTyping && (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex justify-start"
+                >
+                  <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100 flex gap-1">
+                    <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0 }} className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             {/* Input */}

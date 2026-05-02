@@ -68,13 +68,21 @@ export default function Navbar() {
 				}}
 			>
 				{/* Branding */}
-				<Link href="/home" className="flex items-center gap-3 active:scale-95 transition-transform">
-					<div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20">
-						<Brain className="w-6 h-6 text-white" />
+				<Link href="/home" className="flex items-center gap-4 active:scale-95 transition-transform">
+					<div className="w-24 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-50 overflow-hidden p-1">
+						<Image 
+							src="/logo2.png" 
+							alt="MediSeen Logo" 
+							width={80} 
+							height={32} 
+							className="object-contain" 
+						/>
 					</div>
 					<div className="flex flex-col">
-						<span className="font-black text-lg tracking-tight text-slate-900 leading-none">MediSeen</span>
-						<span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">AI Health Assistant</span>
+						<span className="font-black text-xl tracking-tighter text-slate-900 leading-none">
+							Medi<span className="text-pastel-pink">Seen</span>
+						</span>
+						<span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Vision Intelligence</span>
 					</div>
 				</Link>
 

@@ -22,16 +22,6 @@ export default function LandingPage() {
     if (appState === 'splash') {
       const timer = setTimeout(async () => {
         setAppState('language')
-        
-        // Request notification permissions after splash
-        try {
-          const granted = await NotificationService.requestPermissions()
-          if (granted) {
-            await NotificationService.scheduleRepeatingNotifications()
-          }
-        } catch (err) {
-          console.error("Notification permission error:", err)
-        }
       }, 3000)
       return () => clearTimeout(timer)
     }

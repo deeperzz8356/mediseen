@@ -28,8 +28,16 @@ export default function Sidebar() {
     <div className="w-64 h-screen bg-[#1E293B] border-r border-slate-800 flex flex-col justify-between py-8 px-4 sticky top-0 hidden md:flex">
       <div>
         <div className="mb-10 px-4">
-          <Link href="/" className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-[#6EE7B7]">
-            HackMatrix
+          <Link href="/home" className="flex items-center gap-3 active:scale-95 transition-transform">
+            <div className="w-20 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm overflow-hidden p-1">
+              <Image src="/logo2.png" alt="logo" width={64} height={24} className="object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-black text-lg tracking-tighter text-white leading-none">
+                Medi<span className="text-pastel-pink">Seen</span>
+              </span>
+              <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Vision Intelligence</span>
+            </div>
           </Link>
         </div>
         
@@ -68,7 +76,7 @@ export default function Sidebar() {
 
       <div className="px-4">
         <div className="bg-gradient-to-r from-[#7DD3FC]/10 to-[#6EE7B7]/10 border border-[#6EE7B7]/20 rounded-2xl p-4">
-          <p className="text-xs text-slate-300 mb-2">HackMatrix AI System</p>
+          <p className="text-xs text-slate-300 mb-2">MediSeen AI System</p>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#6EE7B7] animate-pulse"></div>
             <span className="text-xs font-semibold text-[#6EE7B7]">All systems operational</span>
