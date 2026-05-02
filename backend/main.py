@@ -44,6 +44,10 @@ import sys
 sys.path.append("..")
 
 from model.graph import build_graph
+try:
+    from backend.services.diet_svc import DietGenerateRequest, SwapRequest
+except ImportError:
+    from services.diet_svc import DietGenerateRequest, SwapRequest
 
 load_dotenv()
 
@@ -197,7 +201,7 @@ def get_medical_context(disease: str):
 
 # 4.2️⃣ Advanced Diet System Endpoints
 @app.post("/diet/generate")
-async def generate_diet_plan(req: "DietGenerateRequest"):
+async def generate_diet_plan(req: DietGenerateRequest):
     from backend.services.diet_svc import calculate_calories, generate_meal_plan
     from backend.services.firebase_svc import fetch_medical_context_object
     
@@ -236,7 +240,7 @@ async def sync_health_data(
         raise HTTPException(status_code=500, detail="Failed to sync health data")
 
 @app.post("/diet/swap")
-async def swap_food_item(req: "SwapRequest"):
+async def swap_food_item(req: SwapRequest):
     # Logic to return alternative foods with similar macros
     return {"alternatives": ["Quinoa", "Sweet Potato", "Whole Wheat Pasta"]}
 

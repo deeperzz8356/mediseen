@@ -121,7 +121,12 @@ def generate_meal_plan(calories: float, disease_rules: DietRules, req: DietGener
     food_docs = db.collection("foods").get()
     all_foods = []
     for doc in food_docs:
-        all_foods.append(FoodItem(id=doc.id, **doc.to_dict()))
+        data = doc.to_dict()
+        if not data: continue
+        try:
+            all_foods.append(FoodItem(id=doc.id, **data))
+        except Exception as e:
+            print(f"WARNING: Skipping malformed food item {doc.id}: {e}")
 
     # 1. Filter phase
     filtered_foods = []

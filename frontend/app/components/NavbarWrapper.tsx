@@ -26,7 +26,7 @@ export default function NavbarWrapper() {
     }
   }, [pathname, router])
 
-  const hideNavbarRoutes = ["/", "/login", "/register"]
+  const hideNavbarRoutes = ["/", "/login"]
 
   if (hideNavbarRoutes.includes(pathname)) return null
 
