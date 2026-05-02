@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { MessageSquare, X, Send, Sparkles, Brain } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useLocale } from "../i18n/LocaleContext"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
@@ -15,6 +15,15 @@ export default function AgentFAB() {
   ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, isTyping])
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return
@@ -28,10 +37,7 @@ export default function AgentFAB() {
 
     try {
       const user = auth?.currentUser
-      if (!user) {
-        alert("Not logged in! Please log in first.")
-        throw new Error("Not authenticated")
-      }
+      if (!user) throw new Error("Not authenticated")
       const token = await user.getIdToken()
 
       // Format messages for OpenRouter (role + content)
@@ -40,7 +46,6 @@ export default function AgentFAB() {
         content: m.text
       }))
 
-      console.log("DEBUG: Calling backend at:", `${API_BASE_URL}/chat`)
       const res = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: {
@@ -51,17 +56,14 @@ export default function AgentFAB() {
       })
 
       if (!res.ok) {
-        console.error("DEBUG: Backend returned error status:", res.status)
         if (res.status === 404) throw new Error("The AI service is still being deployed. Please try again in 2 minutes.")
         throw new Error(`Chat failed with status ${res.status}`)
       }
       const data = await res.json()
-      console.log("DEBUG: Got response:", data.response)
 
       setMessages(prev => [...prev, { role: 'assistant', text: data.response }])
     } catch (err: any) {
-      console.error("DEBUG: Chat error caught:", err)
-      alert("Chat Error: " + err.message)
+      console.error("Chat error caught:", err)
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         text: err.message || "I'm sorry, I'm having trouble connecting right now. Please try again later." 
@@ -91,7 +93,7 @@ export default function AgentFAB() {
                   <h3 className="font-black text-slate-800 text-sm">{t.agent.title}</h3>
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">{t.agent.activeModel}</span>
+                    <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Clinical AI Studio</span>
                   </div>
                 </div>
               </div>
@@ -136,6 +138,7 @@ export default function AgentFAB() {
                   </div>
                 </motion.div>
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
