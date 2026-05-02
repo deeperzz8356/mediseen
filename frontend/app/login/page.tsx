@@ -328,6 +328,13 @@ export default function LoginPage() {
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish <ChevronRight className="w-4 h-4" /></>}
               </motion.button>
+
+              <p className="text-center text-[11px] text-slate-300 font-medium leading-relaxed px-4 pt-4">
+                  By clicking Finish, you agree to our{" "}
+                  <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Terms</Link>
+                  {" "}and{" "}
+                  <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Privacy Policy</Link>.
+              </p>
             </div>
           </motion.div>
         )}
