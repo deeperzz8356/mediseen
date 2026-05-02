@@ -1,10 +1,9 @@
-import { AdMob, BannerAdOptions, BannerAdPosition, BannerAdSize, InterstitialAdOptions } from '@capacitor-community/admob';
+import { AdMob, BannerAdOptions, BannerAdPosition, BannerAdSize, AdOptions } from '@capacitor-community/admob';
 
 export async function initializeAdMob() {
   try {
-    await AdMob.initialize({
-      requestTrackingAuthorization: true,
-    });
+    await AdMob.initialize();
+    await AdMob.requestTrackingAuthorization();
     console.log('AdMob Initialized');
   } catch (error) {
     console.error('AdMob initialization error:', error);
@@ -37,7 +36,7 @@ export async function hideBanner() {
 
 export async function showInterstitial() {
   try {
-    const options: InterstitialAdOptions = {
+    const options: AdOptions = {
       adId: 'ca-app-pub-3940256099942544/1033173712', // Test Interstitial ID
       isTesting: true,
     };
