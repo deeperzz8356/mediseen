@@ -45,15 +45,18 @@ export default function AgentFAB() {
         body: JSON.stringify({ messages: apiMessages })
       })
 
-      if (!res.ok) throw new Error("Chat failed")
+      if (!res.ok) {
+        if (res.status === 404) throw new Error("The AI service is still being deployed. Please try again in 2 minutes.")
+        throw new Error("Chat failed")
+      }
       const data = await res.json()
 
       setMessages(prev => [...prev, { role: 'assistant', text: data.response }])
-    } catch (err) {
+    } catch (err: any) {
       console.error("Chat error:", err)
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        text: "I'm sorry, I'm having trouble connecting right now. Please try again later." 
+        text: err.message || "I'm sorry, I'm having trouble connecting right now. Please try again later." 
       }])
     } finally {
       setIsTyping(false)
