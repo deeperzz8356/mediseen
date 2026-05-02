@@ -1,6 +1,6 @@
 "use client"
 
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 // We define the interface for Health Connect data
 export interface HealthData {
@@ -9,6 +9,21 @@ export interface HealthData {
   caloriesBurned: number;
   activityTime: number; // in minutes
 }
+
+// Define the interface for our native plugin
+interface HealthConnectPlugin {
+  checkAvailability(): Promise<{ status: number }>;
+  requestHealthPermissions(): Promise<{ granted: boolean; message?: string }>;
+  fetchHealthData(): Promise<{
+    steps?: number;
+    caloriesBurned?: number;
+    sleepHours?: number;
+    activityTime?: number;
+  }>;
+}
+
+// Register the native plugin
+const HealthConnect = registerPlugin<HealthConnectPlugin>('HealthConnect');
 
 class HealthService {
   private isConnected = false;
@@ -21,23 +36,13 @@ class HealthService {
     }
 
     try {
-      // @ts-ignore
-      const { HealthConnect } = await import('@capacitor/core').then(m => ({ 
-        HealthConnect: (window as any).Capacitor?.Plugins?.HealthConnect 
-      }));
-      
-      if (!HealthConnect) {
-        console.error("HealthConnect plugin not found on window.Capacitor");
-        return false;
-      }
-
       const availability = await HealthConnect.checkAvailability();
       if (availability.status !== 1) { // 1 = SDK_AVAILABLE
-        console.error("Health Connect SDK not available");
+        console.error("Health Connect SDK not available. Status:", availability.status);
         return false;
       }
 
-      const result = await HealthConnect.requestPermissions();
+      const result = await HealthConnect.requestHealthPermissions();
       this.isConnected = result.granted;
       return result.granted;
     } catch (error) {
@@ -62,13 +67,6 @@ class HealthService {
     }
 
     try {
-      // @ts-ignore
-      const { HealthConnect } = await import('@capacitor/core').then(m => ({ 
-        HealthConnect: (window as any).Capacitor?.Plugins?.HealthConnect 
-      }));
-      
-      if (!HealthConnect) throw new Error("HealthConnect plugin not found");
-
       const data = await HealthConnect.fetchHealthData();
       
       return {

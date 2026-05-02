@@ -30,8 +30,8 @@ export interface DiagnosisResult {
   }
   reportUrl?: string
   heatmapUrl?: string
-  severity?: string
-  affectedArea?: string
+  severity?: "low" | "medium" | "high"
+  affectedArea?: number
   diseaseId?: string
 }
 

@@ -30,8 +30,9 @@ const fr: Translations = {
   navbar: {
     home: "Accueil",
     checkup: "Bilan",
-    health: "Santé",
+    diet: "Régime",
     library: "Bibliothèque",
+    reports: "Rapports",
     notSignedIn: "Non connecté",
   },
   agent: {
@@ -173,7 +174,7 @@ const fr: Translations = {
       startDiagnosis: "Démarrer le diagnostic",
     },
   },
-  wellness: {
+  diet: {
     title: "Votre santé",
     titleHighlight: "& bien-être",
     subtitle: "Des conseils simples sur l'alimentation, le mode de vie et les habitudes pour vous sentir au mieux.",

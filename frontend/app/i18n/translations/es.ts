@@ -30,8 +30,9 @@ const es: Translations = {
   navbar: {
     home: "Inicio",
     checkup: "Chequeo",
-    health: "Salud",
+    diet: "Dieta",
     library: "Biblioteca",
+    reports: "Informes",
     notSignedIn: "No conectado",
   },
   agent: {
@@ -171,7 +172,7 @@ const es: Translations = {
       startDiagnosis: "Iniciar diagnóstico",
     },
   },
-  wellness: {
+  diet: {
     title: "Tu salud",
     titleHighlight: "y bienestar",
     subtitle: "Consejos simples sobre alimentación, estilo de vida y hábitos para sentirte mejor.",

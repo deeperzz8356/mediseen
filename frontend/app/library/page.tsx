@@ -13,7 +13,11 @@ import {
   ArrowRight,
   Stethoscope,
   ChevronRight,
-  X
+  X,
+  ClipboardCheck,
+  Zap,
+  Activity,
+  Sparkles
 } from "lucide-react"
 import { API_BASE_URL } from "../config"
 

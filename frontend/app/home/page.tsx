@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 import { auth } from "@/lib/firebase"
@@ -24,6 +25,7 @@ import { useLocale } from "../i18n/LocaleContext"
 import { healthService, HealthData } from "../services/HealthService"
 
 export default function Home() {
+  const router = useRouter()
   const [username, setUsername] = useState("")
   const [isSyncing, setIsSyncing] = useState(false)
   const [healthData, setHealthData] = useState<HealthData | null>(null)

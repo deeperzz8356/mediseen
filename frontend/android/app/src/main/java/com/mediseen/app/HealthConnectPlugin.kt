@@ -43,7 +43,7 @@ class HealthConnectPlugin : Plugin() {
     }
 
     @PluginMethod
-    fun requestPermissions(call: PluginCall) {
+    fun requestHealthPermissions(call: PluginCall) {
         val client = HealthConnectClient.getOrCreate(context)
         scope.launch {
             try {
