@@ -20,7 +20,6 @@ import {
 } from "lucide-react"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
-import { healthService } from "../services/HealthService"
 
 interface MealItem {
   meal: string
@@ -101,7 +100,6 @@ export default function DietPage() {
   )
 }
 
-
 function SmartDietGenerator() {
   const [loading, setLoading] = useState(false)
   const [plan, setPlan] = useState<DietPlan | null>(null)
@@ -116,32 +114,10 @@ function SmartDietGenerator() {
   const [goal, setGoal] = useState("maintenance")
   const [dietType, setDietType] = useState("veg")
   const [budget, setBudget] = useState("medium")
-  const [error, setError] = useState("")
-
-  const syncWithHealth = async () => {
-    try {
-      const data = await healthService.fetchRealTimeData();
-      if (data) {
-        // Simple heuristic: if active minutes > 60, high activity, etc.
-        const activeMinutes = data.activityTime;
-        if (activeMinutes > 60) setActivity(1.725); // Very Active
-        else if (activeMinutes > 30) setActivity(1.55); // Moderately Active
-        else if (activeMinutes > 15) setActivity(1.375); // Lightly Active
-        else setActivity(1.2); // Sedentary
-      }
-    } catch (err) {
-      console.error("Health sync in Diet failed", err);
-    }
-  }
-
-  useEffect(() => {
-    syncWithHealth();
-  }, []);
 
   const generatePlan = async () => {
     if (!disease.trim()) return
     setLoading(true)
-    setError("")
     try {
       const res = await fetch(`${API_BASE_URL}/diet/generate`, {
         method: "POST",
@@ -159,15 +135,10 @@ function SmartDietGenerator() {
           budget
         })
       })
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Server failed to generate diet plan");
-      }
       const data = await res.json()
       setPlan(data)
-    } catch (err: any) {
-      console.error("Diet generation error:", err)
-      setError(err.message || "Could not fetch diet plan. Please check your connection.")
+    } catch (err) {
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -181,16 +152,6 @@ function SmartDietGenerator() {
   return (
     <div className="space-y-12">
       <div className="flo-card p-8 md:p-12 rounded-[3rem] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40 space-y-10">
-        {error && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="p-5 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center gap-4"
-          >
-            <AlertCircle className="w-6 h-6 shrink-0" />
-            <p className="text-sm font-bold">{error}</p>
-          </motion.div>
-        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Section 1: Clinical Info */}
           <div className="space-y-8">
@@ -258,19 +219,19 @@ function SmartDietGenerator() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="p-8 rounded-[2rem] bg-slate-900 text-white space-y-2 shadow-xl shadow-slate-900/20">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daily Target</p>
-              <p className="text-4xl font-black">{plan?.calories || 0} <span className="text-sm font-bold text-slate-500">kcal</span></p>
+              <p className="text-4xl font-black">{plan.calories} <span className="text-sm font-bold text-slate-500">kcal</span></p>
             </div>
             <div className="p-8 rounded-[2rem] bg-white border border-slate-100 space-y-2 shadow-lg shadow-slate-100">
               <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Protein</p>
-              <p className="text-4xl font-black text-slate-800">{plan?.macros?.protein || 0}g</p>
+              <p className="text-4xl font-black text-slate-800">{plan.macros.protein}g</p>
             </div>
             <div className="p-8 rounded-[2rem] bg-white border border-slate-100 space-y-2 shadow-lg shadow-slate-100">
               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Carbs</p>
-              <p className="text-4xl font-black text-slate-800">{plan?.macros?.carbs || 0}g</p>
+              <p className="text-4xl font-black text-slate-800">{plan.macros.carbs}g</p>
             </div>
             <div className="p-8 rounded-[2rem] bg-white border border-slate-100 space-y-2 shadow-lg shadow-slate-100">
               <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Fats</p>
-              <p className="text-4xl font-black text-slate-800">{plan?.macros?.fats || 0}g</p>
+              <p className="text-4xl font-black text-slate-800">{plan.macros.fats}g</p>
             </div>
           </div>
 
@@ -286,7 +247,7 @@ function SmartDietGenerator() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {plan?.meals?.map((meal, i) => (
+              {plan.meals.map((meal, i) => (
                 <motion.div
                   key={meal.meal}
                   initial={{ opacity: 0, y: 20 }}
@@ -329,7 +290,7 @@ function SmartDietGenerator() {
                 <ShieldCheck className="w-6 h-6" /> Clinical Recommendations
               </h4>
               <div className="flex flex-wrap gap-2">
-                {plan?.recommended?.map(r => (
+                {plan.recommended.map(r => (
                   <span key={r} className="px-4 py-2 bg-white border border-emerald-100 rounded-xl text-xs font-bold text-emerald-600 shadow-sm">{r}</span>
                 ))}
               </div>
@@ -339,7 +300,7 @@ function SmartDietGenerator() {
                 <Ban className="w-6 h-6" /> Strictly Avoid
               </h4>
               <div className="flex flex-wrap gap-2">
-                {plan?.avoid?.map(a => (
+                {plan.avoid.map(a => (
                   <span key={a} className="px-4 py-2 bg-white border border-rose-100 rounded-xl text-xs font-bold text-rose-600 shadow-sm">{a}</span>
                 ))}
               </div>

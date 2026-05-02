@@ -23,7 +23,6 @@ import { MedicalAssistanceIllustration } from "../components/Illustrations"
 import { useLocale } from "../i18n/LocaleContext"
 
 import { healthService, HealthData } from "../services/HealthService"
-import { API_BASE_URL } from "../config"
 
 export default function Home() {
   const router = useRouter()
@@ -76,7 +75,7 @@ export default function Home() {
         // Push to Backend
         const token = await auth?.currentUser?.getIdToken();
         if (token) {
-          const res = await fetch(`${API_BASE_URL}/health/sync`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/health/sync`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -84,15 +83,8 @@ export default function Home() {
             },
             body: JSON.stringify(data)
           });
-          if (!res.ok) {
-            const errorText = await res.text();
-            console.error("Backend sync failed:", errorText);
-          } else {
-            console.log("Health data synced to backend successfully");
-          }
+          if (!res.ok) console.error("Backend sync failed");
         }
-      } else {
-        console.warn("Health permissions not granted");
       }
     } catch (err) {
       console.error("Sync error:", err);
