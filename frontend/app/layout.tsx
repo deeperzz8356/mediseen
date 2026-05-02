@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import NavbarWrapper from "./components/NavbarWrapper"
 import AgentFAB from "./components/AgentFAB"
 import AdManager from "./components/AdManager"
+import FirebaseProvider from "./components/FirebaseProvider"
 import { LocaleProvider } from "./i18n/LocaleContext"
 import "./globals.css"
 
@@ -26,6 +27,7 @@ return ( <html lang="en">
 className="antialiased bg-background text-foreground min-h-screen flex flex-col"
 >
   <LocaleProvider>
+    <FirebaseProvider />
     <AdManager />
     <NavbarWrapper />
     
