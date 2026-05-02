@@ -1,4 +1,8 @@
 import { AdMob, BannerAdOptions, BannerAdPosition, BannerAdSize, AdOptions } from '@capacitor-community/admob';
+import { admobConfig } from './firebase';
+
+const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
+const TEST_INTERSTITIAL_ID = 'ca-app-pub-3940256099942544/1033173712';
 
 export async function initializeAdMob() {
   try {
@@ -12,12 +16,13 @@ export async function initializeAdMob() {
 
 export async function showBanner() {
   try {
+    const adId = admobConfig.bannerId || TEST_BANNER_ID;
     const options: BannerAdOptions = {
-      adId: 'ca-app-pub-3940256099942544/6300978111', // Test Banner ID
+      adId,
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
       margin: 64, // Adjust this to be above the bottom navbar (approx 64px)
-      isTesting: true,
+      isTesting: !admobConfig.bannerId,
     };
     await AdMob.showBanner(options);
     console.log('Banner Ad shown');
@@ -36,9 +41,10 @@ export async function hideBanner() {
 
 export async function showInterstitial() {
   try {
+    const adId = admobConfig.interstitialId || TEST_INTERSTITIAL_ID;
     const options: AdOptions = {
-      adId: 'ca-app-pub-3940256099942544/1033173712', // Test Interstitial ID
-      isTesting: true,
+      adId,
+      isTesting: !admobConfig.interstitialId,
     };
     await AdMob.prepareInterstitial(options);
     await AdMob.showInterstitial();

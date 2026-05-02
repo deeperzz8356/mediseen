@@ -14,6 +14,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
+export const admobConfig = {
+  appId: process.env.NEXT_PUBLIC_ADMOB_APP_ID,
+  bannerId: process.env.NEXT_PUBLIC_ADMOB_BANNER_ID,
+  interstitialId: process.env.NEXT_PUBLIC_ADMOB_INTERSTITIAL_ID,
+}
+
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey)
 
 const app = isFirebaseConfigured
