@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import NavbarWrapper from "./components/NavbarWrapper"
 import AgentFAB from "./components/AgentFAB"
+import AdManager from "./components/AdManager"
 import { LocaleProvider } from "./i18n/LocaleContext"
 import "./globals.css"
 
@@ -25,6 +26,7 @@ return ( <html lang="en">
 className="antialiased bg-background text-foreground min-h-screen flex flex-col"
 >
   <LocaleProvider>
+    <AdManager />
     <NavbarWrapper />
     
     <main className="flex-1 w-full relative pt-14 md:pt-0 pb-24 md:pb-0">

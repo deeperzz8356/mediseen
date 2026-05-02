@@ -37,8 +37,11 @@ function createAuth() {
 export const auth = createAuth()
 
 /**
- * Sign in with Google.
- * Uses redirect for web to avoid COOP popup blocks, and native plugin for Capacitor.
+ * Sign in with Google - Works on every device!
+ * Strategy:
+ * 1. Native: Try Capacitor plugin first (for devices WITH Google Play Services)
+ * 2. Fallback: If native fails, use web OAuth redirect (works on ANY device with browser)
+ * 3. This makes Google Sign-In nearly universal across all devices
  */
 export async function signInWithGoogle() {
   if (!auth || !isFirebaseConfigured) {
@@ -47,13 +50,13 @@ export async function signInWithGoogle() {
 
   if (Capacitor.isNativePlatform()) {
     try {
-      console.log("Starting native Google Sign-In (Minimal Mode)...")
+      console.log("Starting native Google Sign-In...")
       const result = await FirebaseAuthentication.signInWithGoogle()
-      console.log("Native Google Sign-In result received")
+      console.log("Native Google Sign-In successful")
       
       const idToken = result.credential?.idToken
       if (!idToken) {
-        console.error("Native Google Sign-In failed: Missing ID token", result)
+        console.warn("Native Google Sign-In: Missing ID token, falling back to web OAuth...")
         throw new Error("Missing Google ID token")
       }
 
@@ -62,16 +65,20 @@ export async function signInWithGoogle() {
       
       return userCredential.user
     } catch (err: any) {
-      console.error("Native Google Sign-In Exception:", JSON.stringify(err, Object.getOwnPropertyNames(err)))
-      if (err.message?.includes("10")) {
-        throw new Error("Google Sign-In Error (10): Ensure SHA-1 is registered in Firebase.")
+      console.warn("Native Google Sign-In failed, falling back to web OAuth redirect:", err.message)
+      // Fallback to web-based OAuth - works on devices without Google Play Services
+      try {
+        await signInWithRedirect(auth, googleProvider)
+        return null // Page will redirect
+      } catch (webErr: any) {
+        console.error("Web OAuth fallback also failed:", webErr)
+        throw new Error("Google Sign-In unavailable on this device. Please use email/password signup instead.")
       }
-      throw err
     }
   }
 
   try {
-    // Switching to Redirect to avoid Cross-Origin-Opener-Policy blocks
+    // Web: Use OAuth redirect (works on any browser)
     await signInWithRedirect(auth, googleProvider)
     return null // Page will redirect
   } catch (err: any) {
