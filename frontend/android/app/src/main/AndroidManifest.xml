@@ -43,25 +43,7 @@
         android:usesCleartextTraffic="false">
 
         <!--
-             SplashActivity – LAUNCHER entry point
-             Runs native splash then immediately hands off to MainActivity.
-             theme must reference @style/Theme.Mediseen.Splash for SplashScreen API.
-        -->
-        <activity
-            android:name=".SplashActivity"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.Mediseen.Splash">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <!--
-             MainActivity – Capacitor WebView host
-             NOT the launcher; entered from SplashActivity.
+             MainActivity – Capacitor WebView host and launcher.
              Handles deep links and Health Connect permission rationale.
         -->
         <activity
@@ -71,6 +53,11 @@
             android:launchMode="singleTask"
             android:theme="@style/Theme.Mediseen"
             android:windowSoftInputMode="adjustResize">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
 
             <!-- Deep link: com.mediseen.app:// -->
             <intent-filter>

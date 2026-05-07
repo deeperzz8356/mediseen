@@ -377,7 +377,7 @@ async def diagnose(
 
         # ── 2. Rate limit check (2 per user per day) ──────────────────────
         # In dev mode, skip rate limiting entirely to allow unlimited testing
-        if _app_env == "production":
+        if app_env == "production":
             rate = check_and_increment_rate_limit(uid)
             if not rate["allowed"]:
                 raise HTTPException(
