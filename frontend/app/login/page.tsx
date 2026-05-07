@@ -24,6 +24,7 @@ import { auth, signInWithGoogle } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { Mail, Lock, ChevronRight, User, Loader2, ArrowLeft, Calendar, Users } from "lucide-react"
 import { useAppStore, type GenderOption } from "../store/useAppStore"
+import ProfileForm from "../components/ProfileForm"
 
 type AuthView = "login" | "signup" | "profile"
 

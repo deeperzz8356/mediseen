@@ -4,14 +4,14 @@ import { motion } from "framer-motion"
 import { LucideIcon } from "lucide-react"
 
 interface PermissionReason {
-  icon: LucideIcon
+  icon: React.ElementType
   color: string
   title: string
   desc: string
 }
 
 interface PermissionCardProps {
-  icon: LucideIcon
+  icon: React.ElementType
   title: string
   description: string
   reasons: PermissionReason[]

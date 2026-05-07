@@ -5,7 +5,7 @@ import { LucideIcon } from "lucide-react"
 import { DotLottieReact } from "@lottiefiles/dotlottie-react"
 
 interface OnboardingCardProps {
-  icon?: LucideIcon
+  icon?: React.ElementType
   lottieSrc?: string
   title: string
   subtitle: string
