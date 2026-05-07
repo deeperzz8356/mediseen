@@ -2,11 +2,12 @@
 
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
-import { UploadCloud, Image as ImageIcon, Loader2, Sparkles, X, CheckCircle2, MessageSquare } from "lucide-react"
+import { UploadCloud, Loader2, AlertTriangle, Settings } from "lucide-react"
 import { Camera } from "@capacitor/camera"
 import { DiagnosisResult } from "./ResultPanel"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
+import { requestCameraPermission, requestGalleryPermission } from "../lib/permissions"
 
 interface UploadPanelProps {
   onAnalysisComplete?: (result: DiagnosisResult) => void
@@ -206,37 +207,81 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     }
   }
 
+  const [permissionDenied, setPermissionDenied] = useState(false)
+  const [permissionPermanent, setPermissionPermanent] = useState(false)
+
+  /** Gallery / Upload – only requests permission on user tap */
   const handleBrowse = async () => {
+    setPermissionDenied(false)
+    setPermissionPermanent(false)
+
+    // Step 1: Check/request gallery permission lazily
+    const perm = await requestGalleryPermission()
+    if (!perm.granted) {
+      setPermissionDenied(true)
+      setPermissionPermanent(perm.permanentlyDenied)
+      return
+    }
+
     try {
       const { CameraSource, CameraResultType } = await import("@capacitor/camera")
-      
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
         resultType: CameraResultType.Base64,
-        source: CameraSource.Photos // Force use of native gallery picker
+        source: CameraSource.Photos,
       })
 
       if (image.base64String) {
         const base64Url = `data:image/jpeg;base64,${image.base64String}`
         setPreview(base64Url)
         if (onImageUpload) onImageUpload(base64Url)
-        
-        // Convert to File for the upload
         const bstr = atob(image.base64String)
         let n = bstr.length
         const u8arr = new Uint8Array(n)
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n)
-        }
-        const f = new File([u8arr], "gallery_upload.jpg", { type: "image/jpeg" })
-        setFile(f)
+        while (n--) u8arr[n] = bstr.charCodeAt(n)
+        setFile(new File([u8arr], "gallery_upload.jpg", { type: "image/jpeg" }))
       }
     } catch (err) {
-      console.warn("Native gallery picker failed, falling back to web input", err)
+      console.warn("Gallery picker failed, falling back to web input", err)
       fileInputRef.current?.click()
     }
-  };
+  }
+
+  /** Camera / Scan – only requests permission on user tap */
+  const handleScan = async () => {
+    setPermissionDenied(false)
+    setPermissionPermanent(false)
+
+    const perm = await requestCameraPermission()
+    if (!perm.granted) {
+      setPermissionDenied(true)
+      setPermissionPermanent(perm.permanentlyDenied)
+      return
+    }
+
+    try {
+      const { CameraSource, CameraResultType } = await import("@capacitor/camera")
+      const image = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+      })
+      if (image.base64String) {
+        const base64Url = `data:image/jpeg;base64,${image.base64String}`
+        setPreview(base64Url)
+        if (onImageUpload) onImageUpload(base64Url)
+        const bstr = atob(image.base64String)
+        let n = bstr.length
+        const u8arr = new Uint8Array(n)
+        while (n--) u8arr[n] = bstr.charCodeAt(n)
+        setFile(new File([u8arr], "camera_capture.jpg", { type: "image/jpeg" }))
+      }
+    } catch (err) {
+      console.warn("Camera failed:", err)
+    }
+  }
 
   return (
     <div className="w-full h-full bg-white rounded-3xl p-8 md:p-10 border border-black/5 flex flex-col space-y-8">
@@ -248,6 +293,26 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
 
       <div className="flex-1 space-y-8">
         {/* 2. IMAGE DROP ZONE */}
+        {/* Permission denied banner */}
+        {permissionDenied && (
+          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-700">
+                {permissionPermanent ? "Permission permanently denied" : "Permission required"}
+              </p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                {permissionPermanent
+                  ? "Open device Settings to enable access."
+                  : "Please allow access when prompted."}
+              </p>
+            </div>
+            {permissionPermanent && (
+              <Settings className="w-4 h-4 text-amber-500 shrink-0" />
+            )}
+          </div>
+        )}
+
         <div
           onClick={handleBrowse}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}

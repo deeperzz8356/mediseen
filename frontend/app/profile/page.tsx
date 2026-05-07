@@ -1,151 +1,79 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { motion } from "framer-motion"
+/**
+ * /profile – Settings & Profile page
+ *
+ * Sections:
+ * 1. Profile Information (Name, Age, Gender) – uses <ProfileForm />
+ * 2. Language – uses <LanguageSelector /> (same component as onboarding)
+ * 3. Legal & Support
+ * 4. Account Actions (Logout, Delete)
+ */
+
+import { useEffect, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import {
-  onAuthStateChanged,
-  signOut,
-  updateEmail,
-  updateProfile,
-  User,
-} from "firebase/auth"
-import { Ban, LogOut, Mail, Save, UserRound, ChevronRight } from "lucide-react"
+import { onAuthStateChanged, signOut, User } from "firebase/auth"
+import { Ban, LogOut, Languages, ChevronRight, ChevronDown } from "lucide-react"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
-
-function mapFirebaseError(code?: string): string {
-  if (code === "auth/requires-recent-login") {
-    return "For security reasons, please sign out and sign in again before updating this detail."
-  }
-  if (code === "auth/invalid-email") {
-    return "Please enter a valid email address."
-  }
-  if (code === "auth/email-already-in-use") {
-    return "That email is already in use by another account."
-  }
-  return "Unable to update account details right now."
-}
+import { useAppStore, type GenderOption } from "../store/useAppStore"
+import ProfileForm from "../components/ProfileForm"
+import LanguageSelector, { LANGUAGES } from "../components/LanguageSelector"
 
 export default function ProfilePage() {
   const router = useRouter()
+  const { language, setLanguage } = useAppStore()
 
   const [user, setUser] = useState<User | null>(null)
-  const [displayName, setDisplayName] = useState("")
-  const [email, setEmail] = useState("")
-
   const [loaded, setLoaded] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [deleting, setDeleting] = useState(false)
-
-  const [status, setStatus] = useState("")
   const [error, setError] = useState("")
 
+  // Profile data fetched from Firestore
+  const [profileName, setProfileName] = useState("")
+  const [profileAge, setProfileAge] = useState<number | null>(null)
+  const [profileGender, setProfileGender] = useState<GenderOption>("prefer_not_to_say")
+
+  // Accordion states
+  const [showLanguage, setShowLanguage] = useState(false)
+
   useEffect(() => {
-    if (!auth) {
-      setLoaded(true)
-      setError("Authentication is not configured.")
-      return
-    }
+    if (!auth) { setLoaded(true); return }
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
       setLoaded(true)
+      if (!u) { router.replace("/login"); return }
+      setUser(u)
 
-      if (!currentUser) {
-        setUser(null)
-        router.replace("/login")
-        return
+      // Fetch profile from backend
+      try {
+        const token = await u.getIdToken()
+        const res = await fetch(`${API_BASE_URL}/auth/verify`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.profile) {
+            setProfileName(data.profile.name ?? "")
+            setProfileAge(data.profile.age ?? null)
+            setProfileGender(data.profile.gender ?? "prefer_not_to_say")
+          }
+        }
+      } catch {
+        // Use Firebase display name as fallback
+        setProfileName(u.displayName ?? "")
       }
-
-      setUser(currentUser)
-      setDisplayName(currentUser.displayName ?? "")
-      setEmail(currentUser.email ?? "")
     })
-
-    return () => unsubscribe()
+    return () => unsub()
   }, [router])
 
-  const hasChanges = useMemo(() => {
-    if (!user) return false
-    return (
-      displayName.trim() !== (user.displayName ?? "") ||
-      email.trim() !== (user.email ?? "")
-    )
-  }, [displayName, email, user])
-
-  const handleSaveChanges = async () => {
-    setError("")
-    setStatus("")
-
-    if (!auth) {
-      setError("Authentication is not configured.")
-      return
-    }
-
-    const currentUser = auth.currentUser
-    if (!currentUser) {
-      setError("You are not signed in.")
-      router.replace("/login")
-      return
-    }
-
-    const nextName = displayName.trim()
-    const nextEmail = email.trim()
-    const currentName = currentUser.displayName ?? ""
-    const currentEmail = currentUser.email ?? ""
-
-    if (!nextEmail) {
-      setError("Email cannot be empty.")
-      return
-    }
-
-    if (nextName === currentName && nextEmail === currentEmail) {
-      setStatus("No changes to save.")
-      return
-    }
-
-    try {
-      setSaving(true)
-      let updatedName = false
-      let updatedEmail = false
-
-      if (nextName !== currentName) {
-        await updateProfile(currentUser, { displayName: nextName || null })
-        updatedName = true
-      }
-
-      if (nextEmail !== currentEmail) {
-        await updateEmail(currentUser, nextEmail)
-        updatedEmail = true
-      }
-
-      const updatedLabels = [
-        updatedName ? "name" : null,
-        updatedEmail ? "email" : null,
-      ]
-        .filter(Boolean)
-        .join(" and ")
-
-      setStatus(`Account ${updatedLabels} updated successfully.`)
-    } catch (err) {
-      setError(mapFirebaseError((err as { code?: string }).code))
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const handleLogout = async () => {
-    setError("")
-    setStatus("")
-
-    if (!auth) {
-      setError("Authentication is not configured.")
-      return
-    }
-
+    if (!auth) return
+    setLoggingOut(true)
     try {
-      setLoggingOut(true)
       await signOut(auth)
       router.replace("/login")
     } catch {
@@ -156,189 +84,170 @@ export default function ProfilePage() {
   }
 
   const handleDeleteAccount = async () => {
-    setError("")
-    setStatus("")
-
-    if (!auth) {
-      setError("Authentication is not configured.")
-      return
-    }
-
+    if (!auth) return
     const currentUser = auth.currentUser
-    if (!currentUser) {
-      setError("You are not signed in.")
-      router.replace("/login")
-      return
-    }
+    if (!currentUser) return
 
     const confirmed = window.confirm(
-      "PERMANENTLY DELETE your account and all saved data? This cannot be undone. You will be able to sign up again with the same email if you wish."
+      "PERMANENTLY DELETE your account and all saved data? This cannot be undone."
     )
-
     if (!confirmed) return
 
+    setDeleting(true)
     try {
-      setDeleting(true)
       const token = await currentUser.getIdToken()
-
-      const response = await fetch(`${API_BASE_URL}/auth/delete-account`, {
+      const res = await fetch(`${API_BASE_URL}/auth/delete-account`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       })
-
-      if (!response.ok) {
-        let detail = "Unable to delete account right now."
-        try {
-          const body = await response.json()
-          detail = body?.detail || detail
-        } catch {
-          // Ignore
-        }
-        throw new Error(detail)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body?.detail || "Unable to delete account right now.")
       }
-
       await signOut(auth)
       router.replace("/login")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to delete account right now.")
+      setError(err instanceof Error ? err.message : "Unable to delete account.")
     } finally {
       setDeleting(false)
     }
   }
+
+  const currentLanguageLabel =
+    LANGUAGES.find((l) => l.code === language)?.native ?? "English"
 
   if (!loaded) {
     return <div className="min-h-screen bg-background" />
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 pt-28 pb-24 space-y-8">
+    <div className="max-w-2xl mx-auto px-5 pt-24 pb-28 space-y-5">
+
+      {/* ── 1. Profile Information ──────────────────────────────────── */}
       <motion.section
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flo-card p-8 md:p-10 rounded-[2rem]"
+        className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-5"
       >
-        <h1 className="text-3xl md:text-4xl font-black text-slate-800">Profile Settings</h1>
-        <p className="text-slate-500 mt-3 font-medium">
-          Update your account details, log out, or delete your account.
-        </p>
+        <div>
+          <h2 className="text-xl font-black text-slate-900">Profile Information</h2>
+          <p className="text-slate-400 font-medium text-sm mt-1">
+            Update your name, age, and gender.
+          </p>
+        </div>
+
+        <ProfileForm
+          initialName={profileName}
+          initialAge={profileAge}
+          initialGender={profileGender}
+          submitLabel="Save Profile"
+          onSaved={(data) => {
+            setProfileName(data.name)
+            setProfileAge(data.age)
+            setProfileGender(data.gender)
+          }}
+        />
       </motion.section>
 
+      {/* ── 2. Language ─────────────────────────────────────────────── */}
       <motion.section
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flo-card p-8 md:p-10 rounded-[2rem] space-y-6"
+        transition={{ delay: 0.08 }}
+        className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
       >
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-slate-500">Display Name</label>
-          <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 px-4 py-3 shadow-sm">
-            <UserRound className="w-5 h-5 text-slate-400" />
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name"
-              className="w-full outline-none text-slate-700 font-medium"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-slate-500">Email Address</label>
-          <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 px-4 py-3 shadow-sm">
-            <Mail className="w-5 h-5 text-slate-400" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full outline-none text-slate-700 font-medium"
-            />
-          </div>
-        </div>
-
-        <p className="text-xs text-slate-400 font-medium">
-          Note: Changing your email may require a recent sign-in for security.
-        </p>
-
-        {status && <p className="text-sm text-emerald-600 font-medium">{status}</p>}
-        {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={handleSaveChanges}
-          disabled={saving || !hasChanges}
-          className="w-full md:w-auto px-6 py-3 rounded-2xl bg-pastel-violet text-white font-bold shadow-md hover:shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        {/* Header row – tap to expand */}
+        <button
+          onClick={() => setShowLanguage((v) => !v)}
+          className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors"
         >
-          {saving ? "Saving..." : "Save Changes"}
-          <Save className="w-4 h-4" />
-        </motion.button>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+              <Languages className="w-5 h-5 text-violet-500" />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-slate-800">Language</p>
+              <p className="text-xs text-slate-400 font-medium">{currentLanguageLabel}</p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-300 transition-transform duration-200 ${showLanguage ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {/* Expandable language selector – same component as onboarding */}
+        <AnimatePresence>
+          {showLanguage && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden border-t border-slate-100"
+            >
+              <LanguageSelector
+                showNav={false}
+                fullScreen={false}
+                onConfirm={async (lang) => {
+                  await setLanguage(lang)
+                  setShowLanguage(false)
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.section>
 
+      {/* ── 3. Legal & Support ──────────────────────────────────────── */}
       <motion.section
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="flo-card p-8 md:p-10 rounded-[2rem] space-y-6"
+        transition={{ delay: 0.13 }}
+        className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 space-y-3"
       >
-        <h2 className="text-xl font-black text-slate-800">Legal & Support</h2>
-        <div className="grid gap-4">
+        <h2 className="text-base font-black text-slate-800 px-1">Legal & Support</h2>
+        {[
+          { label: "Terms and Conditions", desc: "Read our service agreement", href: "https://sites.google.com/view/sapappsolutionmediseenterms/home" },
+          { label: "Privacy Policy", desc: "How we handle your data", href: "https://sites.google.com/view/sapappsolutionmediseenpolicy/home" },
+        ].map((item) => (
           <a
-            href="https://sites.google.com/view/sapappsolutionmediseenterms/home"
+            key={item.label}
+            href={item.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-pastel-violet transition-all group"
+            className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-violet-200 transition-all group"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 group-hover:text-pastel-violet transition-colors">
-                <ChevronRight className="w-5 h-5 rotate-90" />
-              </div>
-              <div>
-                <p className="font-bold text-slate-800">Terms and Conditions</p>
-                <p className="text-xs text-slate-400 font-medium">Read our service agreement</p>
-              </div>
+            <div>
+              <p className="font-bold text-slate-800 text-sm">{item.label}</p>
+              <p className="text-xs text-slate-400 font-medium">{item.desc}</p>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-pastel-violet transition-all group-hover:translate-x-1" />
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-violet-400 transition-colors" />
           </a>
-
-          <a
-            href="https://sites.google.com/view/sapappsolutionmediseenpolicy/home"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-pastel-violet transition-all group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-400 group-hover:text-pastel-violet transition-colors">
-                <ChevronRight className="w-5 h-5 rotate-90" />
-              </div>
-              <div>
-                <p className="font-bold text-slate-800">Privacy Policy</p>
-                <p className="text-xs text-slate-400 font-medium">How we handle your data</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-pastel-violet transition-all group-hover:translate-x-1" />
-          </a>
-        </div>
+        ))}
       </motion.section>
 
+      {/* ── 4. Account Actions ──────────────────────────────────────── */}
       <motion.section
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="flo-card p-8 md:p-10 rounded-[2rem] border border-red-100 bg-red-50/30"
+        transition={{ delay: 0.18 }}
+        className="bg-red-50/40 border border-red-100 rounded-3xl p-6 space-y-4"
       >
-        <h2 className="text-2xl font-black text-slate-800">Account Actions</h2>
-        <p className="text-slate-500 mt-2 font-medium">
+        <h2 className="text-xl font-black text-slate-900">Account</h2>
+        <p className="text-slate-500 text-sm font-medium">
           Log out from this device or permanently delete your account.
         </p>
 
-        <div className="mt-6 flex flex-col sm:flex-row gap-4">
+        {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
+
+        <div className="flex flex-col sm:flex-row gap-3">
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleLogout}
             disabled={loggingOut || deleting}
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-700 text-white font-bold shadow-md hover:bg-slate-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-800 text-white font-bold text-sm shadow-md disabled:opacity-60 transition-all"
           >
-            {loggingOut ? "Logging Out..." : "Log Out"}
+            {loggingOut ? "Logging Out…" : "Log Out"}
             <LogOut className="w-4 h-4" />
           </motion.button>
 
@@ -346,14 +255,14 @@ export default function ProfilePage() {
             whileTap={{ scale: 0.97 }}
             onClick={handleDeleteAccount}
             disabled={deleting || loggingOut}
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-red-600 text-white font-bold shadow-md hover:bg-red-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-red-600 text-white font-bold text-sm shadow-md disabled:opacity-60 transition-all"
           >
-            {deleting ? "Deleting..." : "Delete Account"}
+            {deleting ? "Deleting…" : "Delete Account"}
             <Ban className="w-4 h-4" />
           </motion.button>
         </div>
 
-        <p className="text-[11px] text-slate-400 mt-5">User ID: {user?.uid || "-"}</p>
+        <p className="text-[11px] text-slate-400">UID: {user?.uid ?? "—"}</p>
       </motion.section>
     </div>
   )

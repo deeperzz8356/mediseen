@@ -1,13 +1,12 @@
 package com.mediseen.app
 
 import android.content.Intent
-import android.net.Uri
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.getcapacitor.JSObject
@@ -20,13 +19,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
 
+/**
+ * HealthConnectPlugin – Capacitor bridge for Google Health Connect
+ *
+ * Compatibility:
+ * - Always check SDK availability before calling getOrCreate()
+ * - Availability codes: SDK_UNAVAILABLE, SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED, SDK_AVAILABLE
+ * - Never crashes app on unsupported devices – returns graceful error payloads
+ * - Requires minSdk 26 (Android 8+) for Instant / ZonedDateTime
+ */
 @CapacitorPlugin(name = "HealthConnect")
 class HealthConnectPlugin : Plugin() {
 
     private val scope = CoroutineScope(Dispatchers.IO)
-    
+
     private val permissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
@@ -34,86 +41,114 @@ class HealthConnectPlugin : Plugin() {
         HealthPermission.getReadPermission(HeartRateRecord::class)
     )
 
+    // ── Availability check ────────────────────────────────────────────
     @PluginMethod
     fun checkAvailability(call: PluginCall) {
-        val availability = HealthConnectClient.getSdkStatus(context)
+        val status = HealthConnectClient.getSdkStatus(context)
         val res = JSObject()
-        res.put("status", availability)
+        res.put("status", status)                        // 0=unavailable, 1=update needed, 2=available
+        res.put("available", status == HealthConnectClient.SDK_AVAILABLE)
+        res.put("needsUpdate", status == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED)
         call.resolve(res)
     }
 
+    // ── Permission request ────────────────────────────────────────────
     @PluginMethod
     fun requestHealthPermissions(call: PluginCall) {
-        val client = HealthConnectClient.getOrCreate(context)
+        if (!isAvailable()) {
+            call.resolve(unavailablePayload())
+            return
+        }
+
         scope.launch {
             try {
+                val client = HealthConnectClient.getOrCreate(context)
                 val granted = client.permissionController.getGrantedPermissions()
+
+                val res = JSObject()
                 if (granted.containsAll(permissions)) {
-                    val res = JSObject()
                     res.put("granted", true)
                     call.resolve(res)
                 } else {
-                    // In a real plugin, we would launch the intent here.
-                    // For this custom implementation, we tell the UI it needs to trigger the intent if possible,
-                    // or we can try to launch it from here using bridge.activity
+                    // Launch Health Connect settings so user can grant permissions
                     val intent = Intent(HealthConnectClient.ACTION_HEALTH_CONNECT_SETTINGS)
                     bridge.activity.startActivity(intent)
-                    
-                    val res = JSObject()
                     res.put("granted", false)
-                    res.put("message", "Redirecting to settings")
+                    res.put("message", "Redirecting to Health Connect settings")
                     call.resolve(res)
                 }
             } catch (e: Exception) {
-                call.reject(e.message)
+                val res = JSObject()
+                res.put("granted", false)
+                res.put("error", e.message ?: "Unknown error")
+                call.resolve(res)
             }
         }
     }
 
+    // ── Fetch health data ─────────────────────────────────────────────
     @PluginMethod
     fun fetchHealthData(call: PluginCall) {
-        val client = HealthConnectClient.getOrCreate(context)
+        if (!isAvailable()) {
+            call.resolve(unavailablePayload())
+            return
+        }
+
         val startTime = ZonedDateTime.now().minusDays(1).toInstant()
         val endTime = Instant.now()
 
         scope.launch {
             try {
+                val client = HealthConnectClient.getOrCreate(context)
                 val response = JSObject()
-                
-                // Fetch Steps
-                val stepsRequest = ReadRecordsRequest(
-                    recordType = StepsRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-                val steps = client.readRecords(stepsRequest).records.sumOf { it.count }
+
+                // Steps
+                val steps = client.readRecords(
+                    ReadRecordsRequest(StepsRecord::class, TimeRangeFilter.between(startTime, endTime))
+                ).records.sumOf { it.count }
                 response.put("steps", steps)
 
-                // Fetch Calories
-                val caloriesRequest = ReadRecordsRequest(
-                    recordType = TotalCaloriesBurnedRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-                val calories = client.readRecords(caloriesRequest).records.sumOf { it.energy.inKilocalories }
+                // Calories
+                val calories = client.readRecords(
+                    ReadRecordsRequest(TotalCaloriesBurnedRecord::class, TimeRangeFilter.between(startTime, endTime))
+                ).records.sumOf { it.energy.inKilocalories }
                 response.put("caloriesBurned", calories)
 
-                // Fetch Sleep (last session)
-                val sleepRequest = ReadRecordsRequest(
-                    recordType = SleepSessionRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-                val sleepRecords = client.readRecords(sleepRequest).records
-                if (sleepRecords.isNotEmpty()) {
-                    val lastSleep = sleepRecords.last()
-                    val durationHrs = java.time.Duration.between(lastSleep.startTime, lastSleep.endTime).toMinutes() / 60.0
-                    response.put("sleepHours", durationHrs)
-                } else {
-                    response.put("sleepHours", 0)
-                }
+                // Sleep
+                val sleepRecords = client.readRecords(
+                    ReadRecordsRequest(SleepSessionRecord::class, TimeRangeFilter.between(startTime, endTime))
+                ).records
+                val sleepHours = if (sleepRecords.isNotEmpty()) {
+                    java.time.Duration.between(
+                        sleepRecords.last().startTime, sleepRecords.last().endTime
+                    ).toMinutes() / 60.0
+                } else 0.0
+                response.put("sleepHours", sleepHours)
 
+                response.put("available", true)
                 call.resolve(response)
+
             } catch (e: Exception) {
-                call.reject(e.message)
+                val res = JSObject()
+                res.put("available", true)
+                res.put("error", e.message ?: "Failed to read health data")
+                call.resolve(res)
             }
         }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────
+    private fun isAvailable(): Boolean =
+        HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
+
+    private fun unavailablePayload(): JSObject {
+        val res = JSObject()
+        res.put("available", false)
+        res.put("granted", false)
+        res.put("steps", 0)
+        res.put("caloriesBurned", 0)
+        res.put("sleepHours", 0)
+        res.put("message", "Health Connect is not available on this device")
+        return res
     }
 }

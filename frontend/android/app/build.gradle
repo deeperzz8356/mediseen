@@ -74,6 +74,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // Required for BuildConfig.DEBUG check in MainActivity
+        buildConfig = true
     }
     // composeOptions {
     //     kotlinCompilerExtensionVersion = composeCompilerVersion
@@ -111,7 +113,12 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleViewModelComposeVersion"
     implementation "androidx.navigation:navigation-compose:$navigationComposeVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesAndroidVersion"
-    implementation "com.google.firebase:firebase-auth:$firebaseAuthVersion"
+    // Firebase BoM and Crashlytics/Analytics
+    implementation platform('com.google.firebase:firebase-bom:33.10.0')
+    implementation 'com.google.firebase:firebase-crashlytics'
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-auth'
+    
     implementation "com.google.android.gms:play-services-auth:$playServicesAuthVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
@@ -121,6 +128,9 @@ dependencies {
     
     // Health Connect Integration
     implementation "androidx.health.connect:connect-client:1.1.0-alpha11"
+
+    // AndroidX WebKit – stable WebView across Android 8+ (avoids deprecated WebViewCompat API)
+    implementation "androidx.webkit:webkit:1.11.0"
 }
 
 apply from: 'capacitor.build.gradle'

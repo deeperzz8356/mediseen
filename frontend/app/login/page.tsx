@@ -1,139 +1,171 @@
 "use client"
 
+/**
+ * /login – Authentication page
+ *
+ * Views:
+ *  - login    → email + password sign-in + Google
+ *  - signup   → email + password + name + age + gender + Google
+ *  - profile  → standalone profile completion (if needed)
+ */
+
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useRouter } from "next/navigation"
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth"
+import { useRouter, useSearchParams } from "next/navigation"
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from "firebase/auth"
 import type { FirebaseError } from "firebase/app"
-import { auth } from "@/lib/firebase"
+import { auth, signInWithGoogle } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
-import { HeartPulse, Mail, Lock, ChevronRight, User, Shield, Loader2, ArrowLeft } from "lucide-react"
-import { signInWithGoogle } from "@/lib/firebase"
-import { useLocale } from "../i18n/LocaleContext"
+import { Mail, Lock, ChevronRight, User, Loader2, ArrowLeft, Calendar, Users } from "lucide-react"
+import { useAppStore, type GenderOption } from "../store/useAppStore"
 
-type AuthView = 'login' | 'signup' | 'complete-profile'
+type AuthView = "login" | "signup" | "profile"
 
-export default function LoginPage() {
+const GENDER_OPTIONS: { value: GenderOption; label: string }[] = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+]
+
+const InputField = ({
+  icon: Icon, type, value, onChange, placeholder, label,
+}: {
+  icon: React.ElementType
+  type: string
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  label: string
+}) => (
+  <div className="space-y-2">
+    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">{label}</label>
+    <div className="flex items-center gap-3 bg-slate-50 rounded-2xl border border-slate-100 px-4 py-3.5 focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100 transition-all">
+      <Icon className="w-5 h-5 text-slate-300 shrink-0" />
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-transparent outline-none text-slate-700 font-medium placeholder:text-slate-300 text-sm"
+      />
+    </div>
+  </div>
+)
+
+const GoogleButton = ({ 
+  onClick, 
+  disabled 
+}: { 
+  onClick: () => void; 
+  disabled?: boolean; 
+}) => (
+  <motion.button
+    whileTap={{ scale: 0.97 }}
+    onClick={onClick}
+    disabled={disabled}
+    className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl border-2 border-slate-100 bg-white hover:bg-slate-50 transition-all group"
+  >
+    <Image src="/google_icon.ico" alt="Google" width={20} height={20} />
+    <span className="font-bold text-slate-700 text-sm">Continue with Google</span>
+  </motion.button>
+)
+
+function LoginContent() {
   const router = useRouter()
-  const { t } = useLocale()
+  const params = useSearchParams()
+  const { setUser, setHasProfile, setAuthLoaded } = useAppStore()
 
-  const [view, setView] = useState<AuthView>('login')
+  const [view, setView] = useState<AuthView>(params.get("complete") === "1" ? "profile" : "login")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  
+  // Signup/Profile fields
   const [name, setName] = useState("")
-  const [role, setRole] = useState<"patient" | "doctor">("patient")
+  const [age, setAge] = useState("")
+  const [gender, setGender] = useState<GenderOption>("male")
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
     if (!auth) return
-
-    const checkRedirect = async () => {
-      const { handleGoogleRedirectResult } = await import("@/lib/firebase")
-      const user = await handleGoogleRedirectResult()
-      if (user) {
-        await verifyAndRedirect(user)
-      }
-    }
-
-    checkRedirect()
-
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user && view === 'login') {
+      if (user) {
         await verifyAndRedirect(user)
       }
     })
     return () => unsub()
-  }, [router])
+  }, [])
 
-  const verifyAndRedirect = async (user: any) => {
+  const verifyAndRedirect = async (user: NonNullable<typeof auth>["currentUser"]) => {
+    if (!user) return
+    setLoading(true)
+    setError("")
     try {
-      setLoading(true)
-      setError("")
       const token = await user.getIdToken()
       
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 60000)
-
-      const res = await fetch(`${API_BASE_URL}/auth/verify`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!res.ok) throw new Error("Verification failed")
-      const data = await res.json()
-      console.log("Auth verification result:", data)
-      
-      if (data.has_profile) {
-        console.log("User has profile, routing to /home")
-        router.push("/home")
-      } else {
-        console.log("User has no profile, showing complete-profile view")
-        setView('complete-profile')
+      let profileData = null;
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/verify`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          profileData = await res.json()
+        }
+      } catch (fetchErr) {
+        console.error("Backend verification failed (CORS/network):", fetchErr);
+        // Fallback: Assume no profile if backend is unreachable so they can complete it later.
       }
-    } catch (err: any) {
-      console.error("Verification error:", err)
-      if (err.name === 'AbortError') {
-        setError("The server is taking a while to wake up. Please wait a few more seconds and try again.")
+
+      setHasProfile(profileData?.has_profile ?? false)
+      if (profileData?.has_profile) {
+        router.replace("/home")
       } else {
-        setError(t.login.errors.loginFailed)
+        setView("profile")
       }
+    } catch {
+      setError("Couldn't verify your account. Please try again.")
     } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleGoogleLogin = async () => {
-    try {
-      setLoading(true)
-      setError("")
-      const { signInWithGoogle } = await import("@/lib/firebase")
-      const user = await signInWithGoogle()
-      
-      if (user) {
-        await verifyAndRedirect(user)
-      }
-    } catch (err: any) {
-      // If native fails, fallback to web OAuth will auto-trigger
-      const message = err.message || t.login.errors.googleFailed
-      if (message.includes("unavailable")) {
-        setError("Google Sign-In unavailable. Please use email/password signup instead.")
-      } else {
-        setError(t.login.errors.googleFailed)
-      }
       setLoading(false)
     }
   }
 
   const handleLogin = async () => {
     setError("")
-
-    if (!email || !password) {
-      setError(t.login.errors.emailPasswordRequired)
-      return
-    }
-
-    if (!auth) {
-      setError(t.login.errors.loginFailed)
-      return
-    }
-
+    if (!email || !password) { setError("Email and password are required."); return }
+    if (!auth) { setError("Authentication not configured."); return }
+    setLoading(true)
     try {
-      setLoading(true)
-
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      await verifyAndRedirect(userCredential.user)
-    } catch (err: unknown) {
+      const cred = await signInWithEmailAndPassword(auth, email, password)
+      await verifyAndRedirect(cred.user)
+    } catch (err) {
       const code = (err as FirebaseError).code
-      if (code === "auth/user-not-found") setError(t.login.errors.accountNotFound)
-      else if (code === "auth/wrong-password") setError(t.login.errors.incorrectPassword)
-      else if (code === "auth/invalid-email") setError(t.login.errors.invalidEmail)
-      else setError(t.login.errors.loginFailed)
+      if (code === "auth/user-not-found" || code === "auth/invalid-credential")
+        setError("No account found with these credentials.")
+      else if (code === "auth/wrong-password") setError("Incorrect password.")
+      else if (code === "auth/invalid-email") setError("Invalid email address.")
+      else setError("Sign-in failed. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setError("")
+    setLoading(true)
+    try {
+      const user = await signInWithGoogle()
+      if (user) await verifyAndRedirect(user)
+    } catch (err: any) {
+      setError(err.message || "Google Sign-In failed.")
     } finally {
       setLoading(false)
     }
@@ -141,368 +173,228 @@ export default function LoginPage() {
 
   const handleSignup = async () => {
     setError("")
-
-    if (!email || !password) {
-      setError(t.login.errors.emailPasswordRequired)
-      return
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
-      return
-    }
-
-    if (!auth) {
-      setError(t.login.errors.loginFailed)
-      return
-    }
-
-    try {
-      setLoading(true)
-
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      await verifyAndRedirect(userCredential.user)
-    } catch (err: unknown) {
-      const code = (err as FirebaseError).code
-      if (code === "auth/email-already-in-use") setError("This email is already registered")
-      else if (code === "auth/invalid-email") setError(t.login.errors.invalidEmail)
-      else if (code === "auth/weak-password") setError("Password is too weak")
-      else setError(t.login.errors.loginFailed)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleCompleteProfile = async () => {
-    if (!name.trim()) {
-      setError("Please enter your name")
-      return
-    }
-
+    if (!email || !password) { setError("Email and password are required."); return }
+    if (password.length < 6) { setError("Password must be at least 6 characters."); return }
+    if (!name.trim()) { setError("Name is required."); return }
+    if (!age || isNaN(parseInt(age))) { setError("Valid age is required."); return }
+    if (!auth) { setError("Authentication not configured."); return }
+    
     setLoading(true)
-    setError("")
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 60000)
-
     try {
-      const user = auth?.currentUser
-      if (!user) throw new Error("No user found")
+      const cred = await createUserWithEmailAndPassword(auth, email, password)
+      const user = cred.user
 
+      // Immediately save profile
       const token = await user.getIdToken()
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
-        },
-        body: JSON.stringify({ name, role }),
-        signal: controller.signal
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.detail || "Registration failed")
-      }
       
-      router.push("/home")
-    } catch (err: any) {
-      clearTimeout(timeoutId)
-      console.error("Profile update error:", err)
-      if (err.name === 'AbortError') {
-        setError("Connection timeout. The server might be waking up—please try one more time.")
-      } else {
-        setError(err.message || "Could not complete profile. Please try again.")
+      let profileSaved = false;
+      try {
+        const regRes = await fetch(`${API_BASE_URL}/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name: name.trim(), age: parseInt(age), gender }),
+        })
+        profileSaved = regRes.ok;
+      } catch (fetchErr) {
+        console.error("Backend registration failed (possibly CORS or network):", fetchErr);
+        // We do not throw here because Firebase account WAS created successfully.
+        profileSaved = false;
       }
+
+      if (!profileSaved) {
+        // Even if register fails, user is created. They'll be prompted to complete profile later.
+        setUser(user)
+        setView("profile")
+      } else {
+        setUser(user)
+        setHasProfile(true)
+        setAuthLoaded(true)
+        router.replace("/home")
+      }
+    } catch (err) {
+      const code = (err as FirebaseError).code
+      if (code === "auth/email-already-in-use") setError("This email is already registered. Try logging in.")
+      else if (code === "auth/invalid-email") setError("Invalid email address.")
+      else if (code === "auth/weak-password") setError("Password is too weak.")
+      else setError("Account creation failed. Please try again.")
     } finally {
       setLoading(false)
     }
   }
+
+  const cardClass = "w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 p-8 space-y-6"
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pastel-pink via-white to-pastel-violet px-4 py-10 sm:px-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-white to-rose-50 px-4 py-10">
       <AnimatePresence mode="wait">
-        {view === 'login' ? (
+        {/* ── LOGIN ──────────────────────────────────────────────────── */}
+        {view === "login" && (
           <motion.div
             key="login"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-xl flo-card p-6 md:p-12 space-y-8 md:space-y-10 rounded-[2rem] md:rounded-[3rem]"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={cardClass}
           >
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-3xl bg-white border border-slate-50 flex items-center justify-center shadow-lg overflow-hidden p-2">
-                  <Image src="/logo2.png" alt="logo" width={60} height={60} className="object-contain" />
-                </div>
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-2xl bg-white border border-slate-100 shadow-md flex items-center justify-center mx-auto overflow-hidden p-2 mb-2">
+                <Image src="/logo2.png" alt="MediSeen" width={52} height={52} className="object-contain" />
               </div>
-              <h1 className="text-4xl font-black text-slate-800">{t.login.welcomeBack}</h1>
-              <p className="text-slate-400 font-medium">{t.login.subtitle}</p>
+              <h1 className="text-2xl font-black text-slate-900">Welcome back</h1>
+              <p className="text-slate-400 font-medium text-sm">Sign in to your account</p>
             </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleLogin() }} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-500">{t.login.emailLabel}</label>
-                <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 px-4 py-3 shadow-sm hover:border-pastel-violet transition">
-                  <Mail className="w-5 h-5 text-slate-400" />
-                  <input
-                    type="email"
-                    placeholder={t.login.emailPlaceholder}
-                    className="w-full outline-none text-slate-700 font-medium"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    suppressHydrationWarning
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-500">{t.login.passwordLabel}</label>
-                <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 px-4 py-3 shadow-sm hover:border-pastel-violet transition">
-                  <Lock className="w-5 h-5 text-slate-400" />
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full outline-none text-slate-700 font-medium"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    suppressHydrationWarning
-                  />
-                </div>
-              </div>
-
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-pastel-violet text-white font-bold shadow-md hover:shadow-xl transition-all"
-              >
-                {loading ? t.login.signingIn : t.login.signIn}
-                <ChevronRight className="w-5 h-5" />
-              </motion.button>
-            </form>
 
             <div className="space-y-4">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-                <div className="relative text-center uppercase text-xs font-black text-slate-300 tracking-widest bg-white px-4 w-fit mx-auto">{t.auth.or}</div>
+              <GoogleButton onClick={handleGoogleLogin} disabled={loading} />
+              
+              <div className="flex items-center gap-4 py-2">
+                <div className="flex-1 h-[1px] bg-slate-100" />
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Or email</span>
+                <div className="flex-1 h-[1px] bg-slate-100" />
               </div>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border border-slate-100 bg-white text-slate-700 font-bold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-slate-300 border-t-pastel-violet rounded-full animate-spin" />
-                ) : (
-                  <Image src="/logo2.png" className="w-5 h-5" alt="google" width={20} height={20} />
-                )}
-                {t.auth.signInGoogle}
-              </motion.button>
-            </div>
-            
-            <p className="text-center text-[11px] text-slate-300 font-medium leading-relaxed px-4">
-                By continuing, you agree to our{" "}
-                <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Terms</Link>
-                {" "}and{" "}
-                <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Privacy Policy</Link>.
-            </p>
 
-            <p className="text-center text-sm text-slate-400 font-medium">
+              <form onSubmit={(e) => { e.preventDefault(); handleLogin() }} className="space-y-4">
+                <InputField icon={Mail} type="email" label="Email" value={email} onChange={setEmail} placeholder="you@example.com" />
+                <InputField icon={Lock} type="password" label="Password" value={password} onChange={setPassword} placeholder="••••••••" />
+                
+                {error && <p className="text-red-500 text-xs text-center font-medium">{error}</p>}
+
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-rose-400 text-white font-bold shadow-lg shadow-violet-200 disabled:opacity-60 transition-all"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Sign In</span><ChevronRight className="w-5 h-5" /></>}
+                </motion.button>
+              </form>
+            </div>
+
+            <p className="text-center text-sm text-slate-400 font-medium pt-2">
               Don't have an account?{" "}
-              <button
-                onClick={() => {
-                  setEmail("")
-                  setPassword("")
-                  setError("")
-                  setView("signup")
-                }}
-                className="text-pastel-violet font-bold hover:underline"
-              >
-                Sign up here
+              <button onClick={() => { setError(""); setView("signup") }} className="text-violet-500 font-bold hover:underline">
+                Sign up
               </button>
             </p>
+
+            {/* DEBUG: Reset Flow */}
+            <div className="pt-4 border-t border-slate-50 flex justify-center">
+              <button 
+                onClick={async () => {
+                  const { setOnboardingDone, setLanguageDone, setNotificationPermission } = useAppStore.getState();
+                  await setOnboardingDone(false);
+                  await setLanguageDone(false);
+                  await setNotificationPermission("not_asked");
+                  window.location.href = "/";
+                }}
+                className="text-[10px] font-bold text-slate-300 uppercase tracking-widest hover:text-violet-400 transition-colors"
+              >
+                Reset App Flow (Debug)
+              </button>
+            </div>
           </motion.div>
-        ) : view === 'signup' ? (
+        )}
+
+        {/* ── SIGN UP ────────────────────────────────────────────────── */}
+        {view === "signup" && (
           <motion.div
             key="signup"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-xl flo-card p-6 md:p-12 space-y-8 md:space-y-10 rounded-[2rem] md:rounded-[3rem]"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={cardClass}
           >
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 rounded-3xl bg-white border border-slate-50 flex items-center justify-center shadow-lg overflow-hidden p-2">
-                  <Image src="/logo2.png" alt="logo" width={60} height={60} className="object-contain" />
-                </div>
-              </div>
-              <h1 className="text-4xl font-black text-slate-800">Create Account</h1>
-              <p className="text-slate-400 font-medium">Join us to get started with health insights</p>
-            </div>
-
-            <form onSubmit={(e) => { e.preventDefault(); handleSignup() }} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-500">{t.login.emailLabel}</label>
-                <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 px-4 py-3 shadow-sm hover:border-pastel-violet transition">
-                  <Mail className="w-5 h-5 text-slate-400" />
-                  <input
-                    type="email"
-                    placeholder={t.login.emailPlaceholder}
-                    className="w-full outline-none text-slate-700 font-medium"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    suppressHydrationWarning
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-500">{t.login.passwordLabel}</label>
-                <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 px-4 py-3 shadow-sm hover:border-pastel-violet transition">
-                  <Lock className="w-5 h-5 text-slate-400" />
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full outline-none text-slate-700 font-medium"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    suppressHydrationWarning
-                  />
-                </div>
-                <p className="text-xs text-slate-400">Minimum 6 characters</p>
-              </div>
-
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-pastel-pink text-white font-bold shadow-md hover:shadow-xl transition-all"
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setError(""); setView("login") }}
+                className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors"
               >
-                {loading ? "Creating account..." : "Create Account"}
-                <ChevronRight className="w-5 h-5" />
-              </motion.button>
-            </form>
+                <ArrowLeft className="w-4 h-4 text-slate-500" />
+              </button>
+              <div>
+                <h1 className="text-xl font-black text-slate-900">Create Account</h1>
+                <p className="text-xs text-slate-400 font-medium">Personalized for you</p>
+              </div>
+            </div>
 
             <div className="space-y-4">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-                <div className="relative text-center uppercase text-xs font-black text-slate-300 tracking-widest bg-white px-4 w-fit mx-auto">{t.auth.or}</div>
+              <GoogleButton onClick={handleGoogleLogin} disabled={loading} />
+
+              <div className="flex items-center gap-4 py-1">
+                <div className="flex-1 h-[1px] bg-slate-100" />
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Or details</span>
+                <div className="flex-1 h-[1px] bg-slate-100" />
               </div>
+
+              <div className="space-y-4 max-h-[400px] overflow-y-auto px-1 pb-2 scrollbar-hide">
+                <InputField icon={User} type="text" label="Full Name" value={name} onChange={setName} placeholder="e.g. John Doe" />
+                <InputField icon={Mail} type="email" label="Email" value={email} onChange={setEmail} placeholder="you@example.com" />
+                <InputField icon={Lock} type="password" label="Password" value={password} onChange={setPassword} placeholder="Min. 6 chars" />
+                
+                <div className="grid grid-cols-2 gap-4">
+                   <InputField icon={Calendar} type="number" label="Age" value={age} onChange={setAge} placeholder="Age" />
+                   <div className="space-y-2">
+                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Gender</label>
+                     <div className="flex items-center gap-2 bg-slate-50 rounded-2xl border border-slate-100 px-3 py-3 focus-within:border-violet-300 transition-all">
+                       <Users className="w-4 h-4 text-slate-300 shrink-0" />
+                       <select 
+                         value={gender} 
+                         onChange={(e) => setGender(e.target.value as GenderOption)}
+                         className="w-full bg-transparent outline-none text-slate-700 font-medium text-xs appearance-none"
+                       >
+                         {GENDER_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                       </select>
+                     </div>
+                   </div>
+                </div>
+              </div>
+
+              {error && <p className="text-red-500 text-xs text-center font-medium">{error}</p>}
+
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={handleGoogleLogin}
+                onClick={handleSignup}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border border-slate-100 bg-white text-slate-700 font-bold shadow-sm hover:shadow-md transition-all disabled:opacity-60"
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-rose-400 text-white font-bold shadow-lg transition-all"
               >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-slate-300 border-t-pastel-violet rounded-full animate-spin" />
-                ) : (
-                  <Image src="/logo2.png" className="w-5 h-5" alt="google" width={20} height={20} />
-                )}
-                {t.auth.signInGoogle}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Create Account</span><ChevronRight className="w-5 h-5" /></>}
               </motion.button>
             </div>
-            
-            <p className="text-center text-[11px] text-slate-300 font-medium leading-relaxed px-4">
-                By creating an account, you agree to our{" "}
-                <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Terms</Link>
-                {" "}and{" "}
-                <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Privacy Policy</Link>.
-            </p>
-
-            <p className="text-center text-sm text-slate-400 font-medium">
-              Already have an account?{" "}
-              <button
-                onClick={() => {
-                  setEmail("")
-                  setPassword("")
-                  setError("")
-                  setView("login")
-                }}
-                className="text-pastel-violet font-bold hover:underline"
-              >
-                Sign in here
-              </button>
-            </p>
           </motion.div>
-        ) : (
+        )}
+
+        {/* ── PROFILE COMPLETION ────────────────────────────────────────── */}
+        {view === "profile" && (
           <motion.div
-            key="complete-profile"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full max-w-xl flo-card p-6 md:p-12 space-y-8 md:space-y-10 rounded-[2rem] md:rounded-[3rem]"
+            key="profile"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={cardClass}
           >
-            <div className="text-center space-y-3">
-              <h1 className="text-3xl font-black text-slate-800 tracking-tight">Complete Profile</h1>
-              <p className="text-slate-400 font-medium text-sm">One last step to personalize your experience.</p>
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-violet-100 flex items-center justify-center mx-auto mb-3">
+                <User className="w-7 h-7 text-violet-500" />
+              </div>
+              <h1 className="text-2xl font-black text-slate-900">Complete Profile</h1>
+              <p className="text-slate-400 font-medium text-sm">Finalize your details</p>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Full Name</label>
-                <div className="flex items-center gap-4 bg-slate-50 rounded-2xl px-6 py-4 border border-slate-100">
-                  <User className="w-5 h-5 text-slate-300" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
-                    className="bg-transparent outline-none w-full font-bold text-slate-700"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">I am a...</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setRole("patient")}
-                    className={`p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                      role === "patient" ? "border-pastel-pink bg-rose-50/50 text-pastel-pink" : "border-slate-50 bg-slate-50 text-slate-300"
-                    }`}
-                  >
-                    <User className="w-6 h-6" />
-                    <span className="font-black text-[10px] uppercase tracking-widest">Patient</span>
-                  </button>
-                  <button
-                    onClick={() => setRole("doctor")}
-                    className={`p-5 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                      role === "doctor" ? "border-pastel-violet bg-violet-50/50 text-pastel-violet" : "border-slate-50 bg-slate-50 text-slate-300"
-                    }`}
-                  >
-                    <Shield className="w-6 h-6" />
-                    <span className="font-black text-[10px] uppercase tracking-widest">Healthcare</span>
-                  </button>
-                </div>
-              </div>
-
-              {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
-
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                onClick={handleCompleteProfile}
-                disabled={loading}
-                className="w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-xl"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Finish <ChevronRight className="w-4 h-4" /></>}
-              </motion.button>
-
-              <p className="text-center text-[11px] text-slate-300 font-medium leading-relaxed px-4 pt-4">
-                  By clicking Finish, you agree to our{" "}
-                  <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Terms</Link>
-                  {" "}and{" "}
-                  <Link href="/privacy" className="text-pastel-violet font-bold hover:underline">Privacy Policy</Link>.
-              </p>
-            </div>
+            <ProfileForm 
+              submitLabel="Finish Setup"
+              onSaved={() => {
+                const currentUser = auth?.currentUser
+                if (currentUser) {
+                  setUser(currentUser)
+                  setHasProfile(true)
+                  setAuthLoaded(true)
+                  router.replace("/home")
+                }
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -510,3 +402,10 @@ export default function LoginPage() {
   )
 }
 
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  )
+}

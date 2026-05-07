@@ -22,7 +22,15 @@ import {
 import { MedicalAssistanceIllustration } from "../components/Illustrations"
 import { useLocale } from "../i18n/LocaleContext"
 
-import { healthService, HealthData } from "../services/HealthService"
+import { HealthService } from "../services/HealthService"
+import { useAppStore } from "../store/useAppStore"
+
+type HealthData = {
+  steps: number
+  caloriesBurned: number
+  sleepHours: number
+  activityTime?: number
+}
 
 export default function Home() {
   const router = useRouter()
@@ -45,53 +53,43 @@ export default function Home() {
     return () => unsubscribe()
   }, [router])
 
-  // Auto-fetch data if already connected
+  // Auto-fetch if already connected
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (healthService.getSyncStatus()) {
-      fetchLiveStats();
-      interval = setInterval(fetchLiveStats, 10000); // Polling slower to be kind to the backend
+    const { healthSyncState } = useAppStore.getState()
+    if (healthSyncState === "connected") {
+      HealthService.fetchData().then((data) => {
+        if (data) setHealthData(data)
+      })
     }
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchLiveStats = async () => {
-    try {
-      const data = await healthService.fetchRealTimeData();
-      setHealthData(data);
-    } catch (err) {
-      console.error("Auto-fetch failed", err);
-    }
-  }
+  }, [])
 
   const handleSync = async () => {
-    setIsSyncing(true);
+    setIsSyncing(true)
     try {
-      const success = await healthService.requestPermissions();
-      if (success) {
-        const data = await healthService.fetchRealTimeData();
-        setHealthData(data);
-        
-        // Push to Backend
-        const token = await auth?.currentUser?.getIdToken();
-        if (token) {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/health/sync`, {
+      const granted = await HealthService.requestPermissions()
+      if (granted) {
+        const data = await HealthService.fetchData()
+        if (data) setHealthData(data)
+
+        const token = await auth?.currentUser?.getIdToken()
+        if (token && data) {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/health/sync`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify(data)
-          });
-          if (!res.ok) console.error("Backend sync failed");
+            body: JSON.stringify(data),
+          }).catch(console.error)
         }
       }
     } catch (err) {
-      console.error("Sync error:", err);
+      console.error("Sync error:", err)
     } finally {
-      setIsSyncing(false);
+      setIsSyncing(false)
     }
   }
+
 
   const quickActions = [
     {

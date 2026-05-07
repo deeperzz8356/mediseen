@@ -1,89 +1,124 @@
 "use client"
 
-import { Capacitor, registerPlugin } from '@capacitor/core';
+/**
+ * HealthService.ts – Capacitor bridge for Health Connect
+ *
+ * Always checks availability before calling native methods.
+ * Fails gracefully – never crashes, always returns a typed payload.
+ */
 
-// We define the interface for Health Connect data
-export interface HealthData {
-  sleepHours: number;
-  steps: number;
-  caloriesBurned: number;
-  activityTime: number; // in minutes
-}
+import { Capacitor, registerPlugin } from "@capacitor/core"
+import { useAppStore } from "../store/useAppStore"
 
-// Define the interface for our native plugin
+// ─── Plugin interface ─────────────────────────────────────────────
 interface HealthConnectPlugin {
-  checkAvailability(): Promise<{ status: number }>;
-  requestHealthPermissions(): Promise<{ granted: boolean; message?: string }>;
+  checkAvailability(): Promise<{ status: number; available: boolean; needsUpdate: boolean }>
+  requestHealthPermissions(): Promise<{
+    granted: boolean
+    message?: string
+    error?: string
+  }>
   fetchHealthData(): Promise<{
-    steps?: number;
-    caloriesBurned?: number;
-    sleepHours?: number;
-    activityTime?: number;
-  }>;
+    available: boolean
+    steps: number
+    caloriesBurned: number
+    sleepHours: number
+    error?: string
+    message?: string
+  }>
 }
 
-// Register the native plugin
-const HealthConnect = registerPlugin<HealthConnectPlugin>('HealthConnect');
+// Register the native plugin (no-op on web)
+const HealthConnect = registerPlugin<HealthConnectPlugin>("HealthConnect")
 
-class HealthService {
-  private isConnected = false;
+// ─── Health Connect availability codes ───────────────────────────
+// 0 = SDK_UNAVAILABLE, 1 = SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED, 2 = SDK_AVAILABLE
+export const HC_STATUS = {
+  UNAVAILABLE: 0,
+  NEEDS_UPDATE: 1,
+  AVAILABLE: 2,
+} as const
 
-  async requestPermissions(): Promise<boolean> {
-    if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) {
-      console.warn("Health Connect is only available on native Android.");
-      this.isConnected = true;
-      return true;
+// ─── Service ─────────────────────────────────────────────────────
+export const HealthService = {
+  /**
+   * Check if Health Connect is available on this device.
+   * Sets the global healthSyncState in Zustand accordingly.
+   */
+  async checkAvailability(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+      useAppStore.getState().setHealthSyncState("unavailable")
+      return false
     }
 
     try {
-      const availability = await HealthConnect.checkAvailability();
-      if (availability.status !== 1) { // 1 = SDK_AVAILABLE
-        console.error("Health Connect SDK not available. Status:", availability.status);
-        return false;
+      const result = await HealthConnect.checkAvailability()
+      if (!result.available) {
+        useAppStore.getState().setHealthSyncState(
+          result.needsUpdate ? "error" : "unavailable"
+        )
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error("[HealthService] Availability check failed:", error)
+      useAppStore.getState().setHealthSyncState("error")
+      return false
+    }
+  },
+
+  /**
+   * Request Health Connect permissions.
+   * Opens the Health Connect permissions screen.
+   */
+  async requestPermissions(): Promise<boolean> {
+    const available = await this.checkAvailability()
+    if (!available) return false
+
+    try {
+      const result = await HealthConnect.requestHealthPermissions()
+      return result.granted
+    } catch (error) {
+      console.error("[HealthService] Permission request failed:", error)
+      return false
+    }
+  },
+
+  /**
+   * Fetch health data for the last 24 hours.
+   * Returns null if unavailable or on error.
+   */
+  async fetchData(): Promise<{
+    steps: number
+    caloriesBurned: number
+    sleepHours: number
+  } | null> {
+    const available = await this.checkAvailability()
+    if (!available) return null
+
+    try {
+      const data = await HealthConnect.fetchHealthData()
+
+      if (!data.available) {
+        useAppStore.getState().setHealthSyncState("unavailable")
+        return null
       }
 
-      const result = await HealthConnect.requestHealthPermissions();
-      this.isConnected = result.granted;
-      return result.granted;
-    } catch (error) {
-      console.error("Error requesting health permissions:", error);
-      return false;
-    }
-  }
-
-  async fetchRealTimeData(): Promise<HealthData> {
-    if (!this.isConnected) {
-      throw new Error("Device not synced. Please connect first.");
-    }
-
-    if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) {
-      // Simulate real-time data fetching for development
-      return {
-        sleepHours: 6.5 + (Math.random() * 1.5),
-        steps: 8432 + Math.floor(Math.random() * 100),
-        caloriesBurned: 1850 + Math.floor(Math.random() * 200),
-        activityTime: 45 + Math.floor(Math.random() * 5),
-      };
-    }
-
-    try {
-      const data = await HealthConnect.fetchHealthData();
-      
-      return {
-        sleepHours: data.sleepHours || 0,
+      const payload = {
         steps: data.steps || 0,
         caloriesBurned: data.caloriesBurned || 0,
-        activityTime: data.activityTime || 45, // Fallback if not tracked
-      };
+        sleepHours: data.sleepHours || 0,
+      }
+
+      // Persist to Zustand
+      useAppStore.getState().setHealthData({ ...payload, heartRate: 0 })
+      useAppStore.getState().setHealthSyncState("connected")
+
+      return payload
     } catch (error) {
-      console.error("Error fetching health data from native bridge:", error);
-      throw error;
+      console.error("[HealthService] Fetch failed:", error)
+      useAppStore.getState().setHealthSyncState("error")
+      return null
     }
-  }
-
-  getSyncStatus(): boolean {
-    return this.isConnected;
-  }
+  },
 }
-
-export const healthService = new HealthService();

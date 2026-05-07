@@ -67,40 +67,16 @@ print(f"INFO: Starting Mediseen API in {os.getenv('APP_ENV', 'development')} mod
 # ---------------------------------------------------
 graph = build_graph()
 
-# Restrict CORS to explicit origins from env instead of wildcard.
-_allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
-_app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+# 1️⃣ CORS - Allow all origins for seamless testing and app usage
+from fastapi.middleware.cors import CORSMiddleware
 
-# Always include Capacitor origins for native app support on ALL devices
-_default_origins = "http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:3001,http://localhost:3001,http://localhost,capacitor://localhost,capacitor://app,file://,http://192.168.1.7:8000,http://192.168.1.7:3000"
-
-if not _allowed_origins_raw:
-    if _app_env == "production":
-        # In production, include Capacitor origins to support all Android devices
-        _allowed_origins_raw = "capacitor://localhost,capacitor://app,file://,https://your-frontend.onrender.com"
-    else:
-        _allowed_origins_raw = _default_origins
-
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in _allowed_origins_raw.split(",")
-    if origin.strip()
-]
-
-# Function to allow any Capacitor origin (works on all phones)
-def is_allowed_origin(origin: str) -> bool:
-    """Check if origin is allowed, with special handling for Capacitor"""
-    # Allow all Capacitor origins (capacitor://anything)
-    if origin.startswith("capacitor://"):
-        return True
-    # Allow file:// protocol for local files
-    if origin.startswith("file://"):
-        return True
-    # Allow localhost and loopback origins used by Capacitor web/runtime bridges
-    if origin.startswith("http://localhost") or origin.startswith("https://localhost") or origin.startswith("http://127.0.0.1"):
-        return True
-    # Allow explicit whitelisted origins
-    return origin in ALLOWED_ORIGINS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 ALLOWED_UPLOAD_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 ALLOWED_IMAGE_EXTENSIONS = {
@@ -111,46 +87,6 @@ ALLOWED_IMAGE_EXTENSIONS = {
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 MAX_SYMPTOMS_LENGTH = int(os.getenv("MAX_SYMPTOMS_LENGTH", "2000"))
 MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "50000000"))
-
-# 1️⃣ CORS - Allow all Capacitor origins for universal Android device support
-class CORSOriginMiddleware:
-    def __init__(self, app):
-        self.app = app
-    
-    async def __call__(self, scope, receive, send):
-        if scope["type"] == "http":
-            origin = dict(scope.get("headers", [])).get(b"origin", b"").decode()
-            if is_allowed_origin(origin):
-                async def send_with_cors(message):
-                    if message["type"] == "http.response.start":
-                        headers = list(message.get("headers", []))
-                        headers.append((b"access-control-allow-origin", origin.encode()))
-                        headers.append((b"access-control-allow-credentials", b"true"))
-                        headers.append((b"access-control-allow-methods", b"GET, POST, PUT, DELETE, OPTIONS"))
-                        headers.append((b"access-control-allow-headers", b"*"))
-                        headers.append((b"access-control-expose-headers", b"*"))
-                        headers.append((b"access-control-max-age", b"600"))
-                        message["headers"] = headers
-                    await send(message)
-                
-                if scope.get("method") == "OPTIONS":
-                    await send_with_cors({
-                        "type": "http.response.start",
-                        "status": 200,
-                        "headers": [],
-                    })
-                    await send({
-                        "type": "http.response.body",
-                        "body": b"",
-                    })
-                    return
-                
-                await self.app(scope, receive, send_with_cors)
-                return
-        
-        await self.app(scope, receive, send)
-
-app.add_middleware(CORSOriginMiddleware)
 
 # 2️⃣ Firebase Init
 init_firebase() # Centralized check-and-init
@@ -308,15 +244,28 @@ async def register_user(
     if not uid:
         raise HTTPException(status_code=400, detail="Missing user id in token")
 
-    email = _decoded_token.get("email")
+    email = _decoded_token.get("email", "")
     name = request.get("name", "").strip()
-    role = request.get("role", "patient").lower()
+    age = request.get("age")
+    gender = request.get("gender", "prefer_not_to_say").lower()
+    language = request.get("language", "en")
 
     if not name:
         raise HTTPException(status_code=400, detail="User name is required")
-    
-    if role not in ["doctor", "patient"]:
-        raise HTTPException(status_code=400, detail="Role must be 'doctor' or 'patient'")
+
+    # Validate age
+    if age is not None:
+        try:
+            age = int(age)
+            if age < 1 or age > 120:
+                raise ValueError
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Age must be a number between 1 and 120")
+
+    # Validate gender
+    valid_genders = {"male", "female", "other", "prefer_not_to_say"}
+    if gender not in valid_genders:
+        raise HTTPException(status_code=400, detail=f"Gender must be one of: {', '.join(valid_genders)}")
 
     try:
         db = get_db()
@@ -329,20 +278,21 @@ async def register_user(
                 "uid": uid,
                 "name": name,
                 "email": email,
-                "role": role,
+                "age": age,
+                "gender": gender,
+                "language": language,
+                "onboarding_completed": True,
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "updated_at": firestore.SERVER_TIMESTAMP,
             },
             merge=True
         )
 
-        # Set custom claims for role-based access
-        auth.set_custom_user_claims(uid, {"role": role})
-
-        return {"status": "registered", "uid": uid, "name": name, "role": role}
+        return {"status": "registered", "uid": uid, "name": name}
     except Exception as e:
         print(f"Registration error: {e}")
         raise HTTPException(status_code=500, detail="Failed to save user profile")
+
 
 
 # 5.1️⃣ Delete Account and Data

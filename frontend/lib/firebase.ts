@@ -84,10 +84,15 @@ export async function signInWithGoogle() {
   }
 
   try {
-    // Web: Use OAuth redirect (works on any browser)
-    await signInWithRedirect(auth, googleProvider)
-    return null // Page will redirect
+    // Web: Use OAuth popup (standard for modern web apps)
+    const result = await signInWithPopup(auth, googleProvider)
+    return result.user
   } catch (err: any) {
+    if (err.code === "auth/popup-blocked") {
+      // Fallback to redirect if popup is blocked
+      await signInWithRedirect(auth, googleProvider)
+      return null
+    }
     console.error("Web Google Sign-In Error:", err)
     throw err
   }
