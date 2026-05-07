@@ -333,7 +333,8 @@ async def diagnose(
         # In production, enforce that the declared multipart content-type is an allowed image MIME.
         # In non-production (dev/test) accept uploads even if the client sends a generic content-type
         # because some tools (PowerShell curl, etc.) may not set the part MIME correctly.
-        if _app_env == "production":
+        app_env = os.getenv("APP_ENV", os.getenv("ENV", "development")).lower()
+        if app_env == "production":
             if image.content_type not in ALLOWED_UPLOAD_MIME_TYPES:
                 raise HTTPException(status_code=400, detail="Unsupported image format")
         else:

@@ -7,7 +7,7 @@ import { Camera } from "@capacitor/camera"
 import { DiagnosisResult } from "./ResultPanel"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
-import { requestCameraPermission, requestGalleryPermission } from "../lib/permissions"
+import { requestCameraPermission, requestGalleryPermission, requestFilesPermission } from "../lib/permissions"
 
 interface UploadPanelProps {
   onAnalysisComplete?: (result: DiagnosisResult) => void
@@ -214,38 +214,52 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
   const handleBrowse = async () => {
     setPermissionDenied(false)
     setPermissionPermanent(false)
-
-    // Step 1: Check/request gallery permission lazily
-    const perm = await requestGalleryPermission()
+    // Step 1: Request files/photos permission lazily
+    const perm = await requestFilesPermission()
     if (!perm.granted) {
       setPermissionDenied(true)
       setPermissionPermanent(perm.permanentlyDenied)
       return
     }
 
+    // Prefer native photo picker when running on device; fallback to file input for documents or browser
     try {
-      const { CameraSource, CameraResultType } = await import("@capacitor/camera")
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Photos,
-      })
+      if ((window as any)?.Capacitor && (window as any).Capacitor.isNativePlatform && (window as any).Capacitor.isNativePlatform()) {
+        const { CameraSource, CameraResultType } = await import("@capacitor/camera")
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Base64,
+          source: CameraSource.Photos,
+        })
 
-      if (image.base64String) {
-        const base64Url = `data:image/jpeg;base64,${image.base64String}`
-        setPreview(base64Url)
-        if (onImageUpload) onImageUpload(base64Url)
-        const bstr = atob(image.base64String)
-        let n = bstr.length
-        const u8arr = new Uint8Array(n)
-        while (n--) u8arr[n] = bstr.charCodeAt(n)
-        setFile(new File([u8arr], "gallery_upload.jpg", { type: "image/jpeg" }))
+        if (image.base64String) {
+          const base64Url = `data:image/jpeg;base64,${image.base64String}`
+          setPreview(base64Url)
+          if (onImageUpload) onImageUpload(base64Url)
+          const bstr = atob(image.base64String)
+          let n = bstr.length
+          const u8arr = new Uint8Array(n)
+          while (n--) u8arr[n] = bstr.charCodeAt(n)
+          setFile(new File([u8arr], "gallery_upload.jpg", { type: "image/jpeg" }))
+          return
+        }
       }
+
+      // If native picker not available or didn't return an image, open the hidden file input to support PDFs and images
+      fileInputRef.current?.click()
     } catch (err) {
-      console.warn("Gallery picker failed, falling back to web input", err)
+      console.warn("Gallery picker failed, falling back to file input", err)
       fileInputRef.current?.click()
     }
+  }
+
+  // Hidden file input handler for web/native fallback (images + documents)
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (f) handleFile(f)
+    // reset value to allow selecting the same file again
+    if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
   /** Camera / Scan – only requests permission on user tap */
@@ -338,6 +352,15 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
             </div>
           )}
         </div>
+
+        {/* Hidden file input for fallback (images, PDFs) */}
+        <input
+          ref={fileInputRef}
+          onChange={handleFileInputChange}
+          type="file"
+          accept="image/*,application/pdf"
+          style={{ display: "none" }}
+        />
 
         {/* 3. SYMPTOMS */}
         <div className="space-y-3">

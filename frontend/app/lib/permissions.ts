@@ -19,6 +19,7 @@
 import { Capacitor } from "@capacitor/core"
 import { Camera, CameraPermissionState } from "@capacitor/camera"
 import { LocalNotifications } from "@capacitor/local-notifications"
+import { Filesystem } from "@capacitor/filesystem"
 
 // ─── Types ─────────────────────────────────────────────────────────
 export type PermissionResult = {
@@ -124,6 +125,48 @@ export async function requestGalleryPermission(): Promise<PermissionResult> {
     return { granted: false, permanentlyDenied: photosResult === "denied" }
   } catch (error) {
     console.error("[permissions] Gallery permission error:", error)
+    return { granted: false, permanentlyDenied: false, error: String(error) }
+  }
+}
+
+
+// ─── Files / Generic Storage Permission ───────────────────────────
+/**
+ * Request permission to access files (images and documents) lazily.
+ * Uses the Camera photos permission for images (Android 13+ uses READ_MEDIA_IMAGES),
+ * and falls back to Filesystem permissions for generic file access on older Android.
+ */
+export async function requestFilesPermission(): Promise<PermissionResult> {
+  if (!Capacitor.isNativePlatform()) {
+    return { granted: true, permanentlyDenied: false }
+  }
+
+  // Android 14+: system picker removes need for storage permission
+  if (isAndroid14Plus()) {
+    return { granted: true, permanentlyDenied: false }
+  }
+
+  try {
+    // Prefer the same flow as gallery (Camera photos permission) which maps to READ_MEDIA_IMAGES on Android 13+
+    const gallery = await requestGalleryPermission()
+    if (gallery.granted) return gallery
+
+    // If gallery permission denied but Filesystem permission might help (older devices)
+    try {
+      const fsStatus = await Filesystem.checkPermissions()
+      if (fsStatus && fsStatus.publicStorage === 'granted') {
+        return { granted: true, permanentlyDenied: false }
+      }
+      const req = await Filesystem.requestPermissions()
+      const granted = req && req.publicStorage === 'granted'
+      return { granted: !!granted, permanentlyDenied: false }
+    } catch (fsErr) {
+      // If Filesystem plugin not available or fails, return gallery's result
+      console.warn('[permissions] Filesystem permission check failed', fsErr)
+      return gallery
+    }
+  } catch (error) {
+    console.error('[permissions] Files permission error:', error)
     return { granted: false, permanentlyDenied: false, error: String(error) }
   }
 }
