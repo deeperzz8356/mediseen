@@ -111,7 +111,7 @@ const hi: Translations = {
     titleHighlight: "सहायक",
     subtitle: "अपना मेडिकल स्कैन अपलोड करें, और हमारा सहायक इसे सेकंडों में समझने में मदद करेगा।",
     scanReport: "रिपोर्ट स्कैन करें",
-    browseHistory: "इतिहास देखें",
+    browseHistory: "गतिविधि",
     camera: {
       alignFrame: "रिपोर्ट को फ्रेम के अंदर रखें",
       aiScanning: "AI स्कैनिंग सक्रिय",

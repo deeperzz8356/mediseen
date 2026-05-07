@@ -111,7 +111,7 @@ const es: Translations = {
     titleHighlight: "de salud",
     subtitle: "Sube tu escaneo médico y nuestro asistente te ayudará a entenderlo en segundos.",
     scanReport: "Escanear informe",
-    browseHistory: "Ver historial",
+    browseHistory: "Actividad",
     camera: {
       alignFrame: "Alinea el informe dentro del marco",
       aiScanning: "Escaneo IA activo",

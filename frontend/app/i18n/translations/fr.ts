@@ -113,7 +113,7 @@ const fr: Translations = {
     titleHighlight: "Santé",
     subtitle: "Téléchargez votre examen médical et notre assistant vous aidera à le comprendre en quelques secondes.",
     scanReport: "Scanner le rapport",
-    browseHistory: "Parcourir l'historique",
+    browseHistory: "Activité",
     camera: {
       alignFrame: "Alignez le rapport dans le cadre",
       aiScanning: "Scan IA actif",

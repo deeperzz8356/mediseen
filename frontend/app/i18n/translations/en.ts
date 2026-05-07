@@ -123,7 +123,7 @@ const en = {
     titleHighlight: "Assistant",
     subtitle: "Upload your medical scan, and our assistant will help you understand it in seconds.",
     scanReport: "Scan Report",
-    browseHistory: "Browse History",
+    browseHistory: "Activity",
     camera: {
       alignFrame: "Align report within the frame",
       aiScanning: "AI Scanning Active",

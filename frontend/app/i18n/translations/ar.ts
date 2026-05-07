@@ -115,7 +115,7 @@ const ar: Translations = {
     titleHighlight: "الصحي",
     subtitle: "ارفع فحصك الطبي وسيساعدك مساعدنا على فهمه في ثوانٍ.",
     scanReport: "مسح التقرير",
-    browseHistory: "تصفح السجل",
+    browseHistory: "النشاط",
     camera: {
       alignFrame: "ضع التقرير داخل الإطار",
       aiScanning: "المسح الذكي نشط",

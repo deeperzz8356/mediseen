@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core"
 import { FirebaseAuthentication } from "@capacitor-firebase/authentication"
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { indexedDBLocalPersistence, getAuth, getRedirectResult, GoogleAuthProvider, signInWithCredential, signInWithRedirect, signInWithPopup, initializeAuth } from "firebase/auth"
+import { getFirestore } from "firebase/firestore"
 
 export const googleProvider = new GoogleAuthProvider()
 
@@ -48,6 +49,7 @@ function createAuth() {
 }
 
 export const auth = createAuth()
+export const db = app ? getFirestore(app) : null
 
 /**
  * Sign in with Google - Works on every device!

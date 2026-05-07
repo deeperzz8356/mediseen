@@ -22,6 +22,7 @@ try:
         increment_cache_hit,
         save_diagnosis_record,
         get_db,
+        delete_user_data,
     )
     from backend.services.storage_svc import upload_image
 except ModuleNotFoundError:

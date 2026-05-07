@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera"
 import { FileText, Eye, ClipboardCheck, ChevronRight, Activity, Sparkles, Camera as CameraIcon, X } from "lucide-react"
@@ -8,6 +8,21 @@ import { useLocale } from "../i18n/LocaleContext"
 import UploadPanel from "../components/UploadPanel"
 import ResultPanel, { DiagnosisResult } from "../components/ResultPanel"
 import HeatmapViewer from "../components/HeatmapViewer"
+import { auth, db } from "@/lib/firebase"
+import { onAuthStateChanged, type User } from "firebase/auth"
+import { collection, getDocs, query, where } from "firebase/firestore"
+import { resolveBackendAssetUrl } from "../config"
+
+type ScanActivity = {
+  id: string
+  diagnosis: string
+  confidence: number | null
+  symptoms: string[]
+  timestamp: string
+  summary: string
+  reportUrl?: string
+  heatmapUrl?: string
+}
 
 export default function DiagnosePage() {
   const [analysisResult, setAnalysisResult] = useState<DiagnosisResult | null>(null)
@@ -15,7 +30,76 @@ export default function DiagnosePage() {
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showActivity, setShowActivity] = useState(false)
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [activityError, setActivityError] = useState("")
+  const [activityItems, setActivityItems] = useState<ScanActivity[]>([])
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const { t } = useLocale()
+
+  useEffect(() => {
+    if (!auth) return
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  const loadActivityHistory = async () => {
+    if (!db || !currentUser) {
+      setActivityItems([])
+      return
+    }
+
+    setActivityLoading(true)
+    setActivityError("")
+
+    try {
+      const recordsRef = collection(db, "diagnosis_records")
+      const activityQuery = query(recordsRef, where("uid", "==", currentUser.uid))
+      const snapshot = await getDocs(activityQuery)
+
+      setActivityItems(
+        snapshot.docs
+          .map((doc) => {
+          const data = doc.data() as Record<string, unknown>
+          const deepKnowledge = (data.deep_knowledge as Record<string, unknown> | undefined) ?? {}
+          const confidence = typeof data.confidence === "number" ? data.confidence : null
+          const symptoms = Array.isArray(data.symptoms)
+            ? data.symptoms.filter((item): item is string => typeof item === "string")
+            : []
+
+          return {
+            id: doc.id,
+            diagnosis: String(data.diagnosis ?? "Unknown result"),
+            confidence,
+            symptoms,
+            timestamp: String(data.timestamp ?? ""),
+            summary: String(deepKnowledge.simple_explanation ?? deepKnowledge.reason ?? "Scan completed."),
+            reportUrl: typeof data.report_url === "string" ? data.report_url : undefined,
+            heatmapUrl: typeof data.heatmap_url === "string" ? data.heatmap_url : undefined,
+          }
+          })
+          .sort((left, right) => {
+            return String(right.timestamp).localeCompare(String(left.timestamp))
+          })
+          .slice(0, 6)
+      )
+    } catch (error) {
+      console.error("Failed to load activity history:", error)
+      setActivityError("Unable to load activity history right now.")
+    } finally {
+      setActivityLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showActivity) {
+      void loadActivityHistory()
+    }
+  }, [showActivity, currentUser])
 
   const handleReset = () => {
     setAnalysisResult(null)
@@ -57,6 +141,9 @@ export default function DiagnosePage() {
 
   const handleAnalysisComplete = (res: DiagnosisResult) => {
     setAnalysisResult(res)
+    if (showActivity) {
+      void loadActivityHistory()
+    }
     setTimeout(() => {
       document.getElementById('results-section-header')?.scrollIntoView({ behavior: 'smooth' })
     }, 100)
@@ -90,7 +177,15 @@ export default function DiagnosePage() {
               <CameraIcon className="w-4 h-4" />
               {t.diagnose.scanReport}
             </motion.button>
-            <button className="flex-1 md:flex-none px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl border border-black/10 font-black text-[10px] md:text-xs uppercase tracking-widest text-slate-400">
+            <button
+              onClick={() => setShowActivity((value) => !value)}
+              className={`flex-1 md:flex-none px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl border font-black text-[10px] md:text-xs uppercase tracking-widest transition-all ${
+                showActivity
+                  ? "border-black bg-black text-white shadow-xl"
+                  : "border-black/10 text-slate-400 hover:text-slate-600 hover:border-black/20"
+              }`}
+            >
+              <Activity className="w-4 h-4 inline-block mr-2" />
               {t.diagnose.browseHistory}
             </button>
           </div>
@@ -118,6 +213,92 @@ export default function DiagnosePage() {
           </div>
         </div>
       </header>
+
+      <AnimatePresence>
+        {showActivity && (
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 18 }}
+            className="max-w-5xl mx-auto rounded-[2rem] border border-black/5 bg-white shadow-sm p-6 md:p-8 space-y-5"
+          >
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Activity</p>
+                <h2 className="text-2xl font-black text-slate-900">Recent scan results</h2>
+              </div>
+              <button
+                onClick={loadActivityHistory}
+                className="self-start md:self-auto px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
+                disabled={activityLoading}
+              >
+                {activityLoading ? "Refreshing…" : "Refresh"}
+              </button>
+            </div>
+
+            {activityError && <p className="text-sm font-medium text-rose-500">{activityError}</p>}
+
+            <div className="grid gap-4">
+              {activityLoading && activityItems.length === 0 ? (
+                <p className="text-sm font-medium text-slate-400">Loading your previous scan results…</p>
+              ) : activityItems.length === 0 ? (
+                <p className="text-sm font-medium text-slate-400">No scan history found yet.</p>
+              ) : (
+                activityItems.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:p-5 space-y-3">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-black text-slate-900">{item.diagnosis}</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                          {item.timestamp ? new Date(item.timestamp).toLocaleString() : "Unknown time"}
+                        </p>
+                      </div>
+                      <div className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 border border-slate-200">
+                        {item.confidence !== null ? `${Math.round(item.confidence * 100)}% confidence` : "Saved result"}
+                      </div>
+                    </div>
+
+                    <p className="text-sm font-medium text-slate-600">{item.summary}</p>
+
+                    {item.symptoms.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.symptoms.slice(0, 4).map((symptom) => (
+                          <span key={symptom} className="px-3 py-1 rounded-full bg-white border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            {symptom}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-3">
+                      {item.reportUrl && (
+                        <a
+                          href={resolveBackendAssetUrl(item.reportUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl bg-black text-white"
+                        >
+                          Open report
+                        </a>
+                      )}
+                      {item.heatmapUrl && (
+                        <a
+                          href={resolveBackendAssetUrl(item.heatmapUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-500"
+                        >
+                          Open heatmap
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       {/* --- MAIN WORKFLOW --- */}
       <main className="space-y-12">

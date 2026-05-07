@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { onAuthStateChanged, signOut, User } from "firebase/auth"
+import { onAuthStateChanged, signOut, updateProfile, User } from "firebase/auth"
 import { Ban, LogOut, Languages, ChevronRight, ChevronDown } from "lucide-react"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
@@ -24,9 +24,9 @@ import LanguageSelector, { LANGUAGES } from "../components/LanguageSelector"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { language, setLanguage, setOnboardingDone, setLanguageDone, setNotificationPermission, setProfile, setUser } = useAppStore()
+  const { language, setLanguage, setOnboardingDone, setLanguageDone, setNotificationPermission, setProfile } = useAppStore()
 
-  const [user, setUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -61,11 +61,24 @@ export default function ProfilePage() {
             setProfileName(data.profile.name ?? "")
             setProfileAge(data.profile.age ?? null)
             setProfileGender(data.profile.gender ?? "prefer_not_to_say")
+            setProfile({
+              uid: u.uid,
+              name: data.profile.name ?? "",
+              email: data.profile.email ?? u.email ?? "",
+              age: data.profile.age ?? null,
+              gender: data.profile.gender ?? "prefer_not_to_say",
+              language: data.profile.language ?? "en",
+              onboarding_completed: Boolean(data.profile.onboarding_completed ?? true),
+            })
+
+            if (data.profile.name && u.displayName !== data.profile.name) {
+              void updateProfile(u, { displayName: data.profile.name }).catch(() => null)
+            }
           }
         }
       } catch {
         // Use Firebase display name as fallback
-        setProfileName(u.displayName ?? "")
+        setProfileName(u.displayName ?? u.email?.split("@")[0] ?? "")
       }
     })
     return () => unsub()
@@ -124,7 +137,7 @@ export default function ProfilePage() {
 
         // Reset in-memory profile/user
         setProfile(null)
-        setUser(null)
+        setCurrentUser(null)
       } catch (prefErr) {
         // Non-fatal; continue to route to entry
         console.warn("Failed to clear preferences after account deletion", prefErr)
@@ -171,6 +184,19 @@ export default function ProfilePage() {
             setProfileName(data.name)
             setProfileAge(data.age)
             setProfileGender(data.gender)
+            const activeUser = auth.currentUser ?? currentUser
+            if (activeUser) {
+              setCurrentUser(activeUser)
+              setProfile({
+                uid: activeUser.uid,
+                name: data.name,
+                email: activeUser.email ?? "",
+                age: data.age,
+                gender: data.gender,
+                language,
+                onboarding_completed: true,
+              })
+            }
           }}
         />
       </motion.section>
@@ -288,7 +314,7 @@ export default function ProfilePage() {
           </motion.button>
         </div>
 
-        <p className="text-[11px] text-slate-400">UID: {user?.uid ?? "—"}</p>
+        <p className="text-[11px] text-slate-400">UID: {currentUser?.uid ?? "—"}</p>
       </motion.section>
     </div>
   )

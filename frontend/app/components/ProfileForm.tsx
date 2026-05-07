@@ -10,10 +10,11 @@
  *  - /login (profile completion after signup)
  */
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { User, Calendar, Users, Save, Loader2, CheckCircle2 } from "lucide-react"
+import { User, Calendar, Save, Loader2, CheckCircle2 } from "lucide-react"
 import { auth } from "@/lib/firebase"
+import { updateProfile } from "firebase/auth"
 import { API_BASE_URL } from "../config"
 import type { GenderOption } from "../store/useAppStore"
 
@@ -46,6 +47,12 @@ export default function ProfileForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    setName(initialName)
+    setAge(initialAge?.toString() ?? "")
+    setGender(initialGender)
+  }, [initialAge, initialGender, initialName])
 
   const validate = (): string | null => {
     if (!name.trim()) return "Full name is required."
@@ -81,6 +88,8 @@ export default function ProfileForm({
         const data = await res.json().catch(() => ({}))
         throw new Error(data.detail || "Failed to save profile.")
       }
+
+      await updateProfile(user, { displayName: name.trim() })
 
       setSuccess(true)
       onSaved?.({ name: name.trim(), age: parseInt(age, 10), gender })
