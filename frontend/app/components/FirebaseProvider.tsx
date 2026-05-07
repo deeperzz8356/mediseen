@@ -14,11 +14,12 @@ export default function FirebaseProvider() {
 
     const initFirebase = async () => {
       try {
-        await FirebaseAnalytics.setCollectionEnabled({ enabled: true })
-        console.log("Firebase Analytics initialized")
+        // Correct method names for @capacitor-firebase v8
+        await FirebaseAnalytics.setEnabled({ enabled: true })
+        console.log("Firebase Analytics enabled")
         
-        await FirebaseCrashlytics.setCrashlyticsCollectionEnabled({ enabled: true })
-        console.log("Firebase Crashlytics initialized")
+        await FirebaseCrashlytics.setEnabled({ enabled: true })
+        console.log("Firebase Crashlytics enabled")
       } catch (error) {
         console.error("Firebase init error:", error)
       }
