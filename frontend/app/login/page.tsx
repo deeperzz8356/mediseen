@@ -148,12 +148,17 @@ function LoginContent() {
       const cred = await signInWithEmailAndPassword(auth, email, password)
       await verifyAndRedirect(cred.user)
     } catch (err) {
-      const code = (err as FirebaseError).code
+      const fbErr = err as FirebaseError
+      const code = fbErr.code
+      const message = fbErr.message
+      console.error("Firebase Auth Error:", { code, message, customData: fbErr.customData })
+      
       if (code === "auth/user-not-found" || code === "auth/invalid-credential")
         setError("No account found with these credentials.")
       else if (code === "auth/wrong-password") setError("Incorrect password.")
       else if (code === "auth/invalid-email") setError("Invalid email address.")
-      else setError("Sign-in failed. Please try again.")
+      else if (code === "auth/operation-not-allowed") setError("Email/password sign-in is not enabled. Contact support.")
+      else setError(`Sign-in failed: ${message || "Unknown error"}`)
     } finally {
       setLoading(false)
     }
@@ -216,11 +221,16 @@ function LoginContent() {
         router.replace("/home")
       }
     } catch (err) {
-      const code = (err as FirebaseError).code
+      const fbErr = err as FirebaseError
+      const code = fbErr.code
+      const message = fbErr.message
+      console.error("Firebase Auth Error:", { code, message, customData: fbErr.customData })
+      
       if (code === "auth/email-already-in-use") setError("This email is already registered. Try logging in.")
       else if (code === "auth/invalid-email") setError("Invalid email address.")
       else if (code === "auth/weak-password") setError("Password is too weak.")
-      else setError("Account creation failed. Please try again.")
+      else if (code === "auth/operation-not-allowed") setError("Email/password sign-up is not enabled. Contact support.")
+      else setError(`Account creation failed: ${message || "Unknown error"}`)
     } finally {
       setLoading(false)
     }

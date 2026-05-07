@@ -18,12 +18,13 @@ import { Ban, LogOut, Languages, ChevronRight, ChevronDown } from "lucide-react"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { useAppStore, type GenderOption } from "../store/useAppStore"
+import { Preferences } from "@capacitor/preferences"
 import ProfileForm from "../components/ProfileForm"
 import LanguageSelector, { LANGUAGES } from "../components/LanguageSelector"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { language, setLanguage } = useAppStore()
+  const { language, setLanguage, setOnboardingDone, setLanguageDone, setNotificationPermission, setProfile, setUser } = useAppStore()
 
   const [user, setUser] = useState<User | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -105,7 +106,32 @@ export default function ProfilePage() {
         throw new Error(body?.detail || "Unable to delete account right now.")
       }
       await signOut(auth)
-      router.replace("/login")
+
+      // Clear persisted onboarding/language/preferences so app restarts first-launch flow
+      try {
+        // Update in-memory store and persisted preferences
+        await Promise.all([
+          setOnboardingDone(false),
+          setLanguageDone(false),
+          setNotificationPermission("not_asked"),
+          setLanguage("en"),
+        ])
+        // Remove persisted keys just in case
+        await Preferences.remove({ key: "onboarding_done" })
+        await Preferences.remove({ key: "language_done" })
+        await Preferences.remove({ key: "notification_permission_asked" })
+        await Preferences.remove({ key: "app_language" })
+
+        // Reset in-memory profile/user
+        setProfile(null)
+        setUser(null)
+      } catch (prefErr) {
+        // Non-fatal; continue to route to entry
+        console.warn("Failed to clear preferences after account deletion", prefErr)
+      }
+
+      // Navigate to root so the entry router shows splash + onboarding
+      router.replace("/")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete account.")
     } finally {

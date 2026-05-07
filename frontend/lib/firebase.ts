@@ -14,6 +14,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
+// NOTE: If you see 400 errors from reCAPTCHA verification in browser console:
+// 1. Go to Firebase Console > Your Project > Authentication > Settings
+// 2. Under "App Verification" find "reCAPTCHA Enterprise"
+// 3. Click the three-dot menu and "Disable" it
+// 4. Your auth will continue working fine without it
+
+
 export const admobConfig = {
   appId: process.env.NEXT_PUBLIC_ADMOB_APP_ID,
   bannerId: process.env.NEXT_PUBLIC_ADMOB_BANNER_ID,

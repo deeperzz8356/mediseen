@@ -76,7 +76,7 @@ fun GetStartedScreen(onNext: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Image(
-                painter = painterResource(id = R.drawable.splash),
+                painter = painterResource(id = R.mipmap.ic_launcher),
                 contentDescription = "Mediseen logo",
                 modifier = Modifier.size(160.dp),
                 contentScale = ContentScale.Crop
