@@ -134,7 +134,7 @@ export default function LanguageSelector({
       </div>
 
       {!showNav && (
-        <div className="px-5 pb-6 pt-2">
+        <div className="px-5 pt-2 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={handleConfirm}

@@ -103,6 +103,7 @@ export default function DietPage() {
 function SmartDietGenerator() {
   const [loading, setLoading] = useState(false)
   const [plan, setPlan] = useState<DietPlan | null>(null)
+  const [error, setError] = useState<string | null>(null)
   
   // Profile State
   const [disease, setDisease] = useState("")
@@ -118,6 +119,7 @@ function SmartDietGenerator() {
   const generatePlan = async () => {
     if (!disease.trim()) return
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch(`${API_BASE_URL}/diet/generate`, {
         method: "POST",
@@ -135,10 +137,20 @@ function SmartDietGenerator() {
           budget
         })
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        const detail = Array.isArray(data?.detail)
+          ? data.detail.map((item: { msg?: string; loc?: Array<string | number> }) => item.msg || JSON.stringify(item)).join("; ")
+          : data?.detail || data?.message || `Diet request failed with status ${res.status}`
+        throw new Error(detail)
+      }
+
       setPlan(data)
     } catch (err) {
-      console.error(err)
+      const message = err instanceof Error ? err.message : "Unable to generate diet plan"
+      console.error("Diet plan generation failed:", err)
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -152,6 +164,12 @@ function SmartDietGenerator() {
   return (
     <div className="space-y-12">
       <div className="flo-card p-8 md:p-12 rounded-[3rem] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40 space-y-10">
+        {error && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Section 1: Clinical Info */}
           <div className="space-y-8">

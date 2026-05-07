@@ -119,7 +119,7 @@ export default function OnboardingSlidesPage() {
       onTouchEnd={onTouchEnd}
     >
       {/* ── TOP BAR: Pagination dots (left) + Skip (right) ─────────── */}
-      <div className="flex items-center justify-between px-6 pt-safe pt-5 pb-3 z-10">
+      <div className="flex items-center justify-between px-6 pb-3 z-10 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
         <div className="flex gap-1.5">
           {SLIDES.map((_, i) => (
             <button
@@ -168,7 +168,7 @@ export default function OnboardingSlidesPage() {
       </div>
 
       {/* ── BOTTOM: Next / Get Started ──────────────────────────────── */}
-      <div className="px-7 pb-10 pt-4">
+      <div className="px-7 pt-4 pb-[calc(env(safe-area-inset-bottom)+2.5rem)]">
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={handleNext}

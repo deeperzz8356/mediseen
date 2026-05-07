@@ -31,16 +31,16 @@ export default function OnboardingCard({
     <div className="flex flex-col h-full">
       {/* Illustration */}
       <div
-        className="flex-1 flex items-center justify-center relative min-h-[220px] overflow-hidden"
+        className="flex-1 flex items-center justify-center relative min-h-[150px] overflow-hidden"
       >
         
         {lottieSrc ? (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center p-2">
             <DotLottieReact
               src={lottieSrc}
               loop
               autoplay
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
             />
           </div>
         ) : Icon ? (
