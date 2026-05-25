@@ -20,7 +20,7 @@ import { useAppStore } from "../store/useAppStore"
 
 export default function FirebaseProvider() {
   const pathname = usePathname()
-  const { bootstrap, setUser, setAuthLoaded } = useAppStore()
+  const { bootstrap, setUser, setAuthLoaded, setAuthStatus, ensureGuestSession } = useAppStore()
 
   // ── Bootstrap: load persisted Preferences on first mount ──────────
   useEffect(() => {
@@ -39,12 +39,19 @@ export default function FirebaseProvider() {
       handleGoogleRedirectResult().catch(() => null)
     })
 
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setUser(user)
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUser(user)
+        setAuthStatus("authenticated")
+      } else {
+        setUser(null)
+        setAuthStatus("unauthenticated")
+        await ensureGuestSession().catch(() => null)
+      }
       setAuthLoaded(true)
     })
     return () => unsub()
-  }, [setUser, setAuthLoaded])
+  }, [ensureGuestSession, setAuthLoaded, setAuthStatus, setUser])
 
   // ── Firebase SDK init (native only) ──────────────────────────────
   useEffect(() => {

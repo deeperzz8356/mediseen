@@ -4,6 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
+import { useLocale } from "../i18n/LocaleContext"
 import { 
   LayoutDashboard, 
   Activity, 
@@ -13,17 +14,72 @@ import {
   FileText 
 } from "lucide-react"
 
+const sidebarCopy = {
+  en: {
+    overview: "Overview",
+    diagnostics: "Diagnostics",
+    patients: "Patients",
+    research: "Research",
+    diseaseKnowledge: "Disease Knowledge",
+    reports: "Reports",
+    statusTitle: "MediSeen AI System",
+    statusLabel: "All systems operational",
+  },
+  hi: {
+    overview: "अवलोकन",
+    diagnostics: "निदान",
+    patients: "मरीज़",
+    research: "अनुसंधान",
+    diseaseKnowledge: "रोग ज्ञान",
+    reports: "रिपोर्ट",
+    statusTitle: "MediSeen AI सिस्टम",
+    statusLabel: "सभी सिस्टम चालू हैं",
+  },
+  es: {
+    overview: "Resumen",
+    diagnostics: "Diagnóstico",
+    patients: "Pacientes",
+    research: "Investigación",
+    diseaseKnowledge: "Conocimiento de enfermedades",
+    reports: "Informes",
+    statusTitle: "Sistema IA MediSeen",
+    statusLabel: "Todos los sistemas operativos",
+  },
+  fr: {
+    overview: "Vue d'ensemble",
+    diagnostics: "Diagnostic",
+    patients: "Patients",
+    research: "Recherche",
+    diseaseKnowledge: "Connaissances sur les maladies",
+    reports: "Rapports",
+    statusTitle: "Système IA MediSeen",
+    statusLabel: "Tous les systèmes sont opérationnels",
+  },
+  ar: {
+    overview: "نظرة عامة",
+    diagnostics: "التشخيص",
+    patients: "المرضى",
+    research: "البحث",
+    diseaseKnowledge: "معرفة الأمراض",
+    reports: "التقارير",
+    statusTitle: "نظام MediSeen للذكاء الاصطناعي",
+    statusLabel: "جميع الأنظمة تعمل بشكل طبيعي",
+  },
+} as const
+
 const menuItems = [
-  { name: "Overview", path: "/", icon: <LayoutDashboard className="w-5 h-5" /> },
-  { name: "Diagnostics", path: "/diagnostics", icon: <Activity className="w-5 h-5" /> },
-  { name: "Patients", path: "/patients", icon: <Users className="w-5 h-5" /> },
-  { name: "Research", path: "/research", icon: <FlaskConical className="w-5 h-5" /> },
-  { name: "Disease Knowledge", path: "/disease-info", icon: <BookHeart className="w-5 h-5" /> },
-  { name: "Reports", path: "/reports", icon: <FileText className="w-5 h-5" /> },
+  { key: "overview", path: "/", icon: <LayoutDashboard className="w-5 h-5" /> },
+  { key: "diagnostics", path: "/diagnostics", icon: <Activity className="w-5 h-5" /> },
+  { key: "patients", path: "/patients", icon: <Users className="w-5 h-5" /> },
+  { key: "research", path: "/research", icon: <FlaskConical className="w-5 h-5" /> },
+  { key: "diseaseKnowledge", path: "/disease-info", icon: <BookHeart className="w-5 h-5" /> },
+  { key: "reports", path: "/reports", icon: <FileText className="w-5 h-5" /> },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { locale } = useLocale()
+  const copy = sidebarCopy[locale as keyof typeof sidebarCopy] ?? sidebarCopy.en
 
   return (
     <div className="w-64 h-screen bg-[#1E293B] border-r border-slate-800 flex flex-col justify-between py-8 px-4 sticky top-0 hidden md:flex">
@@ -51,7 +107,7 @@ export default function Sidebar() {
             
             return (
               <Link 
-                key={item.name} 
+                key={item.key} 
                 href={item.path}
                 className={`relative flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 font-medium ${
                   isActive 
@@ -68,7 +124,7 @@ export default function Sidebar() {
                   />
                 )}
                 <div className="relative z-10">{item.icon}</div>
-                <span className="relative z-10">{item.name}</span>
+                <span className="relative z-10">{copy[item.key as keyof typeof copy]}</span>
               </Link>
             )
           })}
@@ -77,10 +133,10 @@ export default function Sidebar() {
 
       <div className="px-4">
         <div className="bg-gradient-to-r from-[#7DD3FC]/10 to-[#6EE7B7]/10 border border-[#6EE7B7]/20 rounded-2xl p-4">
-          <p className="text-xs text-slate-300 mb-2">MediSeen AI System</p>
+          <p className="text-xs text-slate-300 mb-2">{copy.statusTitle}</p>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#6EE7B7] animate-pulse"></div>
-            <span className="text-xs font-semibold text-[#6EE7B7]">All systems operational</span>
+            <span className="text-xs font-semibold text-[#6EE7B7]">{copy.statusLabel}</span>
           </div>
         </div>
       </div>

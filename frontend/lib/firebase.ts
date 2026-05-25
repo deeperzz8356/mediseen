@@ -97,6 +97,11 @@ export async function signInWithGoogle() {
     const result = await signInWithPopup(auth, googleProvider)
     return result.user
   } catch (err: any) {
+    if (err?.code === "auth/unauthorized-domain") {
+      throw new Error(
+        "Google Sign-In is blocked on this origin. Add this host to Firebase Authorized domains or run the app on https://localhost."
+      )
+    }
     if (err.code === "auth/popup-blocked") {
       // Fallback to redirect if popup is blocked
       await signInWithRedirect(auth, googleProvider)

@@ -36,7 +36,7 @@ function isPreAuthRoute(pathname: string): boolean {
 export default function NavbarWrapper() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, authLoaded } = useAppStore()
+  const { authStatus, authLoaded } = useAppStore()
 
   // Handle Android back button
   useEffect(() => {
@@ -58,10 +58,7 @@ export default function NavbarWrapper() {
   if (isPreAuthRoute(pathname)) return null
 
   // 2. Hide if auth not yet loaded (prevents flash)
-  if (!authLoaded) return null
-
-  // 3. Hide if not authenticated
-  if (!user) return null
+  if (!authLoaded || authStatus === "initializing") return null
 
   return <Navbar />
 }

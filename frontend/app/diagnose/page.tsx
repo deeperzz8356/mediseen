@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera"
-import { FileText, Eye, ClipboardCheck, ChevronRight, Activity, Sparkles, Camera as CameraIcon, X } from "lucide-react"
+import { FileText, Eye, ClipboardCheck, ChevronRight, Activity, Sparkles, Camera as CameraIcon, X, Lock } from "lucide-react"
 import { useLocale } from "../i18n/LocaleContext"
 import UploadPanel from "../components/UploadPanel"
 import ResultPanel, { DiagnosisResult } from "../components/ResultPanel"
@@ -12,6 +13,7 @@ import { auth, db } from "@/lib/firebase"
 import { onAuthStateChanged, type User } from "firebase/auth"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { resolveBackendAssetUrl } from "../config"
+import { useAppStore } from "../store/useAppStore"
 
 type ScanActivity = {
   id: string
@@ -35,7 +37,9 @@ export default function DiagnosePage() {
   const [activityError, setActivityError] = useState("")
   const [activityItems, setActivityItems] = useState<ScanActivity[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false)
   const { t } = useLocale()
+  const { authStatus } = useAppStore()
 
   useEffect(() => {
     if (!auth) return
@@ -46,6 +50,19 @@ export default function DiagnosePage() {
 
     return () => unsubscribe()
   }, [])
+
+  useEffect(() => {
+    setShowGuestPrompt(authStatus === "guest")
+  }, [authStatus])
+
+  const requireLoginForScan = () => {
+    if (authStatus === "guest") {
+      setShowGuestPrompt(true)
+      return true
+    }
+
+    return false
+  }
 
   const loadActivityHistory = async () => {
     if (!db || !currentUser) {
@@ -89,7 +106,7 @@ export default function DiagnosePage() {
       )
     } catch (error) {
       console.error("Failed to load activity history:", error)
-      setActivityError("Unable to load activity history right now.")
+      setActivityError(t.diagnose.activity.error)
     } finally {
       setActivityLoading(false)
     }
@@ -109,13 +126,15 @@ export default function DiagnosePage() {
   }
 
   const takePhoto = async () => {
+    if (requireLoginForScan()) return
+
     try {
       const permissions = await Camera.checkPermissions();
       
       if (permissions.camera !== 'granted') {
         const request = await Camera.requestPermissions({ permissions: ['camera'] });
         if (request.camera !== 'granted') {
-          alert("Camera permission is required to take photos of your reports.");
+          alert(t.diagnose.upload.cameraPermissionRequired);
           return;
         }
       }
@@ -134,7 +153,7 @@ export default function DiagnosePage() {
       console.error("Camera error:", error)
       // Only show error if it's not a user cancellation
       if (error instanceof Error && !error.message.includes("User cancelled")) {
-        alert("Could not access camera. Please check your settings.");
+        alert(t.diagnose.upload.cameraAccessFailed);
       }
     }
   }
@@ -178,7 +197,10 @@ export default function DiagnosePage() {
               {t.diagnose.scanReport}
             </motion.button>
             <button
-              onClick={() => setShowActivity((value) => !value)}
+              onClick={() => {
+                if (requireLoginForScan()) return
+                setShowActivity((value) => !value)
+              }}
               className={`flex-1 md:flex-none px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl border font-black text-[10px] md:text-xs uppercase tracking-widest transition-all ${
                 showActivity
                   ? "border-black bg-black text-white shadow-xl"
@@ -224,15 +246,15 @@ export default function DiagnosePage() {
           >
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Activity</p>
-                <h2 className="text-2xl font-black text-slate-900">Recent scan results</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">{t.diagnose.activity.title}</p>
+                <h2 className="text-2xl font-black text-slate-900">{t.diagnose.activity.recentScans}</h2>
               </div>
               <button
                 onClick={loadActivityHistory}
                 className="self-start md:self-auto px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60"
                 disabled={activityLoading}
               >
-                {activityLoading ? "Refreshing…" : "Refresh"}
+                {activityLoading ? t.diagnose.activity.refreshing : t.diagnose.activity.refresh}
               </button>
             </div>
 
@@ -240,9 +262,9 @@ export default function DiagnosePage() {
 
             <div className="grid gap-4">
               {activityLoading && activityItems.length === 0 ? (
-                <p className="text-sm font-medium text-slate-400">Loading your previous scan results…</p>
+                <p className="text-sm font-medium text-slate-400">{t.diagnose.activity.loadingHistory}</p>
               ) : activityItems.length === 0 ? (
-                <p className="text-sm font-medium text-slate-400">No scan history found yet.</p>
+                <p className="text-sm font-medium text-slate-400">{t.diagnose.activity.noHistory}</p>
               ) : (
                 activityItems.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:p-5 space-y-3">
@@ -250,11 +272,13 @@ export default function DiagnosePage() {
                       <div>
                         <p className="text-lg font-black text-slate-900">{item.diagnosis}</p>
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                          {item.timestamp ? new Date(item.timestamp).toLocaleString() : "Unknown time"}
+                          {item.timestamp ? new Date(item.timestamp).toLocaleString() : t.diagnose.activity.unknownTime}
                         </p>
                       </div>
                       <div className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 border border-slate-200">
-                        {item.confidence !== null ? `${Math.round(item.confidence * 100)}% confidence` : "Saved result"}
+                        {item.confidence !== null
+                          ? `${Math.round(item.confidence * 100)}% ${t.diagnose.activity.confidence}`
+                          : t.diagnose.activity.savedResult}
                       </div>
                     </div>
 
@@ -278,7 +302,7 @@ export default function DiagnosePage() {
                           rel="noopener noreferrer"
                           className="text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl bg-black text-white"
                         >
-                          Open report
+                          {t.diagnose.activity.openReport}
                         </a>
                       )}
                       {item.heatmapUrl && (
@@ -288,7 +312,7 @@ export default function DiagnosePage() {
                           rel="noopener noreferrer"
                           className="text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-500"
                         >
-                          Open heatmap
+                          {t.diagnose.activity.openHeatmap}
                         </a>
                       )}
                     </div>
@@ -334,6 +358,52 @@ export default function DiagnosePage() {
           )}
         </AnimatePresence>
       </main>
+
+      <AnimatePresence>
+        {showGuestPrompt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/45 backdrop-blur-sm flex items-start justify-center px-4 pt-[calc(5rem+env(safe-area-inset-top,0px)+1rem)]"
+          >
+            <motion.div
+              initial={{ y: 24, scale: 0.96 }}
+              animate={{ y: 0, scale: 1 }}
+              exit={{ y: 24, scale: 0.96 }}
+              className="w-full max-w-md rounded-[2rem] bg-white shadow-2xl border border-slate-100 overflow-hidden"
+            >
+              <div className="p-6 md:p-8 space-y-5">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                  <Lock className="w-6 h-6" />
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-slate-900">Login required</h3>
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                    Please log in to store your scan history and records.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/login"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest shadow-lg"
+                  >
+                    Login now
+                  </Link>
+                  <button
+                    onClick={() => setShowGuestPrompt(false)}
+                    className="flex-1 px-5 py-4 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 font-black text-xs uppercase tracking-widest"
+                  >
+                    Continue as guest
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- ADVANCED VISUALIZATION --- */}
       <AnimatePresence>

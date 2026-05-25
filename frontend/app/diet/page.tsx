@@ -20,6 +20,8 @@ import {
 } from "lucide-react"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
+import { useLocale } from "../i18n/LocaleContext"
+import { getTranslations } from "../i18n"
 
 interface MealItem {
   meal: string
@@ -39,19 +41,103 @@ interface DietPlan {
   recommended: string[]
 }
 
+const EN_DIET = getTranslations("en").diet
+
+function getDietTranslations(dietOverride: any) {
+  return {
+    ...EN_DIET,
+    ...(dietOverride ?? {}),
+    tabs: {
+      ...EN_DIET.tabs,
+      ...(dietOverride?.tabs ?? {}),
+    },
+    form: {
+      ...EN_DIET.form,
+      ...(dietOverride?.form ?? {}),
+      budget: {
+        ...EN_DIET.form.budget,
+        ...(dietOverride?.form?.budget ?? {}),
+      },
+    },
+    stats: {
+      ...EN_DIET.stats,
+      ...(dietOverride?.stats ?? {}),
+    },
+    meals: {
+      ...EN_DIET.meals,
+      ...(dietOverride?.meals ?? {}),
+    },
+    progress: {
+      ...EN_DIET.progress,
+      ...(dietOverride?.progress ?? {}),
+    },
+  }
+}
+
 export default function DietPage() {
   const [activeTab, setActiveTab] = useState<"generate" | "history">("generate")
+  const { t } = useLocale()
+  const { setLocale } = useLocale()
+  const diet = getDietTranslations((t as any)?.diet)
+  const [showEnglishAlert, setShowEnglishAlert] = useState(false)
+  const [remainingMs, setRemainingMs] = useState(0)
+  const ALERT_DURATION = 3500
+
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem("seen_en_diet")
+      if (!seen) {
+        setShowEnglishAlert(true)
+        setRemainingMs(ALERT_DURATION)
+        localStorage.setItem("seen_en_diet", "1")
+      }
+    } catch (e) {}
+  }, [])
+
+  useEffect(() => {
+    if (!showEnglishAlert || remainingMs <= 0) return
+    const step = 100
+    const id = setInterval(() => {
+      setRemainingMs((m) => {
+        if (m - step <= 0) {
+          setShowEnglishAlert(false)
+          clearInterval(id)
+          return 0
+        }
+        return m - step
+      })
+    }, step)
+    return () => clearInterval(id)
+  }, [showEnglishAlert, remainingMs])
 
   return (
     <div className="max-w-5xl mx-auto px-6 pt-28 pb-24 space-y-10">
+      {showEnglishAlert && (
+        <div className="fixed top-24 right-6 z-50">
+          <div className="w-72 rounded-lg bg-indigo-600 text-white shadow-lg overflow-hidden">
+            <div className="px-4 py-2 flex items-center justify-between">
+              <span className="font-bold text-sm">Available in English</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs opacity-90">{Math.ceil(remainingMs / 1000)}</span>
+                <button onClick={() => { setLocale("en"); setShowEnglishAlert(false) }} className="text-sm underline">Switch</button>
+              </div>
+            </div>
+            <div className="h-1 bg-indigo-500/40">
+              <div style={{ width: `${(remainingMs / ALERT_DURATION) * 100}%` }} className="h-1 bg-white transition-all" />
+            </div>
+          </div>
+        </div>
+      )}
       <header className="space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-[10px] font-black text-indigo-600 uppercase tracking-widest">
           <ShieldCheck className="w-3.5 h-3.5" />
-          Clinical Nutrition Engine
+          {diet.badge}
         </div>
-        <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">Disease-Aware Diet</h1>
+        <h1 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
+          {diet.title} <span className="text-indigo-600">{diet.titleHighlight}</span>
+        </h1>
         <p className="text-slate-500 font-bold text-lg max-w-2xl leading-relaxed">
-          Dynamic Medical Nutrition Therapy (MNT) tailored to your condition and biometrics.
+          {diet.subtitle}
         </p>
       </header>
 
@@ -63,7 +149,7 @@ export default function DietPage() {
             activeTab === "generate" ? "bg-white text-slate-900 shadow-md border border-slate-100" : "text-slate-400 hover:text-slate-600"
           }`}
         >
-          Generate Plan
+          {diet.tabs.generatePlan}
         </button>
         <button
           onClick={() => setActiveTab("history")}
@@ -71,7 +157,7 @@ export default function DietPage() {
             activeTab === "history" ? "bg-white text-slate-900 shadow-md border border-slate-100" : "text-slate-400 hover:text-slate-600"
           }`}
         >
-          Progress & Feedback
+          {diet.tabs.progressAndFeedback}
         </button>
       </div>
 
@@ -104,6 +190,8 @@ function SmartDietGenerator() {
   const [loading, setLoading] = useState(false)
   const [plan, setPlan] = useState<DietPlan | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { t } = useLocale()
+  const diet = getDietTranslations((t as any)?.diet)
   
   // Profile State
   const [disease, setDisease] = useState("")
@@ -175,27 +263,27 @@ function SmartDietGenerator() {
           <div className="space-y-8">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                <Search className="w-3 h-3" /> Targeted Disease
+                <Search className="w-3 h-3" /> {diet.form.targetDisease}
               </label>
               <input
                 value={disease}
                 onChange={(e) => setDisease(e.target.value)}
-                placeholder="e.g. Pneumonia, Diabetes, Psoriasis..."
+                placeholder={diet.form.diseasePlaceholder}
                 className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-xl font-black text-slate-800 outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-400/5 transition-all"
               />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weight (kg)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.form.weight}</label>
                 <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold" />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Height (cm)</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.form.height}</label>
                 <input type="number" value={height} onChange={(e) => setHeight(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold" />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Age</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.form.age}</label>
                 <input type="number" value={age} onChange={(e) => setAge(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold" />
               </div>
             </div>
@@ -204,10 +292,10 @@ function SmartDietGenerator() {
           {/* Section 2: Lifestyle Preferences */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dietary Preferences</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.form.dietaryPreferences}</label>
               <div className="flex gap-4">
-                <button onClick={() => setDietType("veg")} className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all ${dietType === "veg" ? "bg-emerald-50 border-emerald-400 text-emerald-600 shadow-lg shadow-emerald-400/10" : "bg-white border-slate-100 text-slate-400"}`}>Veg Only</button>
-                <button onClick={() => setDietType("non-veg")} className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all ${dietType === "non-veg" ? "bg-rose-50 border-rose-400 text-rose-600 shadow-lg shadow-rose-400/10" : "bg-white border-slate-100 text-slate-400"}`}>Non-Veg</button>
+                <button onClick={() => setDietType("veg")} className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all ${dietType === "veg" ? "bg-emerald-50 border-emerald-400 text-emerald-600 shadow-lg shadow-emerald-400/10" : "bg-white border-slate-100 text-slate-400"}`}>{diet.form.vegOnly}</button>
+                <button onClick={() => setDietType("non-veg")} className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all ${dietType === "non-veg" ? "bg-rose-50 border-rose-400 text-rose-600 shadow-lg shadow-rose-400/10" : "bg-white border-slate-100 text-slate-400"}`}>{diet.form.nonVeg}</button>
               </div>
             </div>
 
@@ -227,7 +315,7 @@ function SmartDietGenerator() {
           disabled={loading || !disease}
           className="w-full py-6 rounded-[2rem] bg-indigo-600 text-white font-black text-lg uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-4"
         >
-          {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><RefreshCcw className="w-6 h-6" /> Create My Plan</>}
+          {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><RefreshCcw className="w-6 h-6" /> {diet.form.createPlan}</>}
         </button>
       </div>
 
@@ -236,19 +324,19 @@ function SmartDietGenerator() {
           {/* Header Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="p-8 rounded-[2rem] bg-slate-900 text-white space-y-2 shadow-xl shadow-slate-900/20">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Daily Target</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.stats.dailyTarget}</p>
               <p className="text-4xl font-black">{plan.calories} <span className="text-sm font-bold text-slate-500">kcal</span></p>
             </div>
             <div className="p-8 rounded-[2rem] bg-white border border-slate-100 space-y-2 shadow-lg shadow-slate-100">
-              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Protein</p>
+              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{diet.stats.protein}</p>
               <p className="text-4xl font-black text-slate-800">{plan.macros.protein}g</p>
             </div>
             <div className="p-8 rounded-[2rem] bg-white border border-slate-100 space-y-2 shadow-lg shadow-slate-100">
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Carbs</p>
+              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{diet.stats.carbs}</p>
               <p className="text-4xl font-black text-slate-800">{plan.macros.carbs}g</p>
             </div>
             <div className="p-8 rounded-[2rem] bg-white border border-slate-100 space-y-2 shadow-lg shadow-slate-100">
-              <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Fats</p>
+              <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">{diet.stats.fats}</p>
               <p className="text-4xl font-black text-slate-800">{plan.macros.fats}g</p>
             </div>
           </div>
@@ -256,11 +344,11 @@ function SmartDietGenerator() {
           {/* Meals Section */}
           <div className="space-y-8">
             <div className="flex items-center justify-between px-4">
-              <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-                <Apple className="w-7 h-7 text-emerald-500" /> Daily Meal Schedule
+                <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                <Apple className="w-7 h-7 text-emerald-500" /> {diet.meals.dailyMealSchedule}
               </h3>
               <button className="flex items-center gap-2 text-xs font-black text-indigo-600 uppercase tracking-widest hover:gap-3 transition-all">
-                <ShoppingCart className="w-4 h-4" /> Get Grocery List <ChevronRight className="w-4 h-4" />
+                <ShoppingCart className="w-4 h-4" /> {diet.meals.groceryList} <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
@@ -275,7 +363,7 @@ function SmartDietGenerator() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time: {i === 0 ? "8:00 AM" : i === 1 ? "1:30 PM" : i === 2 ? "5:00 PM" : "8:30 PM"}</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.meals.time}: {i === 0 ? "8:00 AM" : i === 1 ? "1:30 PM" : i === 2 ? "5:00 PM" : "8:30 PM"}</span>
                       <h4 className="text-2xl font-black text-slate-800">{meal.meal}</h4>
                     </div>
                     <div className="px-3 py-1 rounded-full bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-500">{Math.round(meal.calories)} kcal</div>
@@ -291,7 +379,7 @@ function SmartDietGenerator() {
                           onClick={() => handleSwap(item)}
                           className="opacity-0 group-hover:opacity-100 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest transition-all"
                         >
-                          <RefreshCcw className="w-3 h-3" /> Swap
+                          <RefreshCcw className="w-3 h-3" /> {diet.meals.swap}
                         </button>
                       </div>
                     ))}
@@ -331,61 +419,63 @@ function SmartDietGenerator() {
 }
 
 function ProgressTracker() {
+  const { t } = useLocale()
+  const diet = getDietTranslations((t as any)?.diet)
   const [adherence, setAdherence] = useState(80)
   const [weight, setWeight] = useState("69.5")
 
   return (
     <div className="space-y-8 pb-20">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="flo-card p-8 rounded-[2.5rem] bg-white border border-slate-100 space-y-6">
+          <div className="flo-card p-8 rounded-[2.5rem] bg-white border border-slate-100 space-y-6">
           <TrendingUp className="w-10 h-10 text-emerald-500" />
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Adherence</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.progress.planAdherence}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-black text-slate-800">{adherence}%</span>
               <span className="text-xs font-bold text-emerald-500">+5% this week</span>
             </div>
           </div>
         </div>
-        <div className="flo-card p-8 rounded-[2.5rem] bg-white border border-slate-100 space-y-6">
+          <div className="flo-card p-8 rounded-[2.5rem] bg-white border border-slate-100 space-y-6">
           <Scale className="w-10 h-10 text-indigo-500" />
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Latest Weight</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.progress.latestWeight}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-black text-slate-800">{weight} <span className="text-lg">kg</span></span>
               <span className="text-xs font-bold text-indigo-500">-0.5kg change</span>
             </div>
           </div>
         </div>
-        <div className="flo-card p-8 rounded-[2.5rem] bg-indigo-600 text-white space-y-6 shadow-xl shadow-indigo-600/20">
+          <div className="flo-card p-8 rounded-[2.5rem] bg-indigo-600 text-white space-y-6 shadow-xl shadow-indigo-600/20">
           <Info className="w-10 h-10 text-indigo-200" />
           <div className="space-y-1">
-            <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">AI Status</p>
-            <h4 className="text-xl font-black">Plan Re-calibration</h4>
-            <p className="text-xs font-medium text-indigo-100/70">Scheduled for Sunday Morning</p>
+            <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">{diet.progress.aiStatus}</p>
+            <h4 className="text-xl font-black">{diet.progress.recalibration}</h4>
+            <p className="text-xs font-medium text-indigo-100/70">{diet.progress.scheduled}</p>
           </div>
         </div>
       </div>
 
       <div className="flo-card p-10 rounded-[3rem] bg-white border border-slate-100 space-y-8">
         <div className="space-y-2">
-          <h3 className="text-2xl font-black text-slate-800">Weekly Feedback</h3>
-          <p className="text-slate-500 font-bold">Help MediSeen fine-tune your nutrition logic.</p>
+              <h3 className="text-2xl font-black text-slate-800">{diet.progress.weeklyFeedback}</h3>
+            <p className="text-slate-500 font-bold">{diet.progress.helpText}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div className="space-y-6">
             <div className="space-y-3">
-              <label className="text-sm font-black text-slate-700">How would you rate your adherence?</label>
+              <label className="text-sm font-black text-slate-700">{diet.progress.howRate}</label>
               <input type="range" min="0" max="100" value={adherence} onChange={(e) => setAdherence(Number(e.target.value))} className="w-full" />
               <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <span>Difficult</span>
-                <span>Perfect</span>
+                <span>{diet.progress.scaleLow}</span>
+                <span>{diet.progress.scaleHigh}</span>
               </div>
             </div>
             <div className="space-y-3">
-              <label className="text-sm font-black text-slate-700">Any new symptoms?</label>
-              <textarea placeholder="e.g. Bloating, low energy..." className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-5 text-sm font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all" rows={4} />
+              <label className="text-sm font-black text-slate-700">{diet.progress.anyNewSymptoms}</label>
+              <textarea placeholder={diet.progress.symptomsPlaceholder} className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-5 text-sm font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all" rows={4} />
             </div>
           </div>
           
@@ -393,10 +483,10 @@ function ProgressTracker() {
             <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
               <RefreshCcw className="w-8 h-8" />
             </div>
-            <h4 className="text-lg font-black text-slate-800">Submit for AI Review</h4>
-            <p className="text-xs font-bold text-slate-500 max-w-xs leading-relaxed">Our clinical engine will analyze your feedback and adjust your macro targets and food selection for next week.</p>
+            <h4 className="text-lg font-black text-slate-800">{diet.progress.submitReview}</h4>
+            <p className="text-xs font-bold text-slate-500 max-w-xs leading-relaxed">{diet.progress.submitDesc}</p>
             <button className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl">
-              Submit Feedback
+              {diet.progress.submitBtn}
             </button>
           </div>
         </div>

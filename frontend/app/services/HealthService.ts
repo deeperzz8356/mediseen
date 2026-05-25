@@ -17,16 +17,20 @@ interface HealthConnectPlugin {
     granted: boolean
     message?: string
     error?: string
+    source?: string
   }>
   fetchHealthData(): Promise<{
     available: boolean
     steps: number
     caloriesBurned: number
     sleepHours: number
+    source?: string
     error?: string
     message?: string
   }>
 }
+
+export type HealthSource = "health_connect" | "google_fit" | "none"
 
 // Register the native plugin (no-op on web)
 const HealthConnect = registerPlugin<HealthConnectPlugin>("HealthConnect")
@@ -92,6 +96,8 @@ export const HealthService = {
     steps: number
     caloriesBurned: number
     sleepHours: number
+    activityTime: number
+    source: HealthSource
   } | null> {
     const available = await this.checkAvailability()
     if (!available) return null
@@ -104,10 +110,14 @@ export const HealthService = {
         return null
       }
 
+      const source = (data.source as HealthSource | undefined) ?? "health_connect"
+
       const payload = {
         steps: data.steps || 0,
         caloriesBurned: data.caloriesBurned || 0,
         sleepHours: data.sleepHours || 0,
+        activityTime: Math.max(0, Math.round((data.steps || 0) / 120)),
+        source,
       }
 
       // Persist to Zustand

@@ -1,7 +1,7 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from "react"
-import { Locale, Translations, getTranslations, getSavedLocale, saveLocale, LOCALES } from "./index"
+import { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import { Locale, Translations, getTranslations, getSavedLocale, saveLocaleSafe, LOCALES } from "./index"
 
 interface LocaleContextValue {
   locale: Locale
@@ -21,12 +21,19 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => getSavedLocale())
 
   const setLocale = (l: Locale) => {
-    saveLocale(l)
+    saveLocaleSafe(l)
     setLocaleState(l)
   }
 
   const dir = LOCALES.find((l) => l.code === locale)?.dir === "rtl" ? "rtl" : "ltr"
   const t = getTranslations(locale)
+
+  useEffect(() => {
+    if (typeof document === "undefined") return
+
+    document.documentElement.lang = locale
+    document.documentElement.dir = dir
+  }, [dir, locale])
 
   return (
     <LocaleContext.Provider value={{ locale, t, setLocale, dir }}>

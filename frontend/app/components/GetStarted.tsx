@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { Sparkles, Activity, ShieldCheck, ChevronRight, ScanLine, BrainCircuit, Utensils } from "lucide-react"
 import Image from "next/image"
 
+import { useLocale } from "../i18n/LocaleContext"
 import { NotificationService } from "../services/NotificationService"
 
 interface GetStartedProps {
@@ -11,6 +12,8 @@ interface GetStartedProps {
 }
 
 export default function GetStarted({ onStart }: GetStartedProps) {
+  const { t } = useLocale()
+
   const handleStart = async () => {
     // Attempt to request notifications as they start
     try {
@@ -48,7 +51,7 @@ export default function GetStarted({ onStart }: GetStartedProps) {
                 <Image src="/logo2.png" alt="logo" width={80} height={80} className="object-contain" />
              </div>
              <div className="px-5 py-2 rounded-full bg-white/90 backdrop-blur-md border border-white/50 text-[10px] font-black text-pastel-violet uppercase tracking-[0.3em] inline-block shadow-sm">
-               Your AI Health Companion
+               {t.getStarted.badge}
              </div>
           </div>
         </div>
@@ -56,36 +59,41 @@ export default function GetStarted({ onStart }: GetStartedProps) {
         <div className="mt-12 space-y-8 flex-1">
           <header className="space-y-3">
             <h2 className="text-4xl font-black text-slate-800 tracking-tight leading-tight">
-              Medical <br/><span className="text-pastel-violet">Intelligence</span>
+              {t.getStarted.headline.split("\n").map((line, index, lines) => (
+                <span key={line}>
+                  {line}
+                  {index < lines.length - 1 ? <br /> : null}
+                </span>
+              ))}
             </h2>
             <p className="text-slate-500 font-medium text-lg leading-relaxed">
-              MediSeen transforms how you understand your health using AI-powered diagnostic vision.
+              {t.getStarted.subtitle}
             </p>
           </header>
 
           <div className="grid gap-6">
             <FeatureItem 
               icon={<ScanLine className="w-5 h-5" />}
-              title="Report Analysis"
-              desc="Scan medical reports to get instant, easy-to-understand explanations."
+              title={t.getStarted.features.secureData}
+              desc={t.getStarted.subtitle}
               color="bg-rose-50 text-rose-500"
             />
             <FeatureItem 
               icon={<Activity className="w-5 h-5" />}
-              title="Health Connect"
-              desc="Sync with Google Health Connect for steps, sleep, and heart rate tracking."
+              title={t.getStarted.features.fastResults}
+              desc={t.getStarted.subtitle}
               color="bg-blue-50 text-blue-500"
             />
             <FeatureItem 
               icon={<BrainCircuit className="w-5 h-5" />}
-              title="AI Consultation"
-              desc="Chat with our AI medical agent for deep insights into your health markers."
+              title={t.getStarted.features.aiPowered}
+              desc={t.getStarted.subtitle}
               color="bg-violet-50 text-violet-500"
             />
             <FeatureItem 
               icon={<Utensils className="w-5 h-5" />}
-              title="Personalized Diet"
-              desc="Get tailored nutritional plans based on your specific health conditions."
+              title={t.getStarted.features.community}
+              desc={t.getStarted.subtitle}
               color="bg-emerald-50 text-emerald-500"
             />
           </div>
@@ -97,9 +105,12 @@ export default function GetStarted({ onStart }: GetStartedProps) {
             onClick={handleStart}
             className="w-full py-6 rounded-3xl bg-slate-900 text-white font-black text-sm uppercase tracking-[0.3em] shadow-2xl shadow-slate-900/20 flex items-center justify-center gap-4 group"
           >
-            Get Started
+            {t.getStarted.cta}
             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </motion.button>
+          <p className="mt-4 text-center text-[11px] font-medium text-slate-400">
+            {t.getStarted.terms}
+          </p>
         </div>
       </div>
     </motion.div>

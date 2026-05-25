@@ -8,8 +8,12 @@ import { initializeAdMob, showBanner, showInterstitial, hideBanner } from "../..
 export default function AdManager() {
   const pathname = usePathname()
   const [tapCount, setTapCount] = useState(0)
+  
+  // Toggle this to true when you want to re-enable ads
+  const ADS_ENABLED = false
 
   useEffect(() => {
+    if (!ADS_ENABLED) return
     if (!Capacitor.isNativePlatform()) return
 
     // Initialize AdMob on mount
@@ -27,6 +31,7 @@ export default function AdManager() {
   }, [pathname])
 
   useEffect(() => {
+    if (!ADS_ENABLED) return
     if (!Capacitor.isNativePlatform()) return
 
     const handleTap = (e: MouseEvent) => {

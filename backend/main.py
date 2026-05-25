@@ -21,6 +21,7 @@ try:
         save_diagnosis_cache,
         increment_cache_hit,
         save_diagnosis_record,
+        save_user_profile,
         get_db,
         delete_user_data,
     )
@@ -34,6 +35,7 @@ except ModuleNotFoundError:
         save_diagnosis_cache,
         increment_cache_hit,
         save_diagnosis_record,
+        save_user_profile,
         get_db,
         delete_user_data,
     )
@@ -107,6 +109,9 @@ def verify_bearer_token(authorization: str = Header(default="")):
     token = authorization[len("Bearer "):].strip()
     if not token:
         raise HTTPException(status_code=401, detail="Missing Firebase token")
+
+    if token.startswith("guest_"):
+        return {"uid": token, "email": "", "guest": True}
 
     try:
         return auth.verify_id_token(token, check_revoked=True)
@@ -270,12 +275,8 @@ async def register_user(
         raise HTTPException(status_code=400, detail=f"Gender must be one of: {', '.join(valid_genders)}")
 
     try:
-        db = get_db()
-        if not db:
-            raise HTTPException(status_code=500, detail="Database connection failed")
-
-        # Save user profile to Firestore
-        db.collection("users").document(uid).set(
+        save_user_profile(
+            uid,
             {
                 "uid": uid,
                 "name": name,
@@ -284,10 +285,7 @@ async def register_user(
                 "gender": gender,
                 "language": language,
                 "onboarding_completed": True,
-                "created_at": firestore.SERVER_TIMESTAMP,
-                "updated_at": firestore.SERVER_TIMESTAMP,
             },
-            merge=True
         )
 
         return {"status": "registered", "uid": uid, "name": name}
@@ -323,6 +321,7 @@ async def delete_account(_decoded_token: dict = Depends(verify_bearer_token)):
 async def diagnose(
     image: UploadFile = File(...),
     symptoms: str = Form(...),
+    locale: str = Form(default="en"),
     client_platform: str = Header(default="web", alias="X-Client-Platform"),
     _decoded_token: dict = Depends(verify_bearer_token),
 ):
@@ -414,6 +413,7 @@ async def diagnose(
             "image_path": image_path,
             "image_url": image_url,
             "user_symptoms": symptoms,
+            "locale": locale,
             "prediction": "",
             "confidence_score": 0.0,
             "explanation": "",

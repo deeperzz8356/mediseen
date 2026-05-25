@@ -4,10 +4,13 @@ import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
 import { UploadCloud, Loader2, AlertTriangle, Settings } from "lucide-react"
 import { Camera } from "@capacitor/camera"
+import { motion, AnimatePresence } from "framer-motion"
 import { DiagnosisResult } from "./ResultPanel"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
-import { requestCameraPermission, requestGalleryPermission, requestFilesPermission } from "../lib/permissions"
+import { useAppStore } from "../store/useAppStore"
+import { useLocale } from "../i18n/LocaleContext"
+import { requestCameraPermission, requestGalleryPermission } from "../lib/permissions"
 
 interface UploadPanelProps {
   onAnalysisComplete?: (result: DiagnosisResult) => void
@@ -22,8 +25,12 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
   const [isDragging, setIsDragging] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
+  const [showGalleryPrompt, setShowGalleryPrompt] = useState(false)
+  const [requestingGalleryPermission, setRequestingGalleryPermission] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { authStatus, profile } = useAppStore()
+  const { locale, t } = useLocale()
 
   const getRequestDebugContext = () => {
     if (typeof window === "undefined") {
@@ -147,17 +154,17 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
       const formData = new FormData()
       formData.append("image", file)
       formData.append("symptoms", symptoms || "No symptoms provided")
+      formData.append("locale", locale)
 
-      if (!auth) {
-        throw new Error("Authentication is not configured")
-      }
-
-      const user = auth.currentUser
-      if (!user) {
+      let token = ""
+      const user = auth?.currentUser
+      if (user) {
+        token = await user.getIdToken()
+      } else if (authStatus === "guest" && profile?.uid) {
+        token = profile.uid
+      } else {
         throw new Error("Please sign in before running diagnosis")
       }
-
-      const token = await user.getIdToken()
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000)
 
@@ -197,7 +204,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
       }
 
       console.log("MAPPED DATA STATE:", res);
-      setResult(`Analysis complete: ${res.disease_identification}`)
+      setResult(`${t.diagnose.upload.analysisCompletePrefix} ${res.disease_identification}`)
       if (onAnalysisComplete) onAnalysisComplete(res)
     } catch (error) {
       console.error("DIAGNOSIS PIPELINE FAILURE:", error)
@@ -210,18 +217,14 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
   const [permissionDenied, setPermissionDenied] = useState(false)
   const [permissionPermanent, setPermissionPermanent] = useState(false)
 
-  /** Gallery / Upload – only requests permission on user tap */
-  const handleBrowse = async () => {
+  const openGalleryPrompt = () => {
     setPermissionDenied(false)
     setPermissionPermanent(false)
-    // Step 1: Request files/photos permission lazily
-    const perm = await requestFilesPermission()
-    if (!perm.granted) {
-      setPermissionDenied(true)
-      setPermissionPermanent(perm.permanentlyDenied)
-      return
-    }
+    setShowGalleryPrompt(true)
+  }
 
+  /** Gallery / Upload – asks for explain-first permission prompt on tap */
+  const openGalleryPicker = async () => {
     // Prefer native photo picker when running on device; fallback to file input for documents or browser
     try {
       if ((window as any)?.Capacitor && (window as any).Capacitor.isNativePlatform && (window as any).Capacitor.isNativePlatform()) {
@@ -251,6 +254,25 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     } catch (err) {
       console.warn("Gallery picker failed, falling back to file input", err)
       fileInputRef.current?.click()
+    }
+  }
+
+  const allowGalleryAccess = async () => {
+    setRequestingGalleryPermission(true)
+    setShowGalleryPrompt(false)
+    try {
+      setPermissionDenied(false)
+      setPermissionPermanent(false)
+      const perm = await requestGalleryPermission()
+      if (!perm.granted) {
+        setPermissionDenied(true)
+        setPermissionPermanent(perm.permanentlyDenied)
+        return
+      }
+
+      await openGalleryPicker()
+    } finally {
+      setRequestingGalleryPermission(false)
     }
   }
 
@@ -301,8 +323,8 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     <div className="w-full h-full bg-white rounded-3xl p-8 md:p-10 border border-black/5 flex flex-col space-y-8">
       {/* 1. SIMPLE HEADER */}
       <div className="space-y-2">
-        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">1. Upload Report</h2>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select your medical image or scan</p>
+        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{t.diagnose.upload.stepTitle}</h2>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t.diagnose.upload.stepSubtitle}</p>
       </div>
 
       <div className="flex-1 space-y-8">
@@ -313,12 +335,12 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-bold text-amber-700">
-                {permissionPermanent ? "Permission permanently denied" : "Permission required"}
+                {permissionPermanent ? t.diagnose.upload.permissionPermanent : t.diagnose.upload.permissionRequired}
               </p>
               <p className="text-xs text-amber-600 mt-0.5">
                 {permissionPermanent
-                  ? "Open device Settings to enable access."
-                  : "Please allow access when prompted."}
+                  ? t.diagnose.upload.permissionPermanentDesc
+                  : t.diagnose.upload.permissionRequiredDesc}
               </p>
             </div>
             {permissionPermanent && (
@@ -328,7 +350,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
         )}
 
         <div
-          onClick={handleBrowse}
+          onClick={openGalleryPrompt}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
@@ -339,7 +361,7 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
             <div className="relative w-full h-full flex flex-col items-center p-6">
               <Image src={preview} alt="Scan preview" width={280} height={160} unoptimized className="max-h-[160px] rounded-2xl shadow-lg object-contain border-4 border-white" />
               <button onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); }} className="mt-4 px-4 py-2 bg-white border border-slate-200 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition">
-                Change Image
+                {t.diagnose.upload.changeImage}
               </button>
             </div>
           ) : (
@@ -347,8 +369,8 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
               <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mb-4 shadow-sm">
                 <UploadCloud className="w-6 h-6 text-slate-300" />
               </div>
-              <p className="text-sm font-black text-slate-600">Tap to browse or take a photo</p>
-              <p className="text-[10px] font-bold text-slate-300 mt-2 uppercase tracking-widest">PNG, JPG or HEIC</p>
+              <p className="text-sm font-black text-slate-600">{t.diagnose.upload.tapToBrowse}</p>
+              <p className="text-[10px] font-bold text-slate-300 mt-2 uppercase tracking-widest">{t.diagnose.upload.fileTypes}</p>
             </div>
           )}
         </div>
@@ -362,13 +384,61 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
           style={{ display: "none" }}
         />
 
+        <AnimatePresence>
+          {showGalleryPrompt && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm flex items-start justify-center px-4 pt-[calc(5rem+env(safe-area-inset-top,0px)+1rem)]"
+            >
+              <motion.div
+                initial={{ y: 20, scale: 0.97 }}
+                animate={{ y: 0, scale: 1 }}
+                exit={{ y: 20, scale: 0.97 }}
+                className="w-full max-w-md rounded-[2rem] bg-white shadow-2xl border border-slate-100 overflow-hidden"
+              >
+                <div className="p-6 md:p-8 space-y-5">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
+                      <UploadCloud className="w-6 h-6" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-black text-slate-900">Allow photo access</h3>
+                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                      MediSeen needs photo access only when you upload a scan or report, so it can analyze and save your record safely.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => setShowGalleryPrompt(false)}
+                      className="flex-1 px-5 py-4 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 font-black text-xs uppercase tracking-widest"
+                      disabled={requestingGalleryPermission}
+                    >
+                      Not now
+                    </button>
+                    <button
+                      onClick={() => void allowGalleryAccess()}
+                      className="flex-1 px-5 py-4 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest shadow-lg disabled:opacity-60"
+                      disabled={requestingGalleryPermission}
+                    >
+                      {requestingGalleryPermission ? "Requesting..." : "Allow"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* 3. SYMPTOMS */}
         <div className="space-y-3">
-          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">2. Describe Symptoms</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t.diagnose.upload.symptomsLabel}</label>
           <textarea
             value={symptoms}
             onChange={(e) => setSymptoms(e.target.value)}
-            placeholder="Type your symptoms here (e.g. heartache, dizziness...)"
+            placeholder={t.diagnose.upload.symptomsPlaceholder}
             className="w-full h-32 p-6 rounded-2xl bg-slate-50 border-none text-slate-700 font-bold text-sm focus:ring-4 focus:ring-slate-100 transition-all resize-none placeholder:text-slate-300"
           ></textarea>
         </div>
@@ -384,10 +454,10 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Analyzing Report...</span>
+                <span>{t.diagnose.upload.analyzingReport}</span>
               </>
             ) : (
-              <span>Start AI Analysis</span>
+              <span>{t.diagnose.upload.startAnalysis}</span>
             )}
           </button>
           {result && (

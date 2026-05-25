@@ -10,65 +10,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ChevronRight, ScanLine, Salad, Activity, BrainCircuit } from "lucide-react"
 import { useAppStore } from "../../store/useAppStore"
 import OnboardingCard from "../../components/OnboardingCard"
-
-const SLIDES = [
-  {
-    id: "ai-detection",
-    lottieSrc: "/animation_onboarding/Searching.lottie",
-    gradient: "from-rose-400 to-pink-500",
-    bgGradient: "from-rose-50 to-pink-50",
-    accentColor: "text-rose-500",
-    dotColor: "bg-rose-400",
-    activeBtnGradient: "from-rose-400 to-pink-500",
-    title: "AI Disease Detection",
-    subtitle: "Instant medical insights",
-    description:
-      "Upload any medical scan or report and our advanced AI analyzes it in seconds. Get clear, easy-to-understand diagnoses with confidence scores.",
-    features: ["Chest X-Ray analysis", "Skin condition detection", "98% accuracy"],
-  },
-  {
-    id: "diet",
-    lottieSrc: "/animation_onboarding/Nutrition.lottie",
-    gradient: "from-emerald-400 to-teal-500",
-    bgGradient: "from-emerald-50 to-teal-50",
-    accentColor: "text-emerald-500",
-    dotColor: "bg-emerald-400",
-    activeBtnGradient: "from-emerald-400 to-teal-500",
-    title: "Diet Recommendations",
-    subtitle: "Nutrition tailored for you",
-    description:
-      "Get personalized diet plans based on your diagnosed conditions, age, and health goals. Know exactly what to eat and what to avoid.",
-    features: ["Condition-specific meal plans", "Macro tracking", "Food swap suggestions"],
-  },
-  {
-    id: "reports",
-    lottieSrc: "/animation_onboarding/Health.lottie",
-    gradient: "from-blue-400 to-indigo-500",
-    bgGradient: "from-blue-50 to-indigo-50",
-    accentColor: "text-blue-500",
-    dotColor: "bg-blue-400",
-    activeBtnGradient: "from-blue-400 to-indigo-500",
-    title: "Health Reports & Tracking",
-    subtitle: "Your health, visualized",
-    description:
-      "Sync with Google Health Connect to track steps, sleep, calories, and heart rate. Generate detailed PDF reports to share with your doctor.",
-    features: ["Health Connect sync", "Visual charts", "Shareable PDF reports"],
-  },
-  {
-    id: "assistant",
-    lottieSrc: "/animation_onboarding/Artificial intelligence in healthcare.lottie",
-    gradient: "from-violet-400 to-purple-500",
-    bgGradient: "from-violet-50 to-purple-50",
-    accentColor: "text-violet-500",
-    dotColor: "bg-violet-400",
-    activeBtnGradient: "from-violet-400 to-purple-500",
-    title: "AI Medical Assistant",
-    subtitle: "Ask anything, anytime",
-    description:
-      "Chat with our AI medical consultant powered by the latest medical knowledge. Get detailed explanations about your diagnoses and treatment options.",
-    features: ["24/7 medical guidance", "Multi-language support", "Evidence-based answers"],
-  },
-] as const
+import { useLocale } from "../../i18n/LocaleContext"
 
 type Direction = 1 | -1
 
@@ -81,9 +23,65 @@ const variants = {
 export default function OnboardingSlidesPage() {
   const router = useRouter()
   const { setOnboardingDone } = useAppStore()
+  const { t } = useLocale()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState<Direction>(1)
   const touchStartX = useRef<number | null>(null)
+
+  const SLIDES = [
+    {
+      id: "ai-detection",
+      lottieSrc: "/animation_onboarding/Searching.lottie",
+      gradient: "from-rose-400 to-pink-500",
+      bgGradient: "from-rose-50 to-pink-50",
+      accentColor: "text-rose-500",
+      dotColor: "bg-rose-400",
+      activeBtnGradient: "from-rose-400 to-pink-500",
+      title: t.onboarding.slides.cards.aiDetection.title,
+      subtitle: t.onboarding.slides.cards.aiDetection.subtitle,
+      description: t.onboarding.slides.cards.aiDetection.description,
+      features: t.onboarding.slides.cards.aiDetection.features,
+    },
+    {
+      id: "diet",
+      lottieSrc: "/animation_onboarding/Nutrition.lottie",
+      gradient: "from-emerald-400 to-teal-500",
+      bgGradient: "from-emerald-50 to-teal-50",
+      accentColor: "text-emerald-500",
+      dotColor: "bg-emerald-400",
+      activeBtnGradient: "from-emerald-400 to-teal-500",
+      title: t.onboarding.slides.cards.diet.title,
+      subtitle: t.onboarding.slides.cards.diet.subtitle,
+      description: t.onboarding.slides.cards.diet.description,
+      features: t.onboarding.slides.cards.diet.features,
+    },
+    {
+      id: "reports",
+      lottieSrc: "/animation_onboarding/Health.lottie",
+      gradient: "from-blue-400 to-indigo-500",
+      bgGradient: "from-blue-50 to-indigo-50",
+      accentColor: "text-blue-500",
+      dotColor: "bg-blue-400",
+      activeBtnGradient: "from-blue-400 to-indigo-500",
+      title: t.onboarding.slides.cards.reports.title,
+      subtitle: t.onboarding.slides.cards.reports.subtitle,
+      description: t.onboarding.slides.cards.reports.description,
+      features: t.onboarding.slides.cards.reports.features,
+    },
+    {
+      id: "assistant",
+      lottieSrc: "/animation_onboarding/Artificial intelligence in healthcare.lottie",
+      gradient: "from-violet-400 to-purple-500",
+      bgGradient: "from-violet-50 to-purple-50",
+      accentColor: "text-violet-500",
+      dotColor: "bg-violet-400",
+      activeBtnGradient: "from-violet-400 to-purple-500",
+      title: t.onboarding.slides.cards.assistant.title,
+      subtitle: t.onboarding.slides.cards.assistant.subtitle,
+      description: t.onboarding.slides.cards.assistant.description,
+      features: t.onboarding.slides.cards.assistant.features,
+    },
+  ] as const
 
   const slide = SLIDES[currentIndex]
   const isLast = currentIndex === SLIDES.length - 1
@@ -135,7 +133,7 @@ export default function OnboardingSlidesPage() {
           onClick={finish}
           className="text-slate-400 font-semibold text-sm px-3 py-1.5 rounded-xl hover:bg-slate-100 hover:text-slate-600 transition-all"
         >
-          Skip
+          {t.onboarding.slides.skip}
         </button>
       </div>
 
@@ -174,7 +172,7 @@ export default function OnboardingSlidesPage() {
           onClick={handleNext}
           className={`w-full flex items-center justify-center gap-2 py-5 rounded-2xl bg-gradient-to-r ${slide.activeBtnGradient} text-white font-bold text-base shadow-lg transition-all`}
         >
-          {isLast ? "Get Started" : "Next"}
+          {isLast ? t.onboarding.slides.getStarted : t.onboarding.slides.next}
           <ChevronRight className="w-5 h-5" />
         </motion.button>
       </div>

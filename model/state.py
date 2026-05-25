@@ -14,6 +14,7 @@ class AgentState(TypedDict, total=False):
     request_id: str
     user_symptoms: str
     image_path: str
+    locale: Optional[str]
 
     # -------------------------
     # AI Analysis

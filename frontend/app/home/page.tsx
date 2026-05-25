@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
-
-import { auth } from "@/lib/firebase"
-import { onAuthStateChanged } from "firebase/auth"
 
 import {
   Plus,
@@ -15,7 +11,6 @@ import {
   ChevronRight,
   Moon,
   Flame,
-  Calendar,
   Activity
 } from "lucide-react"
 
@@ -23,6 +18,7 @@ import { MedicalAssistanceIllustration } from "../components/Illustrations"
 import { useLocale } from "../i18n/LocaleContext"
 
 import { HealthService } from "../services/HealthService"
+import { auth } from "../../lib/firebase"
 import { useAppStore } from "../store/useAppStore"
 
 type HealthData = {
@@ -33,43 +29,53 @@ type HealthData = {
 }
 
 export default function Home() {
-  const router = useRouter()
   const [username, setUsername] = useState("")
   const [isSyncing, setIsSyncing] = useState(false)
-  const [healthData, setHealthData] = useState<HealthData | null>(null)
+  const [syncMessage, setSyncMessage] = useState("")
   const { t } = useLocale()
+  const { authStatus, user, profile, healthData, healthSyncState } = useAppStore()
 
   useEffect(() => {
-    if (!auth) return
+    if (authStatus === "authenticated" && user) {
+      setUsername(user.displayName || user.email?.split("@")[0] || "there")
+      return
+    }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const name = user.displayName || user.email?.split("@")[0] || "there"
-        setUsername(name)
-      } else {
-        router.push("/login")
-      }
-    })
-    return () => unsubscribe()
-  }, [router])
+    if (authStatus === "guest") {
+      setUsername(profile?.name || "Guest")
+      return
+    }
 
-  // Auto-fetch if already connected
+    if (authStatus === "unauthenticated") {
+      setUsername(profile?.name || "Guest")
+    }
+  }, [authStatus, profile, user])
+
+  // Auto-fetch once when Health Connect is already available and we do not yet have data.
   useEffect(() => {
-    const { healthSyncState } = useAppStore.getState()
-    if (healthSyncState === "connected") {
-      HealthService.fetchData().then((data) => {
-        if (data) setHealthData(data)
+    if (healthSyncState === "connected" && !healthData) {
+      HealthService.fetchData().catch((error) => {
+        console.error("Health auto-fetch error:", error)
       })
     }
-  }, [])
+  }, [healthData, healthSyncState])
 
   const handleSync = async () => {
     setIsSyncing(true)
+    setSyncMessage("")
     try {
-      const granted = await HealthService.requestPermissions()
+      const granted = healthSyncState === "connected"
+        ? true
+        : await HealthService.requestPermissions()
+
       if (granted) {
         const data = await HealthService.fetchData()
-        if (data) setHealthData(data)
+        if (data) {
+          const sourceLabel = data.source === "google_fit" ? "Google Fit" : "Health Connect"
+          setSyncMessage(`Synced via ${sourceLabel}: ${data.steps.toLocaleString()} steps and ${data.caloriesBurned.toLocaleString()} calories.`)
+        } else {
+          setSyncMessage("Health Connect is ready, but no recent device data was found yet.")
+        }
 
         const token = await auth?.currentUser?.getIdToken()
         if (token && data) {
@@ -82,9 +88,12 @@ export default function Home() {
             body: JSON.stringify(data),
           }).catch(console.error)
         }
+      } else {
+        setSyncMessage("Health permission is required to fetch steps and calories.")
       }
     } catch (err) {
       console.error("Sync error:", err)
+      setSyncMessage("Sync failed. Please try again.")
     } finally {
       setIsSyncing(false)
     }
@@ -255,6 +264,12 @@ export default function Home() {
             {isSyncing ? "Syncing..." : t.home.syncDevice}
           </motion.button>
         </div>
+
+        {syncMessage ? (
+          <p className="px-1 md:px-3 text-sm font-medium text-slate-500">
+            {syncMessage}
+          </p>
+        ) : null}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
           {metrics.map((item, i) => (

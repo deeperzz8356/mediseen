@@ -21,10 +21,18 @@ import { useAppStore, type GenderOption } from "../store/useAppStore"
 import { Preferences } from "@capacitor/preferences"
 import ProfileForm from "../components/ProfileForm"
 import LanguageSelector, { LANGUAGES } from "../components/LanguageSelector"
+import { useLocale } from "../i18n/LocaleContext"
+
+const syncableLocales = ["en", "hi", "es", "fr", "ar", "mr", "bn", "te"] as const
+
+function canSyncLocale(value: string): value is (typeof syncableLocales)[number] {
+  return syncableLocales.includes(value as (typeof syncableLocales)[number])
+}
 
 export default function ProfilePage() {
   const router = useRouter()
   const { language, setLanguage, setOnboardingDone, setLanguageDone, setNotificationPermission, setProfile } = useAppStore()
+  const { locale, setLocale } = useLocale()
 
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -46,7 +54,7 @@ export default function ProfilePage() {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setLoaded(true)
       if (!u) { router.replace("/login"); return }
-      setUser(u)
+      setCurrentUser(u)
 
       // Fetch profile from backend
       try {
@@ -153,7 +161,7 @@ export default function ProfilePage() {
   }
 
   const currentLanguageLabel =
-    LANGUAGES.find((l) => l.code === language)?.native ?? "English"
+    LANGUAGES.find((l) => l.code === locale || l.code === language)?.native ?? "English"
 
   if (!loaded) {
     return <div className="min-h-screen bg-background" />
@@ -184,7 +192,7 @@ export default function ProfilePage() {
             setProfileName(data.name)
             setProfileAge(data.age)
             setProfileGender(data.gender)
-            const activeUser = auth.currentUser ?? currentUser
+            const activeUser = auth?.currentUser ?? currentUser
             if (activeUser) {
               setCurrentUser(activeUser)
               setProfile({
@@ -242,6 +250,9 @@ export default function ProfilePage() {
                 fullScreen={false}
                 onConfirm={async (lang) => {
                   await setLanguage(lang)
+                  if (canSyncLocale(lang)) {
+                    setLocale(lang)
+                  }
                   setShowLanguage(false)
                 }}
               />

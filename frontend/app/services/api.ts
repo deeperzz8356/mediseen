@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config"
+import type { Locale } from "../i18n"
 
 const API_URL = API_BASE_URL
 
@@ -13,12 +14,14 @@ export interface DiagnoseResponse {
 
 export async function diagnoseImage(
   image: File,
+  activeLocale: Locale,
   symptoms: string,
   token: string,
 ): Promise<DiagnoseResponse> {
 
   const formData = new FormData()
   formData.append("image", image)
+  formData.append("locale", activeLocale)
   formData.append("symptoms", symptoms)
 
   const res = await fetch(`${API_URL}/diagnose`, {

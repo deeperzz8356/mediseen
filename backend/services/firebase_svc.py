@@ -192,6 +192,29 @@ def upload_image(local_path: str, destination_blob_name: str) -> str:
         return ""
 
 
+def save_user_profile(uid: str, profile: dict):
+    """
+    Save the user's profile atomically in both the root user document and the profile subcollection.
+    """
+    db = get_db()
+    if db is None:
+        raise RuntimeError("Database connection failed")
+
+    user_ref = db.collection("users").document(uid)
+    profile_ref = user_ref.collection("profile").document("details")
+    payload = {
+        **profile,
+        "uid": uid,
+        "created_at": firestore.SERVER_TIMESTAMP,
+        "updated_at": firestore.SERVER_TIMESTAMP,
+    }
+
+    batch = db.batch()
+    batch.set(user_ref, payload, merge=True)
+    batch.set(profile_ref, payload, merge=True)
+    batch.commit()
+
+
 # ---------------------------------------------------
 # Rate Limiting (2 diagnoses per user per day)
 # ---------------------------------------------------
@@ -370,6 +393,10 @@ def delete_user_data(uid: str):
     try:
         # 1. Delete user profile
         db.collection("users").document(uid).delete()
+
+        profile_docs = db.collection("users").document(uid).collection("profile").stream()
+        for doc in profile_docs:
+            doc.reference.delete()
 
         # 2. Delete diagnosis records
         records_ref = db.collection("diagnosis_records").where("uid", "==", uid)

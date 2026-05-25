@@ -19,7 +19,7 @@ export default function PermissionsRequest({ onComplete }: Props) {
   const allGranted = granted.camera && granted.storage
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center p-8 bg-gradient-to-br from-white to-slate-50">
+    <div className="fixed inset-0 z-[120] bg-white flex flex-col items-center justify-center p-8 bg-gradient-to-br from-white to-slate-50">
       
       <div className="max-w-md w-full space-y-10 text-center">
         

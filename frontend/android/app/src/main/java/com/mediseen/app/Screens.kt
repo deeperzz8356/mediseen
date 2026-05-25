@@ -295,7 +295,7 @@ private fun normalizeAuthError(message: String?): String {
 @Composable
 fun LanguageSelectionScreen(onLanguageSelected: (String) -> Unit) {
     val context = LocalContext.current
-    val languages = listOf("English", "Hindi")
+    val languages = listOf("English", "Hindi", "Marathi", "Bengali", "Telugu", "Spanish", "French", "Arabic")
     val prefs = context.getSharedPreferences("mediseen_prefs", Context.MODE_PRIVATE)
     var selectedLanguage by remember {
         mutableStateOf(

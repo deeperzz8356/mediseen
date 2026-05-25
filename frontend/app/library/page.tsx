@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Search, 
@@ -20,6 +20,7 @@ import {
   Sparkles
 } from "lucide-react"
 import { API_BASE_URL } from "../config"
+import { useLocale } from "../i18n/LocaleContext"
 
 interface MedicalContext {
   disease: string
@@ -38,6 +39,38 @@ export default function LibraryPage() {
   const [data, setData] = useState<MedicalContext | null>(null)
   const [error, setError] = useState("")
   const [showDetails, setShowDetails] = useState(false)
+  const { t } = useLocale()
+  const { setLocale } = useLocale()
+  const [showEnglishAlert, setShowEnglishAlert] = useState(false)
+  const [remainingMs, setRemainingMs] = useState(0)
+  const ALERT_DURATION = 3500
+
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem("seen_en_library")
+      if (!seen) {
+        setShowEnglishAlert(true)
+        setRemainingMs(ALERT_DURATION)
+        localStorage.setItem("seen_en_library", "1")
+      }
+    } catch (e) {}
+  }, [])
+
+  useEffect(() => {
+    if (!showEnglishAlert || remainingMs <= 0) return
+    const step = 100
+    const id = setInterval(() => {
+      setRemainingMs((m) => {
+        if (m - step <= 0) {
+          setShowEnglishAlert(false)
+          clearInterval(id)
+          return 0
+        }
+        return m - step
+      })
+    }, step)
+    return () => clearInterval(id)
+  }, [showEnglishAlert, remainingMs])
 
   const shortcuts = [
     { name: "Diabetes", icon: "🩸", color: "bg-rose-50", text: "text-rose-600" },
@@ -67,7 +100,7 @@ export default function LibraryPage() {
       const json = await res.json()
       setData(json)
     } catch (err) {
-      setError("Information for this condition is not currently in our library.")
+      setError(t.library.error)
     } finally {
       setLoading(false)
     }
@@ -75,14 +108,30 @@ export default function LibraryPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-6 pt-28 pb-24 space-y-12">
+      {showEnglishAlert && (
+        <div className="fixed top-24 right-6 z-50">
+          <div className="w-72 rounded-lg bg-violet-600 text-white shadow-lg overflow-hidden">
+            <div className="px-4 py-2 flex items-center justify-between">
+              <span className="font-bold text-sm">Available in English</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs opacity-90">{Math.ceil(remainingMs / 1000)}</span>
+                <button onClick={() => { setLocale("en"); setShowEnglishAlert(false) }} className="text-sm underline">Switch</button>
+              </div>
+            </div>
+            <div className="h-1 bg-violet-500/40">
+              <div style={{ width: `${(remainingMs / ALERT_DURATION) * 100}%` }} className="h-1 bg-white transition-all" />
+            </div>
+          </div>
+        </div>
+      )}
       <header className="space-y-4 text-center md:text-left">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-50 border border-violet-100 text-[10px] font-black text-violet-600 uppercase tracking-widest">
           <Book className="w-3.5 h-3.5" />
-          Clinical Knowledge Base
+          {t.library.badge}
         </div>
-        <h1 className="text-4xl md:text-6xl font-black text-slate-800 tracking-tight">MediSeen Library</h1>
+        <h1 className="text-4xl md:text-6xl font-black text-slate-800 tracking-tight">{t.library.title}</h1>
         <p className="text-xl text-slate-500 font-bold max-w-2xl leading-relaxed">
-          Search thousands of conditions or use our quick-access clinical shortcuts.
+          {t.library.subtitle}
         </p>
       </header>
 
@@ -94,14 +143,14 @@ export default function LibraryPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && fetchKnowledge()}
-            placeholder="Search symptoms, diseases, or precautions..."
+            placeholder={t.library.searchPlaceholder}
             className="w-full bg-transparent outline-none text-xl font-bold text-slate-700 placeholder:text-slate-300"
           />
           <button 
             onClick={() => fetchKnowledge()}
             className="hidden md:flex items-center gap-2 bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-violet-600 transition-all active:scale-95"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Explore"}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t.library.explore}
           </button>
         </div>
       </div>
@@ -110,8 +159,8 @@ export default function LibraryPage() {
       {!data && !loading && (
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Clinical Shortcuts</h3>
-            <span className="text-[10px] font-bold text-slate-300 uppercase">8 Curated Conditions</span>
+            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">{t.library.shortcutsTitle}</h3>
+            <span className="text-[10px] font-bold text-slate-300 uppercase">{t.library.shortcutsCount}</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {shortcuts.map((s, i) => (
@@ -128,7 +177,7 @@ export default function LibraryPage() {
                 </div>
                 <h4 className="text-lg font-black text-slate-800">{s.name}</h4>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1 mt-1 group-hover:text-violet-500">
-                  View Data <ChevronRight className="w-3 h-3" />
+                  {t.library.viewData} <ChevronRight className="w-3 h-3" />
                 </p>
                 <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-slate-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
               </motion.button>
@@ -146,7 +195,7 @@ export default function LibraryPage() {
             className="flex flex-col items-center justify-center py-20 space-y-4"
           >
             <Loader2 className="w-12 h-12 text-violet-500 animate-spin" />
-            <p className="font-black text-slate-400 uppercase tracking-widest text-xs">Querying clinical database...</p>
+            <p className="font-black text-slate-400 uppercase tracking-widest text-xs">{t.library.querying}</p>
           </motion.div>
         )}
 
@@ -175,11 +224,11 @@ export default function LibraryPage() {
               <div className="relative z-10 space-y-6">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-[0.2em] text-violet-200">
                   <ShieldCheck className="w-4 h-4" />
-                  Verified Clinical Data
+                  {t.library.verifiedData}
                 </div>
                 <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight">{data.disease}</h2>
                 <p className="text-xl text-slate-400 font-medium max-w-2xl leading-relaxed">
-                  Comprehensive therapeutic overview and management protocols for <span className="text-white">{data.disease}</span>.
+                  {t.library.overviewPrefix} <span className="text-white">{data.disease}</span>.
                 </p>
               </div>
             </div>
@@ -195,7 +244,7 @@ export default function LibraryPage() {
                     <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
                       <AlertTriangle className="w-6 h-6" />
                     </div>
-                    <h3 className="text-2xl font-black text-slate-800">Clinical Symptoms</h3>
+                    <h3 className="text-2xl font-black text-slate-800">{t.library.symptomsTitle}</h3>
                   </div>
                   <div className="grid gap-3">
                     {data.symptoms.map((s, i) => (
@@ -219,7 +268,7 @@ export default function LibraryPage() {
                     <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
                       <ShieldCheck className="w-6 h-6" />
                     </div>
-                    <h3 className="text-2xl font-black text-slate-800">Precautions</h3>
+                    <h3 className="text-2xl font-black text-slate-800">{t.library.precautionsTitle}</h3>
                   </div>
                   <div className="grid gap-3">
                     {data.precautions.map((p, i) => (
@@ -250,15 +299,15 @@ export default function LibraryPage() {
                       <div className="w-16 h-16 bg-white/20 backdrop-blur-xl rounded-3xl flex items-center justify-center text-white">
                         <Sparkles className="w-8 h-8" />
                       </div>
-                      <h3 className="text-3xl md:text-4xl font-black">Nutrition Strategy</h3>
+                      <h3 className="text-3xl md:text-4xl font-black">{t.library.nutritionTitle}</h3>
                       <p className="text-indigo-100 font-medium leading-relaxed">
-                        Precision dietary guidance optimized for <span className="text-white font-bold">{data.disease}</span> management.
+                        {t.library.dietaryGuidancePrefix} <span className="text-white font-bold">{data.disease}</span> management.
                       </p>
                     </div>
 
                     {/* Recommended */}
                     <div className="space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">Therapeutic Favorites</h4>
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">{t.library.therapeuticFavorites}</h4>
                       <div className="flex flex-wrap gap-2">
                         {data.diet.recommended.map((item, i) => (
                           <span key={i} className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-sm font-bold backdrop-blur-md">
@@ -270,7 +319,7 @@ export default function LibraryPage() {
 
                     {/* Avoid */}
                     <div className="space-y-4">
-                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-rose-300">Strictly Avoid</h4>
+                      <h4 className="text-xs font-black uppercase tracking-[0.2em] text-rose-300">{t.library.strictlyAvoid}</h4>
                       <div className="flex flex-wrap gap-2">
                         {data.diet.avoid.map((item, i) => (
                           <span key={i} className="px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-100 text-sm font-bold backdrop-blur-md">
@@ -286,7 +335,7 @@ export default function LibraryPage() {
                         onClick={() => window.location.href = "/diet"}
                         className="w-full py-5 rounded-2xl bg-white text-slate-900 font-black text-sm uppercase tracking-widest shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
                       >
-                        Generate Personalized Diet Plan
+                        {t.library.generatePlan}
                         <ArrowRight className="w-5 h-5" />
                       </button>
                     </div>
@@ -302,7 +351,7 @@ export default function LibraryPage() {
                 onClick={() => { setData(null); setQuery(""); }}
                 className="px-8 py-3 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
               >
-                Clear Results & Search Again
+                {t.library.clearResults}
               </button>
             </div>
           </motion.div>

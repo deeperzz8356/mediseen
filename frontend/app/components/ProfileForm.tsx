@@ -16,7 +16,10 @@ import { User, Calendar, Save, Loader2, CheckCircle2 } from "lucide-react"
 import { auth } from "@/lib/firebase"
 import { updateProfile } from "firebase/auth"
 import { API_BASE_URL } from "../config"
-import type { GenderOption } from "../store/useAppStore"
+import { useAppStore, type GenderOption } from "../store/useAppStore"
+
+const PROFILE_STORAGE_KEY = "mediseen_patient_profile"
+const PROFILE_COMPLETED_KEY = "mediseen_profile_completed"
 
 const GENDER_OPTIONS: { value: GenderOption; label: string }[] = [
   { value: "male", label: "Male" },
@@ -47,12 +50,62 @@ export default function ProfileForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [hasDetails, setHasDetails] = useState<boolean | null>(null)
+  const { authStatus } = useAppStore()
 
   useEffect(() => {
+    try {
+      const localData = localStorage.getItem(PROFILE_STORAGE_KEY)
+      const statusFlag = localStorage.getItem(PROFILE_COMPLETED_KEY)
+      const userUid = auth?.currentUser?.uid
+      const scopedStatusFlag = userUid
+        ? localStorage.getItem(`${PROFILE_COMPLETED_KEY}_${userUid}`)
+        : null
+
+      if (localData) {
+        const parsed = JSON.parse(localData) as {
+          name?: string
+          age?: string
+          gender?: GenderOption
+        }
+
+        setName(parsed.name ?? initialName)
+        setAge(parsed.age ?? initialAge?.toString() ?? "")
+        setGender(parsed.gender ?? initialGender)
+        setHasDetails(
+          statusFlag === "true" ||
+          scopedStatusFlag === "true" ||
+          Boolean(parsed.name || parsed.age || parsed.gender),
+        )
+        return
+      }
+    } catch {
+      // Fall through to the incoming props when local storage is unavailable.
+    }
+
     setName(initialName)
     setAge(initialAge?.toString() ?? "")
     setGender(initialGender)
+    setHasDetails(false)
   }, [initialAge, initialGender, initialName])
+
+  useEffect(() => {
+    if (hasDetails === null) return
+
+    try {
+      const userUid = auth?.currentUser?.uid
+      localStorage.setItem(
+        PROFILE_STORAGE_KEY,
+        JSON.stringify({ name, age, gender }),
+      )
+      localStorage.setItem(PROFILE_COMPLETED_KEY, hasDetails ? "true" : "false")
+      if (userUid) {
+        localStorage.setItem(`${PROFILE_COMPLETED_KEY}_${userUid}`, hasDetails ? "true" : "false")
+      }
+    } catch {
+      // Ignore storage errors and keep the form usable.
+    }
+  }, [age, gender, hasDetails, name])
 
   const validate = (): string | null => {
     if (!name.trim()) return "Full name is required."
@@ -70,26 +123,45 @@ export default function ProfileForm({
     if (validationError) { setError(validationError); return }
 
     const user = auth?.currentUser
-    if (!user) { setError("Session expired. Please sign in again."); return }
+    const isGuestSession = authStatus === "guest" || !user
+
+    if (!user && !isGuestSession) { setError("Session expired. Please sign in again."); return }
 
     setSaving(true)
     try {
-      const token = await user.getIdToken()
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name: name.trim(), age: parseInt(age, 10), gender }),
-      })
+      if (!isGuestSession && user) {
+        const token = await user.getIdToken()
+        const res = await fetch(`${API_BASE_URL}/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name: name.trim(), age: parseInt(age, 10), gender }),
+        })
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.detail || "Failed to save profile.")
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.detail || "Failed to save profile.")
+        }
+
+        await updateProfile(user, { displayName: name.trim() })
       }
 
-      await updateProfile(user, { displayName: name.trim() })
+      setHasDetails(true)
+      try {
+        const userUid = auth?.currentUser?.uid
+        localStorage.setItem(
+          PROFILE_STORAGE_KEY,
+          JSON.stringify({ name: name.trim(), age, gender }),
+        )
+        localStorage.setItem(PROFILE_COMPLETED_KEY, "true")
+        if (userUid) {
+          localStorage.setItem(`${PROFILE_COMPLETED_KEY}_${userUid}`, "true")
+        }
+      } catch {
+        // Ignore storage errors. The form save already succeeded.
+      }
 
       setSuccess(true)
       onSaved?.({ name: name.trim(), age: parseInt(age, 10), gender })

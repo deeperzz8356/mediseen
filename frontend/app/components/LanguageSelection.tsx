@@ -2,20 +2,30 @@
 
 import { motion } from "framer-motion"
 import { Languages, ChevronRight } from "lucide-react"
+import { useLocale } from "../i18n/LocaleContext"
+import { useAppStore, type AppLanguage } from "../store/useAppStore"
+import { LOCALES } from "../i18n"
+
+const syncableLocales = ["en", "hi", "es", "fr", "ar", "te", "de", "ko", "ja", "zh"] as const
+
+function canSyncLocale(value: AppLanguage): value is (typeof syncableLocales)[number] {
+  return syncableLocales.includes(value as (typeof syncableLocales)[number])
+}
 
 interface LanguageSelectionProps {
   onComplete: () => void
 }
 
-const languages = [
-  { code: 'en', name: 'English', native: 'English' },
-  { code: 'hi', name: 'Hindi', native: 'हिन्दी' },
-  { code: 'es', name: 'Spanish', native: 'Español' },
-  { code: 'fr', name: 'French', native: 'Français' },
-  { code: 'ar', name: 'Arabic', native: 'العربية' }
-]
+const languages = LOCALES.map((locale) => ({
+  code: locale.code,
+  name: locale.name,
+  native: locale.name,
+}))
 
 export default function LanguageSelection({ onComplete }: LanguageSelectionProps) {
+  const { setLocale, t } = useLocale()
+  const { setLanguage } = useAppStore()
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -29,9 +39,9 @@ export default function LanguageSelection({ onComplete }: LanguageSelectionProps
             <Languages className="w-6 h-6" />
           </div>
           <h2 className="text-4xl font-black text-slate-800 tracking-tight leading-tight">
-            Choose your <br/><span className="text-pastel-violet">Language</span>
+            {t.languageSelection.title}
           </h2>
-          <p className="text-slate-400 font-medium">Select your preferred language to continue with MediSeen.</p>
+          <p className="text-slate-400 font-medium">{t.languageSelection.subtitle}</p>
         </header>
 
         <div className="space-y-3">
@@ -41,7 +51,15 @@ export default function LanguageSelection({ onComplete }: LanguageSelectionProps
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              onClick={onComplete}
+              onClick={() => {
+                const selectedLanguage = lang.code as AppLanguage
+
+                void setLanguage(selectedLanguage)
+                if (canSyncLocale(selectedLanguage)) {
+                  setLocale(selectedLanguage)
+                }
+                onComplete()
+              }}
               className="w-full flex items-center justify-between p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-pastel-violet hover:shadow-xl hover:shadow-pastel-violet/5 transition-all group"
             >
               <div className="flex flex-col items-start">
@@ -57,7 +75,7 @@ export default function LanguageSelection({ onComplete }: LanguageSelectionProps
       </div>
       
       <p className="text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] py-8">
-        MediSeen Universal Access
+        {t.languageSelection.finish}
       </p>
     </motion.div>
   )

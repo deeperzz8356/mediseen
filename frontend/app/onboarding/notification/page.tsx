@@ -11,10 +11,12 @@ import { requestNotificationPermission, isAndroid13Plus, isAndroid } from "../..
 import { useAppStore } from "../../store/useAppStore"
 import { NotificationService } from "../../services/NotificationService"
 import PermissionCard from "../../components/PermissionCard"
+import { useLocale } from "../../i18n/LocaleContext"
 
 export default function NotificationPermissionPage() {
   const router = useRouter()
   const { setNotificationPermission } = useAppStore()
+  const { t } = useLocale()
   const [loading, setLoading] = useState(false)
 
   const needsRuntimePermission = !isAndroid() || isAndroid13Plus()
@@ -41,9 +43,9 @@ export default function NotificationPermissionPage() {
   }
 
   const reasons = [
-    { icon: Pill, color: "bg-rose-100 text-rose-500", title: "Medicine Reminders", desc: "Never miss a dose with timely reminders" },
-    { icon: BrainCircuit, color: "bg-violet-100 text-violet-500", title: "AI Health Alerts", desc: "Get notified about important health insights" },
-    { icon: Activity, color: "bg-blue-100 text-blue-500", title: "Daily Health Tips", desc: "Bite-sized tips to improve your well-being" },
+    { icon: Pill, color: "bg-rose-100 text-rose-500", title: t.onboarding.notification.reasons.medicineReminders.title, desc: t.onboarding.notification.reasons.medicineReminders.desc },
+    { icon: BrainCircuit, color: "bg-violet-100 text-violet-500", title: t.onboarding.notification.reasons.aiHealthAlerts.title, desc: t.onboarding.notification.reasons.aiHealthAlerts.desc },
+    { icon: Activity, color: "bg-blue-100 text-blue-500", title: t.onboarding.notification.reasons.dailyHealthTips.title, desc: t.onboarding.notification.reasons.dailyHealthTips.desc },
   ]
 
   return (
@@ -53,7 +55,7 @@ export default function NotificationPermissionPage() {
         <button
           onClick={() => router.replace("/onboarding/language")}
           className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors text-slate-400"
-          aria-label="Back"
+          aria-label={t.onboarding.notification.back}
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -61,21 +63,22 @@ export default function NotificationPermissionPage() {
           onClick={handleSkip}
           className="text-slate-400 font-semibold text-sm px-3 py-1.5 rounded-xl hover:bg-slate-100 hover:text-slate-600 transition-all"
         >
-          Skip
+          {t.onboarding.notification.skip}
         </button>
       </div>
 
       <PermissionCard
         icon={Bell}
-        title="Stay on top of<br /> <span className='text-violet-500'>your health</span>"
+        title={t.onboarding.notification.title}
         description={needsRuntimePermission
-          ? "Enable notifications to get timely health reminders and alerts."
-          : "We'll send you helpful health reminders to keep you on track."}
+          ? t.onboarding.notification.descriptionRuntime
+          : t.onboarding.notification.descriptionRelaxed}
         reasons={reasons}
         onAllow={handleAllow}
         onSkip={handleSkip}
         loading={loading}
-        allowLabel={needsRuntimePermission ? "Allow Notifications" : "Continue"}
+        allowLabel={needsRuntimePermission ? t.onboarding.notification.allowRuntime : t.onboarding.notification.allowRelaxed}
+        skipLabel={t.onboarding.notification.skip}
       />
     </div>
   )

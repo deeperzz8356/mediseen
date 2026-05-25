@@ -6,11 +6,12 @@ import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { onAuthStateChanged, User } from "firebase/auth"
 import { motion, AnimatePresence } from "framer-motion"
-import { Activity, BookOpen, Heart, Home, Settings, Languages, Brain, ClipboardList } from "lucide-react"
+import { Activity, BookOpen, Heart, Home, Settings, Languages } from "lucide-react"
 
 import { auth } from "../../lib/firebase"
 import { useLocale } from "../i18n/LocaleContext"
 import { LOCALES } from "../i18n"
+import { useAppStore } from "../store/useAppStore"
 
 type NavItem = {
 	name: string
@@ -25,6 +26,7 @@ export default function Navbar() {
 	const [user, setUser] = useState<User | null>(null)
 	const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
 	const { t, locale, setLocale } = useLocale()
+	const { authStatus, setLanguage } = useAppStore()
 
 	useEffect(() => {
 		if (!auth) return
@@ -38,11 +40,10 @@ export default function Navbar() {
 		{ name: t.navbar.diet, shortName: "Diet", href: "/diet", icon: Heart },
 		{ name: t.navbar.checkup, shortName: "Scan", href: "/diagnose", icon: Activity },
 		{ name: t.navbar.library, shortName: "Library", href: "/library", icon: BookOpen },
-		{ name: "Profile", shortName: "Profile", href: "/profile", icon: Settings },
+		{ name: "Profile", shortName: "Profile", href: authStatus === "guest" ? "/login" : "/profile", icon: Settings },
 	]
 
 	const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
-	const currentUserName = user?.displayName || user?.email?.split("@")[0] || "Guest"
 
 	const getInitials = (currentUser: User) => {
 		if (currentUser.displayName) {
@@ -119,6 +120,7 @@ export default function Navbar() {
 												<button
 													key={lang.code}
 													onClick={() => {
+														void setLanguage(lang.code)
 														setLocale(lang.code)
 														setShowLanguageDropdown(false)
 													}}
@@ -143,19 +145,28 @@ export default function Navbar() {
 					</div>
 
 					{/* Profile Button */}
-					<Link
-						href="/profile"
-						className="w-10 h-10 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden active:scale-90 transition-all"
-						aria-label="Profile"
-					>
-						{user ? (
-							<div className="w-full h-full bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-xs">
-								{getInitials(user)}
-							</div>
-						) : (
-							<Image src="/logo2.png" alt="Profile" width={24} height={24} className="rounded-lg" />
-						)}
-					</Link>
+					{authStatus === "guest" ? (
+						<button
+							onClick={() => router.push("/login")}
+							className="px-4 h-10 rounded-xl bg-slate-900 text-white border border-slate-900 shadow-sm flex items-center justify-center font-black text-xs uppercase tracking-widest active:scale-90 transition-all"
+						>
+							{t.navbar.notSignedIn}
+						</button>
+					) : (
+						<Link
+							href="/profile"
+							className="w-10 h-10 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden active:scale-90 transition-all"
+							aria-label="Profile"
+						>
+							{user ? (
+								<div className="w-full h-full bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-xs">
+									{getInitials(user)}
+								</div>
+							) : (
+								<Image src="/logo2.png" alt="Profile" width={24} height={24} className="rounded-lg" />
+							)}
+						</Link>
+					)}
 				</div>
 			</div>
 

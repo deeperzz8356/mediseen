@@ -4,26 +4,29 @@
  * LanguageSelector.tsx – Reusable language selection component with image icons
  */
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Check, ChevronLeft } from "lucide-react"
 import Image from "next/image"
 import { useAppStore, type AppLanguage } from "../store/useAppStore"
+import { useLocale } from "../i18n/LocaleContext"
+import { LOCALES } from "../i18n"
+
+const syncableLocales = ["en", "hi", "es", "fr", "ar", "te", "de", "ko", "ja", "zh"] as const
+
+function canSyncLocale(value: AppLanguage): value is (typeof syncableLocales)[number] {
+  return syncableLocales.includes(value as (typeof syncableLocales)[number])
+}
 
 export const LANGUAGES: {
   code: AppLanguage
   name: string
   native: string
-}[] = [
-  { code: "en", name: "English", native: "English" },
-  { code: "hi", name: "Hindi", native: "हिन्दी" },
-  { code: "bn", name: "Bengali", native: "বাংলা" },
-  { code: "ml", name: "Malayalam", native: "മലയാളം" },
-  { code: "ta", name: "Tamil", native: "தமிழ்" },
-  { code: "es", name: "Spanish", native: "Español" },
-  { code: "fr", name: "French", native: "Français" },
-  { code: "ar", name: "Arabic", native: "العربية" },
-]
+}[] = LOCALES.map((locale) => ({
+  code: locale.code,
+  name: locale.name,
+  native: locale.name,
+}))
 
 interface LanguageSelectorProps {
   onConfirm?: (lang: AppLanguage) => void
@@ -39,10 +42,18 @@ export default function LanguageSelector({
   fullScreen = true,
 }: LanguageSelectorProps) {
   const { language, setLanguage } = useAppStore()
+  const { locale, setLocale, t } = useLocale()
   const [selected, setSelected] = useState<AppLanguage>(language)
+
+  useEffect(() => {
+    setSelected(locale)
+  }, [locale])
 
   const handleConfirm = async () => {
     await setLanguage(selected)
+    if (canSyncLocale(selected)) {
+      setLocale(selected)
+    }
     onConfirm?.(selected)
   }
 
@@ -58,27 +69,22 @@ export default function LanguageSelector({
           <button
             onClick={onBack}
             className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors text-slate-500"
-            aria-label="Go back"
+            aria-label={t.onboarding.languageSelector.back}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-base font-black text-slate-800">Choose Language</h1>
-          <button
-            onClick={handleConfirm}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-500 hover:bg-violet-600 transition-colors text-white shadow-md shadow-violet-200"
-          >
-            <Check className="w-5 h-5" />
-          </button>
+          <h1 className="text-base font-black text-slate-800">{t.onboarding.languageSelector.title}</h1>
+          <div className="w-10 h-10" />
         </div>
       )}
 
       {/* Header text */}
       <div className="px-6 pt-6 pb-4">
         <h2 className="text-2xl font-black text-slate-900 leading-tight">
-          Choose Language
+          {t.onboarding.languageSelector.title}
         </h2>
         <p className="text-slate-400 font-medium text-sm mt-1.5">
-          Select your preferred language for the app interface.
+          {t.onboarding.languageSelector.subtitle}
         </p>
       </div>
 
@@ -133,18 +139,16 @@ export default function LanguageSelector({
         })}
       </div>
 
-      {!showNav && (
-        <div className="px-5 pt-2 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={handleConfirm}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-rose-400 text-white font-bold text-base shadow-lg shadow-violet-200 flex items-center justify-center gap-2"
-          >
-            <Check className="w-5 h-5" />
-            Save Language
-          </motion.button>
-        </div>
-      )}
+      <div className="px-5 pt-2 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={handleConfirm}
+          className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-rose-400 text-white font-bold text-base shadow-lg shadow-violet-200 flex items-center justify-center gap-2"
+        >
+          <Check className="w-5 h-5" />
+          {t.onboarding.languageSelector.confirm}
+        </motion.button>
+      </div>
     </div>
   )
 }

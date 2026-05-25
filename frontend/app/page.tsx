@@ -4,101 +4,58 @@
  * app/page.tsx – Smart entry router
  *
  * ROUTING LOGIC:
- *   First launch:  / → /onboarding/language → /onboarding/notification → /onboarding/slides → /login
- *   Onboarding done, logged out: / → /login
+ *   First launch:  / → /onboarding/language → /onboarding/notification → /onboarding/slides
+ *   Onboarding done, guest mode: / → /home
  *   Logged in with profile: / → /home
  *   Logged in, no profile: / → /login?complete=1
  */
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { onAuthStateChanged } from "firebase/auth"
 import { motion } from "framer-motion"
 import Image from "next/image"
-import { auth } from "@/lib/firebase"
 import { useAppStore } from "./store/useAppStore"
-import { API_BASE_URL } from "./config"
 
 export default function EntryPage() {
   const router = useRouter()
   const {
     bootstrap,
-    setUser,
-    setAuthLoaded,
-    setHasProfile,
+    authStatus,
     authLoaded,
+    hasProfile,
+    user,
     onboardingLoaded,
     languageLoaded,
+    onboardingDone,
+    languageDone,
+    notificationAsked,
   } = useAppStore()
 
   const [showSplash, setShowSplash] = useState(true)
 
-  // Step 1 – bootstrap persisted preferences + Artificial Timer
+  // Step 1 – bootstrap persisted preferences
   useEffect(() => {
-    bootstrap()
-    
-    // Ensure splash is visible for at least 3 seconds
-    const timer = setTimeout(() => {
+    bootstrap().finally(() => {
       setShowSplash(false)
-    }, 3000)
-    
-    return () => clearTimeout(timer)
+    })
   }, [bootstrap])
 
-  // Step 2 – set up Firebase auth listener (only after prefs loaded)
-  useEffect(() => {
-    if (!onboardingLoaded || !languageLoaded) return
-
-    if (!auth) {
-      setAuthLoaded(true)
-      return
-    }
-
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser)
-        try {
-          const token = await firebaseUser.getIdToken()
-          const res = await fetch(`${API_BASE_URL}/auth/verify`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          if (res.ok) {
-            const data = await res.json()
-            setHasProfile(data.has_profile ?? false)
-          }
-        } catch {
-          // network error – proceed, home will guard
-        }
-      } else {
-        setUser(null)
-        setHasProfile(false)
-      }
-      setAuthLoaded(true)
-    })
-
-    return () => unsub()
-  }, [onboardingLoaded, languageLoaded, setUser, setAuthLoaded, setHasProfile])
-
-  // Step 3 – navigate once all state is loaded AND splash timer finished
+  // Step 2 – navigate once all state is loaded AND splash timer finished
   useEffect(() => {
     if (!authLoaded || !onboardingLoaded || !languageLoaded || showSplash) return
 
-    const { onboardingDone, languageDone, notificationAsked, user, hasProfile } =
-      useAppStore.getState()
-
-    if (user && hasProfile) {
+    if (authStatus === "authenticated" && user && hasProfile) {
       router.replace("/home")
       return
     }
 
-    if (user && !hasProfile) {
+    if (authStatus === "authenticated" && user && !hasProfile) {
       router.replace("/login?complete=1")
       return
     }
 
-    if (onboardingDone) {
-      router.replace("/login")
+    if (onboardingDone && (authStatus === "guest" || authStatus === "unauthenticated")) {
+      router.replace("/home")
       return
     }
 
@@ -110,7 +67,7 @@ export default function EntryPage() {
     } else {
       router.replace("/onboarding/slides")
     }
-  }, [authLoaded, onboardingLoaded, languageLoaded, showSplash, router])
+  }, [authLoaded, authStatus, hasProfile, languageDone, languageLoaded, notificationAsked, onboardingDone, onboardingLoaded, router, showSplash, user])
 
   // Splash UI
   return (
