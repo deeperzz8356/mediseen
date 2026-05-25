@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Check, ChevronLeft } from "lucide-react"
-import Image from "next/image"
+// Use a plain <img> for dynamic public/flags fallbacks
 import { useAppStore, type AppLanguage } from "../store/useAppStore"
 import { useLocale } from "../i18n/LocaleContext"
 import { LOCALES } from "../i18n"
@@ -22,10 +22,12 @@ export const LANGUAGES: {
   code: AppLanguage
   name: string
   native: string
+  flag?: string
 }[] = LOCALES.map((locale) => ({
   code: locale.code,
   name: locale.name,
   native: locale.name,
+  flag: locale.flag,
 }))
 
 interface LanguageSelectorProps {
@@ -105,19 +107,10 @@ export default function LanguageSelector({
                   : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
               }`}
             >
-              {/* Flag Image */}
+              {/* Flag image helper component - attempts SVG then PNG, falls back to nothing so emoji shows */}
+              {/* Note: defined inside this file to avoid extra exports */}
               <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-100 shrink-0 bg-slate-50 relative">
-                <Image
-                  src={`/flags/${lang.code}.png`}
-                  alt={lang.name}
-                  fill
-                  className="object-cover"
-                  onError={(e) => {
-                    // Fallback to initial if image missing
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
+                <FlagImage code={lang.code} name={lang.name} />
               </div>
 
               {/* Text */}
@@ -150,5 +143,23 @@ export default function LanguageSelector({
         </motion.button>
       </div>
     </div>
+  )
+}
+
+function FlagImage({ code, name }: { code: string; name: string }) {
+  const [ext, setExt] = useState<"svg" | "png" | "">("svg")
+
+  if (!ext) return null
+
+  return (
+    <img
+      src={`/flags/${code}.${ext}`}
+      alt={name}
+      className="w-full h-full object-cover"
+      onError={() => {
+        if (ext === "svg") setExt("png")
+        else setExt("")
+      }}
+    />
   )
 }

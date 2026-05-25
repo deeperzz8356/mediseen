@@ -85,8 +85,8 @@ export default function ProfilePage() {
           }
         }
       } catch {
-        // Use Firebase display name as fallback
-        setProfileName(u.displayName ?? u.email?.split("@")[0] ?? "")
+        // Use Firebase display name as fallback; do NOT extract from email
+        setProfileName(u.displayName ?? "")
       }
     })
     return () => unsub()

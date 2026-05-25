@@ -37,7 +37,8 @@ export default function Home() {
 
   useEffect(() => {
     if (authStatus === "authenticated" && user) {
-      setUsername(user.displayName || user.email?.split("@")[0] || "there")
+      // Prefer profile name set from the form; fall back to Firebase displayName only
+      setUsername(profile?.name || user.displayName || "there")
       return
     }
 

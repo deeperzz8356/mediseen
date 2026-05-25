@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { API_BASE_URL } from "../config"
 import { useLocale } from "../i18n/LocaleContext"
+import { useAppStore } from "../store/useAppStore"
 
 interface MedicalContext {
   disease: string
@@ -45,16 +46,18 @@ export default function LibraryPage() {
   const [remainingMs, setRemainingMs] = useState(0)
   const ALERT_DURATION = 3500
 
+  const { authStatus } = useAppStore()
+
   useEffect(() => {
     try {
       const seen = localStorage.getItem("seen_en_library")
-      if (!seen) {
+      if (!seen && authStatus === "guest" && t && (t as any).locale !== "en") {
         setShowEnglishAlert(true)
         setRemainingMs(ALERT_DURATION)
         localStorage.setItem("seen_en_library", "1")
       }
     } catch (e) {}
-  }, [])
+  }, [authStatus, t])
 
   useEffect(() => {
     if (!showEnglishAlert || remainingMs <= 0) return
@@ -109,7 +112,7 @@ export default function LibraryPage() {
   return (
     <div className="max-w-5xl mx-auto px-6 pt-28 pb-24 space-y-12">
       {showEnglishAlert && (
-        <div className="fixed top-24 right-6 z-50">
+        <div className="fixed top-24 right-6 z-[90]">
           <div className="w-72 rounded-lg bg-violet-600 text-white shadow-lg overflow-hidden">
             <div className="px-4 py-2 flex items-center justify-between">
               <span className="font-bold text-sm">Available in English</span>

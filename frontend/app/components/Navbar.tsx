@@ -26,7 +26,7 @@ export default function Navbar() {
 	const [user, setUser] = useState<User | null>(null)
 	const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
 	const { t, locale, setLocale } = useLocale()
-	const { authStatus, setLanguage } = useAppStore()
+	const { authStatus, setLanguage, profile } = useAppStore()
 
 	useEffect(() => {
 		if (!auth) return
@@ -46,8 +46,10 @@ export default function Navbar() {
 	const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
 
 	const getInitials = (currentUser: User) => {
-		if (currentUser.displayName) {
-			return currentUser.displayName
+		// Prefer the profile name set via the form; then Firebase displayName.
+		const nameSource = profile?.name || currentUser.displayName || null
+		if (nameSource) {
+			return nameSource
 				.split(" ")
 				.map((name) => name[0])
 				.join("")
@@ -55,7 +57,8 @@ export default function Navbar() {
 				.slice(0, 2)
 		}
 
-		return currentUser.email ? currentUser.email[0].toUpperCase() : "?"
+		// Do not derive name from email; show placeholder
+		return "?"
 	}
 
 	return (
