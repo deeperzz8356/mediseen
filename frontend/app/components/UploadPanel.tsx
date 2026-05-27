@@ -2,15 +2,15 @@
 
 import Image from "next/image"
 import { useState, useRef, useEffect } from "react"
-import { UploadCloud, Loader2, AlertTriangle, Settings } from "lucide-react"
+import { UploadCloud, Loader2 } from "lucide-react"
+import { Capacitor } from "@capacitor/core"
 import { Camera } from "@capacitor/camera"
-import { motion, AnimatePresence } from "framer-motion"
 import { DiagnosisResult } from "./ResultPanel"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
 import { useAppStore } from "../store/useAppStore"
 import { useLocale } from "../i18n/LocaleContext"
-import { requestCameraPermission, requestGalleryPermission } from "../lib/permissions"
+import { requestGalleryPermission } from "../lib/permissions"
 
 interface UploadPanelProps {
   onAnalysisComplete?: (result: DiagnosisResult) => void
@@ -25,8 +25,6 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
   const [isDragging, setIsDragging] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<string | null>(null)
-  const [showGalleryPrompt, setShowGalleryPrompt] = useState(false)
-  const [requestingGalleryPermission, setRequestingGalleryPermission] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { authStatus, profile } = useAppStore()
@@ -214,20 +212,36 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     }
   }
 
-  const [permissionDenied, setPermissionDenied] = useState(false)
-  const [permissionPermanent, setPermissionPermanent] = useState(false)
-
-  const openGalleryPrompt = () => {
-    setPermissionDenied(false)
-    setPermissionPermanent(false)
-    setShowGalleryPrompt(true)
-  }
-
-  /** Gallery / Upload – asks for explain-first permission prompt on tap */
   const openGalleryPicker = async () => {
     // Prefer native photo picker when running on device; fallback to file input for documents or browser
     try {
-      if ((window as any)?.Capacitor && (window as any).Capacitor.isNativePlatform && (window as any).Capacitor.isNativePlatform()) {
+      // First try the gallery/photos permission flow (maps to READ_MEDIA_IMAGES on Android 13+)
+      const galleryPermission = await requestGalleryPermission()
+      if (!galleryPermission.granted) {
+        // Try Filesystem fallback for older Android devices where gallery permission is not sufficient
+        try {
+          const { Filesystem } = await import('@capacitor/filesystem')
+          if (typeof Filesystem.checkPermissions === 'function') {
+            const fsStatus: any = await Filesystem.checkPermissions()
+            if (fsStatus && fsStatus.publicStorage === 'granted') {
+              // treat as granted
+            } else {
+              const req: any = await Filesystem.requestPermissions()
+              if (!(req && req.publicStorage === 'granted')) {
+                // permission denied, stop
+                return
+              }
+            }
+          } else {
+            return
+          }
+        } catch (err) {
+          // Filesystem not available or failed – stop
+          return
+        }
+      }
+
+      if (Capacitor.isNativePlatform()) {
         const { CameraSource, CameraResultType } = await import("@capacitor/camera")
         const image = await Camera.getPhoto({
           quality: 90,
@@ -257,66 +271,12 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
     }
   }
 
-  const allowGalleryAccess = async () => {
-    setRequestingGalleryPermission(true)
-    setShowGalleryPrompt(false)
-    try {
-      setPermissionDenied(false)
-      setPermissionPermanent(false)
-      const perm = await requestGalleryPermission()
-      if (!perm.granted) {
-        setPermissionDenied(true)
-        setPermissionPermanent(perm.permanentlyDenied)
-        return
-      }
-
-      await openGalleryPicker()
-    } finally {
-      setRequestingGalleryPermission(false)
-    }
-  }
-
   // Hidden file input handler for web/native fallback (images + documents)
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (f) handleFile(f)
     // reset value to allow selecting the same file again
     if (fileInputRef.current) fileInputRef.current.value = ""
-  }
-
-  /** Camera / Scan – only requests permission on user tap */
-  const handleScan = async () => {
-    setPermissionDenied(false)
-    setPermissionPermanent(false)
-
-    const perm = await requestCameraPermission()
-    if (!perm.granted) {
-      setPermissionDenied(true)
-      setPermissionPermanent(perm.permanentlyDenied)
-      return
-    }
-
-    try {
-      const { CameraSource, CameraResultType } = await import("@capacitor/camera")
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Camera,
-      })
-      if (image.base64String) {
-        const base64Url = `data:image/jpeg;base64,${image.base64String}`
-        setPreview(base64Url)
-        if (onImageUpload) onImageUpload(base64Url)
-        const bstr = atob(image.base64String)
-        let n = bstr.length
-        const u8arr = new Uint8Array(n)
-        while (n--) u8arr[n] = bstr.charCodeAt(n)
-        setFile(new File([u8arr], "camera_capture.jpg", { type: "image/jpeg" }))
-      }
-    } catch (err) {
-      console.warn("Camera failed:", err)
-    }
   }
 
   return (
@@ -329,28 +289,8 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
 
       <div className="flex-1 space-y-8">
         {/* 2. IMAGE DROP ZONE */}
-        {/* Permission denied banner */}
-        {permissionDenied && (
-          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-bold text-amber-700">
-                {permissionPermanent ? t.diagnose.upload.permissionPermanent : t.diagnose.upload.permissionRequired}
-              </p>
-              <p className="text-xs text-amber-600 mt-0.5">
-                {permissionPermanent
-                  ? t.diagnose.upload.permissionPermanentDesc
-                  : t.diagnose.upload.permissionRequiredDesc}
-              </p>
-            </div>
-            {permissionPermanent && (
-              <Settings className="w-4 h-4 text-amber-500 shrink-0" />
-            )}
-          </div>
-        )}
-
         <div
-          onClick={openGalleryPrompt}
+          onClick={() => void openGalleryPicker()}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={(e) => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f); }}
@@ -383,54 +323,6 @@ export default function UploadPanel({ onAnalysisComplete, onImageUpload, externa
           accept="image/*,application/pdf"
           style={{ display: "none" }}
         />
-
-        <AnimatePresence>
-          {showGalleryPrompt && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-sm flex items-start justify-center px-4 pt-[calc(5rem+env(safe-area-inset-top,0px)+1rem)]"
-            >
-              <motion.div
-                initial={{ y: 20, scale: 0.97 }}
-                animate={{ y: 0, scale: 1 }}
-                exit={{ y: 20, scale: 0.97 }}
-                className="w-full max-w-md rounded-[2rem] bg-white shadow-2xl border border-slate-100 overflow-hidden"
-              >
-                <div className="p-6 md:p-8 space-y-5">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
-                      <UploadCloud className="w-6 h-6" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-2xl font-black text-slate-900">Allow photo access</h3>
-                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                      MediSeen needs photo access only when you upload a scan or report, so it can analyze and save your record safely.
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      onClick={() => setShowGalleryPrompt(false)}
-                      className="flex-1 px-5 py-4 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 font-black text-xs uppercase tracking-widest"
-                      disabled={requestingGalleryPermission}
-                    >
-                      Not now
-                    </button>
-                    <button
-                      onClick={() => void allowGalleryAccess()}
-                      className="flex-1 px-5 py-4 rounded-2xl bg-slate-900 text-white font-black text-xs uppercase tracking-widest shadow-lg disabled:opacity-60"
-                      disabled={requestingGalleryPermission}
-                    >
-                      {requestingGalleryPermission ? "Requesting..." : "Allow"}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* 3. SYMPTOMS */}
         <div className="space-y-3">

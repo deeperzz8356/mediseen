@@ -25,7 +25,7 @@ import type { FirebaseError } from "firebase/app"
 import { auth, signInWithGoogle } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { Mail, Lock, ChevronRight, User, Loader2, ArrowLeft, Calendar, Users } from "lucide-react"
-import { useAppStore, type GenderOption } from "../store/useAppStore"
+import { useAppStore, type GenderOption, type UserProfile } from "../store/useAppStore"
 import ProfileForm from "../components/ProfileForm"
 import { useLocale } from "../i18n/LocaleContext"
 
@@ -88,27 +88,32 @@ const InputField = ({
 
 const GoogleButton = ({ 
   onClick, 
-  disabled 
+  disabled,
+  loading,
 }: { 
   onClick: () => void; 
-  disabled?: boolean; 
+  disabled?: boolean;
+  loading?: boolean;
 }) => (
-  <motion.button
-    whileTap={{ scale: 0.97 }}
+  <button
     onClick={onClick}
     disabled={disabled}
     className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl border-2 border-slate-100 bg-white hover:bg-slate-50 transition-all group"
   >
-    <Image src="/google_icon.ico" alt="Google" width={20} height={20} />
+    {loading ? (
+      <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+    ) : (
+      <Image src="/google_icon.ico" alt="Google" width={20} height={20} />
+    )}
     <span className="font-bold text-slate-700 text-sm">Continue with Google</span>
-  </motion.button>
+  </button>
 )
 
 function LoginContent() {
   const router = useRouter()
   const params = useSearchParams()
   const { t } = useLocale()
-  const { setUser, setHasProfile, setAuthLoaded, setAuthStatus, ensureGuestSession } = useAppStore()
+  const { setUser, setHasProfile, setAuthLoaded, setAuthStatus, ensureGuestSession, setProfile } = useAppStore()
 
   const [view, setView] = useState<AuthView>(params.get("complete") === "1" ? "profile" : "login")
   const [email, setEmail] = useState("")
@@ -119,10 +124,13 @@ function LoginContent() {
   const [age, setAge] = useState("")
   const [gender, setGender] = useState<GenderOption>("male")
 
-  const [loading, setLoading] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [guestLoading, setGuestLoading] = useState(false)
   const [error, setError] = useState("")
 
   const authCheckInFlightRef = useRef(false)
+  const authActionInFlightRef = useRef(false)
   const viewRef = useRef<AuthView>(view)
 
   useEffect(() => {
@@ -136,13 +144,12 @@ function LoginContent() {
       return
     }
 
-    setLoading(true)
     setError("")
     try {
       const token = await user.getIdToken()
       setUser(user)
       
-      let profileData = null;
+      let profileData: { has_profile?: boolean; profile?: UserProfile } | null = null
       try {
         const res = await fetch(`${API_BASE_URL}/auth/verify`, {
           method: "POST",
@@ -152,13 +159,16 @@ function LoginContent() {
           profileData = await res.json()
         }
       } catch (fetchErr) {
-        console.error("Backend verification failed (CORS/network):", fetchErr);
+        console.error("Backend verification failed (CORS/network):", fetchErr)
         // Fallback: Assume no profile if backend is unreachable so they can complete it later.
       }
 
       const hasBackendProfile = Boolean(profileData?.has_profile)
       if (hasBackendProfile) {
         setProfileCompletedForUid(user.uid)
+        if (profileData?.profile) {
+          setProfile(profileData.profile)
+        }
       }
       const hasCompletedProfile = hasBackendProfile || getProfileCompletedForUid(user.uid)
 
@@ -174,10 +184,8 @@ function LoginContent() {
       }
     } catch {
       setError("Couldn't verify your account. Please try again.")
-    } finally {
-      setLoading(false)
     }
-  }, [router, setHasProfile, setUser])
+  }, [router, setHasProfile, setUser, setProfile])
 
   useEffect(() => {
     if (!auth) return
@@ -185,6 +193,7 @@ function LoginContent() {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) return
       if (viewRef.current === "profile") return
+      if (authActionInFlightRef.current) return
       if (authCheckInFlightRef.current) return
 
       authCheckInFlightRef.current = true
@@ -202,7 +211,8 @@ function LoginContent() {
     setError("")
     if (!email || !password) { setError("Email and password are required."); return }
     if (!auth) { setError("Authentication not configured."); return }
-    setLoading(true)
+    setEmailLoading(true)
+    authActionInFlightRef.current = true
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password)
       await verifyAndRedirect(cred.user)
@@ -219,20 +229,23 @@ function LoginContent() {
       else if (code === "auth/operation-not-allowed") setError("Email/password sign-in is not enabled. Contact support.")
       else setError(`Sign-in failed: ${message || "Unknown error"}`)
     } finally {
-      setLoading(false)
+      setEmailLoading(false)
+      authActionInFlightRef.current = false
     }
   }
 
   const handleGoogleLogin = async () => {
     setError("")
-    setLoading(true)
+    setGoogleLoading(true)
+    authActionInFlightRef.current = true
     try {
       const user = await signInWithGoogle()
       if (user) await verifyAndRedirect(user)
-    } catch (err: any) {
-      setError(err.message || "Google Sign-In failed.")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google Sign-In failed.")
     } finally {
-      setLoading(false)
+      setGoogleLoading(false)
+      authActionInFlightRef.current = false
     }
   }
 
@@ -244,7 +257,8 @@ function LoginContent() {
     if (!age || isNaN(parseInt(age))) { setError("Valid age is required."); return }
     if (!auth) { setError("Authentication not configured."); return }
     
-    setLoading(true)
+    setEmailLoading(true)
+    authActionInFlightRef.current = true
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password)
       const user = cred.user
@@ -288,6 +302,15 @@ function LoginContent() {
         setProfileCompletedForUid(user.uid)
         setUser(user)
         setHasProfile(true)
+        setProfile({
+          uid: user.uid,
+          name: name.trim(),
+          email: user.email || email,
+          age: parseInt(age, 10),
+          gender,
+          language: "en",
+          onboarding_completed: true,
+        })
         setAuthLoaded(true)
         startTransition(() => {
           router.replace("/home")
@@ -305,13 +328,14 @@ function LoginContent() {
       else if (code === "auth/operation-not-allowed") setError("Email/password sign-up is not enabled. Contact support.")
       else setError(`Account creation failed: ${message || "Unknown error"}`)
     } finally {
-      setLoading(false)
+      setEmailLoading(false)
+      authActionInFlightRef.current = false
     }
   }
 
   const handleGuestBypassEntrance = async () => {
     setError("")
-    setLoading(true)
+    setGuestLoading(true)
 
     try {
       await ensureGuestSession()
@@ -324,7 +348,7 @@ function LoginContent() {
       console.error("Guest session initialization failed:", guestErr)
       setError("Guest access is temporarily unavailable.")
     } finally {
-      setLoading(false)
+      setGuestLoading(false)
     }
   }
 
@@ -351,45 +375,50 @@ function LoginContent() {
             </div>
 
             <div className="space-y-4">
-              <GoogleButton onClick={handleGoogleLogin} disabled={loading} />
-              
-              <div className="flex items-center gap-4 py-2">
-                <div className="flex-1 h-[1px] bg-slate-100" />
-                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{t.auth.or}</span>
-                <div className="flex-1 h-[1px] bg-slate-100" />
-              </div>
-
               <form onSubmit={(e) => { e.preventDefault(); handleLogin() }} className="space-y-4">
                 <InputField icon={Mail} type="email" label={t.login.emailLabel} value={email} onChange={setEmail} placeholder={t.login.emailPlaceholder} />
                 <InputField icon={Lock} type="password" label={t.login.passwordLabel} value={password} onChange={setPassword} placeholder="Min. 6 chars" />
                 
                 {error && <p className="text-red-500 text-xs text-center font-medium">{error}</p>}
 
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
+                <button
                   type="submit"
-                  disabled={loading}
+                  disabled={emailLoading || googleLoading || guestLoading}
                   className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-rose-400 text-white font-bold shadow-lg shadow-violet-200 disabled:opacity-60 transition-all"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t.login.signIn}</span><ChevronRight className="w-5 h-5" /></>}
-                </motion.button>
-                <button
-                  type="button"
-                  onClick={handleGuestBypassEntrance}
-                  disabled={loading}
-                  className="w-full py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-sm hover:bg-slate-100 disabled:opacity-60 transition-all"
-                >
-                  Continue as Guest
+                  {emailLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t.login.signIn}</span><ChevronRight className="w-5 h-5" /></>}
                 </button>
               </form>
+
+              <div className="flex items-center gap-4 py-2">
+                <div className="flex-1 h-[1px] bg-slate-100" />
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{t.auth.or}</span>
+                <div className="flex-1 h-[1px] bg-slate-100" />
+              </div>
+
+              <GoogleButton onClick={handleGoogleLogin} disabled={emailLoading || googleLoading || guestLoading} loading={googleLoading} />
+
+              <button
+                type="button"
+                onClick={handleGuestBypassEntrance}
+                disabled={emailLoading || googleLoading || guestLoading}
+                className="w-full py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-sm hover:bg-slate-100 disabled:opacity-60 transition-all"
+              >
+                Continue as Guest
+              </button>
             </div>
 
-            <p className="text-center text-sm text-slate-400 font-medium pt-2">
+            <div className="text-center text-sm text-slate-400 font-medium pt-2 space-y-2">
+              <p>
               {t.login.newToMediseen}{" "}
               <button onClick={() => { setError(""); setView("signup") }} className="text-violet-500 font-bold hover:underline">
                 {t.login.createAccount}
               </button>
-            </p>
+              </p>
+              <Link href="/privacy" className="block text-xs font-bold text-slate-300 uppercase tracking-widest hover:text-violet-500 transition-colors">
+                Privacy Policy
+              </Link>
+            </div>
 
           
           </motion.div>
@@ -418,14 +447,6 @@ function LoginContent() {
             </div>
 
             <div className="space-y-4">
-              <GoogleButton onClick={handleGoogleLogin} disabled={loading} />
-
-              <div className="flex items-center gap-4 py-1">
-                <div className="flex-1 h-[1px] bg-slate-100" />
-                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{t.auth.or}</span>
-                <div className="flex-1 h-[1px] bg-slate-100" />
-              </div>
-
               <form onSubmit={(e) => { e.preventDefault(); handleSignup() }} className="space-y-4">
                 <div className="space-y-4 max-h-[400px] overflow-y-auto px-1 pb-2 scrollbar-hide">
                   <InputField icon={User} type="text" label={t.register.fullName} value={name} onChange={setName} placeholder="e.g. John Doe" />
@@ -452,15 +473,35 @@ function LoginContent() {
 
                 {error && <p className="text-red-500 text-xs text-center font-medium">{error}</p>}
 
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
+                <button
                   type="submit"
-                  disabled={loading}
+                  disabled={emailLoading || googleLoading || guestLoading}
                   className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-violet-500 to-rose-400 text-white font-bold shadow-lg transition-all"
                 >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t.register.createAccountBtn}</span><ChevronRight className="w-5 h-5" /></>}
-                </motion.button>
+                    {emailLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>{t.register.createAccountBtn}</span><ChevronRight className="w-5 h-5" /></>}
+                </button>
               </form>
+
+              <div className="flex items-center gap-4 py-1">
+                <div className="flex-1 h-[1px] bg-slate-100" />
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{t.auth.or}</span>
+                <div className="flex-1 h-[1px] bg-slate-100" />
+              </div>
+
+              <GoogleButton onClick={handleGoogleLogin} disabled={emailLoading || googleLoading || guestLoading} loading={googleLoading} />
+
+              <button
+                type="button"
+                onClick={handleGuestBypassEntrance}
+                disabled={emailLoading || googleLoading || guestLoading}
+                className="w-full py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-sm hover:bg-slate-100 disabled:opacity-60 transition-all"
+              >
+                Continue as Guest
+              </button>
+
+              <Link href="/privacy" className="block text-center text-xs font-bold text-slate-300 uppercase tracking-widest hover:text-violet-500 transition-colors">
+                Privacy Policy
+              </Link>
             </div>
           </motion.div>
         )}
@@ -484,12 +525,21 @@ function LoginContent() {
 
             <ProfileForm 
               submitLabel={t.languageSelection.finish}
-              onSaved={() => {
+              onSaved={(data) => {
                 const currentUser = auth?.currentUser
                 if (currentUser) {
                   setProfileCompletedForUid(currentUser.uid)
                   setUser(currentUser)
                   setHasProfile(true)
+                  setProfile({
+                    uid: currentUser.uid,
+                    name: data.name,
+                    age: data.age,
+                    gender: data.gender,
+                    email: currentUser.email || "",
+                    language: "en",
+                    onboarding_completed: true
+                  })
                   setAuthLoaded(true)
                   startTransition(() => {
                     router.replace("/home")

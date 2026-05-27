@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera"
-import { FileText, Eye, ClipboardCheck, ChevronRight, Activity, Sparkles, Camera as CameraIcon, X, Lock } from "lucide-react"
+import { FileText, Eye, ChevronRight, Activity, Sparkles, Camera as CameraIcon, Lock } from "lucide-react"
 import { useLocale } from "../i18n/LocaleContext"
 import UploadPanel from "../components/UploadPanel"
 import ResultPanel, { DiagnosisResult } from "../components/ResultPanel"
@@ -31,7 +31,6 @@ export default function DiagnosePage() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
   const [showHeatmap, setShowHeatmap] = useState(false)
   const [showReport, setShowReport] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [showActivity, setShowActivity] = useState(false)
   const [activityLoading, setActivityLoading] = useState(false)
   const [activityError, setActivityError] = useState("")
@@ -52,10 +51,12 @@ export default function DiagnosePage() {
   }, [])
 
   useEffect(() => {
-    setShowGuestPrompt(authStatus === "guest")
+    if (authStatus !== "guest") {
+      setShowGuestPrompt(false)
+    }
   }, [authStatus])
 
-  const requireLoginForScan = () => {
+  const requireLoginForHistory = () => {
     if (authStatus === "guest") {
       setShowGuestPrompt(true)
       return true
@@ -64,7 +65,7 @@ export default function DiagnosePage() {
     return false
   }
 
-  const loadActivityHistory = async () => {
+  const loadActivityHistory = useCallback(async () => {
     if (!db || !currentUser) {
       setActivityItems([])
       return
@@ -110,13 +111,13 @@ export default function DiagnosePage() {
     } finally {
       setActivityLoading(false)
     }
-  }
+  }, [currentUser, t.diagnose.activity.error])
 
   useEffect(() => {
     if (showActivity) {
       void loadActivityHistory()
     }
-  }, [showActivity, currentUser])
+  }, [showActivity, loadActivityHistory])
 
   const handleReset = () => {
     setAnalysisResult(null)
@@ -126,8 +127,6 @@ export default function DiagnosePage() {
   }
 
   const takePhoto = async () => {
-    if (requireLoginForScan()) return
-
     try {
       const permissions = await Camera.checkPermissions();
       
@@ -198,7 +197,7 @@ export default function DiagnosePage() {
             </motion.button>
             <button
               onClick={() => {
-                if (requireLoginForScan()) return
+                if (requireLoginForHistory()) return
                 setShowActivity((value) => !value)
               }}
               className={`flex-1 md:flex-none px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl border font-black text-[10px] md:text-xs uppercase tracking-widest transition-all ${

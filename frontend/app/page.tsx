@@ -36,7 +36,8 @@ export default function EntryPage() {
   // Step 1 – bootstrap persisted preferences
   useEffect(() => {
     bootstrap().finally(() => {
-      setShowSplash(false)
+      const timer = setTimeout(() => setShowSplash(false), 2000)
+      return () => clearTimeout(timer)
     })
   }, [bootstrap])
 
@@ -71,7 +72,7 @@ export default function EntryPage() {
 
   // Splash UI
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white z-[9999]">
+    <div className="fixed inset-0 flex flex-col items-center justify-center splash-bg z-[9999]">
       <div className="flex flex-col items-center gap-8">
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
@@ -84,7 +85,7 @@ export default function EntryPage() {
             alt="MediSeen"
             width={80}
             height={80}
-            className="object-contain"
+            className="object-contain rounded-full"
             priority
           />
         </motion.div>
@@ -95,10 +96,10 @@ export default function EntryPage() {
           transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
           className="text-center space-y-1.5"
         >
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-4xl font-black text-black tracking-tight">
             MediSeen
           </h1>
-          <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.25em] pl-1">
+          <p className="text-gray-300 font-bold text-xs uppercase tracking-[0.25em] pl-1">
             AI Clinical Studio
           </p>
         </motion.div>

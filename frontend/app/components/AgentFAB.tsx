@@ -6,9 +6,11 @@ import { useState, useRef, useEffect } from "react"
 import { useLocale } from "../i18n/LocaleContext"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
+import { useAppStore } from "../store/useAppStore"
 
 export default function AgentFAB() {
   const { t } = useLocale()
+  const { authStatus, profile } = useAppStore()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState([
     { role: 'assistant', text: t.agent.greeting }
@@ -21,9 +23,108 @@ export default function AgentFAB() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  // Render message text as simple HTML to preserve newlines and basic lists.
+  const escapeHtml = (unsafe: string) => {
+    return unsafe
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+  }
+
+  const formatMessageToHtml = (text: string) => {
+    if (!text) return ''
+    // Escape HTML first
+    const escaped = escapeHtml(text)
+    const lines = escaped.split(/\r?\n/)
+
+    // Group consecutive bullet lines into <ul>
+    const parts: string[] = []
+    let inList = false
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('- ')) {
+        if (!inList) {
+          parts.push('<ul>')
+          inList = true
+        }
+        parts.push(`<li>${trimmed.slice(2)}</li>`)
+      } else {
+        if (inList) {
+          parts.push('</ul>')
+          inList = false
+        }
+        if (trimmed === '') {
+          parts.push('<p></p>')
+        } else {
+          parts.push(`<p>${trimmed}</p>`)
+        }
+      }
+    }
+    if (inList) parts.push('</ul>')
+    return parts.join('')
+  }
+
   useEffect(() => {
     scrollToBottom()
   }, [messages, isTyping])
+
+  // Normalize any assistant messages that are JSON objects (or double-encoded JSON)
+  useEffect(() => {
+    setMessages(prev => {
+      let changed = false
+      const next = prev.map((m) => {
+        if (m.role !== 'assistant' || typeof m.text !== 'string') return m
+        const raw = m.text.trim()
+        let parsed: any = null
+        try {
+          // Try direct parse
+          if (raw.startsWith('{') || raw.startsWith('[') || raw.startsWith('"{')) {
+            let candidate = raw
+            if (candidate.startsWith('"') && candidate.endsWith('"')) {
+              try { candidate = JSON.parse(candidate) } catch (_) {}
+            }
+            try {
+              parsed = JSON.parse(candidate)
+            } catch (_) {
+              // fallback: try extracting a JSON substring inside the text
+              const start = raw.indexOf('{')
+              const end = raw.lastIndexOf('}')
+              if (start >= 0 && end > start) {
+                try {
+                  parsed = JSON.parse(raw.slice(start, end + 1))
+                } catch (_) {
+                  parsed = null
+                }
+              }
+            }
+          } else {
+            // also try to find embedded JSON anywhere in the text
+            const start = raw.indexOf('{')
+            const end = raw.lastIndexOf('}')
+            if (start >= 0 && end > start) {
+              try {
+                parsed = JSON.parse(raw.slice(start, end + 1))
+              } catch (_) {
+                parsed = null
+              }
+            }
+          }
+        } catch (_) {
+          // ignore parse errors
+        }
+
+        if (parsed && typeof parsed === 'object') {
+          const candidate = parsed.response || parsed.text || parsed.message || parsed.body
+          if (candidate && typeof candidate === 'string') {
+            changed = true
+            return { ...m, text: candidate }
+          }
+        }
+        return m
+      })
+      return changed ? next : prev
+    })
+  }, [messages.length])
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return
@@ -36,9 +137,16 @@ export default function AgentFAB() {
     setIsTyping(true)
 
     try {
+      let token = ""
+
       const user = auth?.currentUser
-      if (!user) throw new Error("Not authenticated")
-      const token = await user.getIdToken()
+      if (user) {
+        token = await user.getIdToken()
+      } else if (authStatus === "guest" && profile?.uid) {
+        token = profile.uid
+      } else {
+        throw new Error("Not authenticated")
+      }
 
       // Format messages for OpenRouter (role + content)
       const apiMessages = newMessages.map(m => ({
@@ -57,16 +165,81 @@ export default function AgentFAB() {
 
       if (!res.ok) {
         if (res.status === 404) throw new Error("The AI service is still being deployed. Please try again in 2 minutes.")
-        throw new Error(`Chat failed with status ${res.status}`)
+        const errorText = await res.text().catch(() => "")
+        throw new Error(errorText || `Chat failed with status ${res.status}`)
       }
-      const data = await res.json()
 
-      setMessages(prev => [...prev, { role: 'assistant', text: data.response }])
-    } catch (err: any) {
+      if (!res.body) {
+        throw new Error("Chat response stream was empty.")
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let started = false
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        if (!chunk) continue
+
+        started = true
+        setMessages((prev) => {
+          const next = [...prev]
+          const lastIndex = next.length - 1
+          const lastMessage = next[lastIndex]
+
+          if (lastMessage && lastMessage.role === 'assistant') {
+            next[lastIndex] = { ...lastMessage, text: lastMessage.text + chunk }
+          } else {
+            next.push({ role: 'assistant', text: chunk })
+          }
+
+          return next
+        })
+      }
+
+      if (!started) {
+        setMessages(prev => [...prev, { role: 'assistant', text: "I'm sorry, I couldn't generate a reply." }])
+      }
+
+      // Post-process last assistant message: if it's JSON (e.g. {"response": "..."}), unwrap it.
+      setMessages(prev => {
+        const next = [...prev]
+        const lastIndex = next.length - 1
+        if (lastIndex < 0) return prev
+        const last = next[lastIndex]
+        if (!last || last.role !== 'assistant' || typeof last.text !== 'string') return prev
+        let text = last.text.trim()
+        // Try parsing JSON once or twice (for double-encoded strings)
+        try {
+          let parsed = JSON.parse(text)
+          if (typeof parsed === 'string') {
+            // double encoded
+            try {
+              parsed = JSON.parse(parsed)
+            } catch (_) {
+              // keep as string
+            }
+          }
+          if (parsed && typeof parsed === 'object') {
+            const candidate = parsed.response || parsed.text || parsed.message || parsed.body
+            if (candidate && typeof candidate === 'string') {
+              next[lastIndex] = { ...last, text: candidate }
+              return next
+            }
+          }
+        } catch (_) {
+          // not JSON, nothing to do
+        }
+        return prev
+      })
+    } catch (err: unknown) {
       console.error("Chat error caught:", err)
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        text: err.message || "I'm sorry, I'm having trouble connecting right now. Please try again later." 
+        text: err instanceof Error ? err.message : "I'm sorry, I'm having trouble connecting right now. Please try again later." 
       }])
     } finally {
       setIsTyping(false)
@@ -120,7 +293,11 @@ export default function AgentFAB() {
                       : 'bg-slate-50 text-slate-600 rounded-tl-none border border-slate-100'
                     }
                   `}>
-                    {m.text}
+                    {m.role === 'assistant' ? (
+                      <div dangerouslySetInnerHTML={{ __html: formatMessageToHtml(m.text) }} />
+                    ) : (
+                      <>{m.text}</>
+                    )}
                   </div>
                 </motion.div>
               ))}

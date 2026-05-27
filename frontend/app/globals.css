@@ -142,6 +142,8 @@ body::before {
   gap: 1.5rem;
 }
 
+.splash-bg { background: linear-gradient(135deg, #ffe4e6, #fff1f2); }
+
 .text-balance {
   text-wrap: balance;
 }

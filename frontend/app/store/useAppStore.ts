@@ -15,7 +15,6 @@ const PREF = {
 
 // ─── Types ───────────────────────────────────────────────────────
 export type NotificationPermissionState = "not_asked" | "granted" | "denied" | "skipped"
-export type HealthSyncState = "unavailable" | "not_connected" | "connected" | "error"
 export type AppLanguage = "en" | "hi" | "es" | "fr" | "ar" | "te" | "de" | "ko" | "ja" | "zh"
 export type AuthStatus = "initializing" | "unauthenticated" | "guest" | "authenticated"
 
@@ -61,16 +60,6 @@ interface AppState {
   // ── Language ─────────────────────────────────────────────────
   language: AppLanguage
 
-  // ── Health ───────────────────────────────────────────────────
-  healthSyncState: HealthSyncState
-  healthData: {
-    steps: number
-    caloriesBurned: number
-    sleepHours: number
-    heartRate: number
-    activityTime: number
-  } | null
-
   // ── Actions ──────────────────────────────────────────────────
   setUser: (user: User | null) => void
   setAuthStatus: (status: AuthStatus) => void
@@ -91,9 +80,6 @@ interface AppState {
 
   setLanguage: (lang: AppLanguage) => Promise<void>
   loadLanguage: () => Promise<void>
-
-  setHealthSyncState: (state: HealthSyncState) => void
-  setHealthData: (data: AppState["healthData"]) => void
 
   bootstrap: () => Promise<void>
 }
@@ -124,9 +110,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   notificationAsked: false,
 
   language: "en",
-
-  healthSyncState: "not_connected",
-  healthData: null,
 
   // ── Auth ─────────────────────────────────────────────────────
   setUser: (user) => set({ user, authStatus: user ? "authenticated" : "unauthenticated" }),
@@ -207,10 +190,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { value } = await Preferences.get({ key: PREF.LANGUAGE })
     set({ language: value && isSupportedLanguage(value) ? value : "en" })
   },
-
-  // ── Health ───────────────────────────────────────────────────
-  setHealthSyncState: (healthSyncState) => set({ healthSyncState }),
-  setHealthData: (healthData) => set({ healthData }),
 
   // ── Bootstrap ────────────────────────────────────────────────
   bootstrap: async () => {

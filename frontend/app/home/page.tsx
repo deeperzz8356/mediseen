@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 
@@ -9,96 +9,21 @@ import {
   MessageCircle,
   Sparkles,
   ChevronRight,
-  Moon,
-  Flame,
-  Activity
 } from "lucide-react"
 
 import { MedicalAssistanceIllustration } from "../components/Illustrations"
 import { useLocale } from "../i18n/LocaleContext"
 
-import { HealthService } from "../services/HealthService"
-import { auth } from "../../lib/firebase"
 import { useAppStore } from "../store/useAppStore"
 
-type HealthData = {
-  steps: number
-  caloriesBurned: number
-  sleepHours: number
-  activityTime?: number
-}
-
 export default function Home() {
-  const [username, setUsername] = useState("")
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [syncMessage, setSyncMessage] = useState("")
   const { t } = useLocale()
-  const { authStatus, user, profile, healthData, healthSyncState } = useAppStore()
+  const { authStatus, user, profile } = useAppStore()
 
-  useEffect(() => {
-    if (authStatus === "authenticated" && user) {
-      // Prefer profile name set from the form; fall back to Firebase displayName only
-      setUsername(profile?.name || user.displayName || "there")
-      return
-    }
-
-    if (authStatus === "guest") {
-      setUsername(profile?.name || "Guest")
-      return
-    }
-
-    if (authStatus === "unauthenticated") {
-      setUsername(profile?.name || "Guest")
-    }
-  }, [authStatus, profile, user])
-
-  // Auto-fetch once when Health Connect is already available and we do not yet have data.
-  useEffect(() => {
-    if (healthSyncState === "connected" && !healthData) {
-      HealthService.fetchData().catch((error) => {
-        console.error("Health auto-fetch error:", error)
-      })
-    }
-  }, [healthData, healthSyncState])
-
-  const handleSync = async () => {
-    setIsSyncing(true)
-    setSyncMessage("")
-    try {
-      const granted = healthSyncState === "connected"
-        ? true
-        : await HealthService.requestPermissions()
-
-      if (granted) {
-        const data = await HealthService.fetchData()
-        if (data) {
-          const sourceLabel = data.source === "google_fit" ? "Google Fit" : "Health Connect"
-          setSyncMessage(`Synced via ${sourceLabel}: ${data.steps.toLocaleString()} steps and ${data.caloriesBurned.toLocaleString()} calories.`)
-        } else {
-          setSyncMessage("Health Connect is ready, but no recent device data was found yet.")
-        }
-
-        const token = await auth?.currentUser?.getIdToken()
-        if (token && data) {
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/health/sync`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(data),
-          }).catch(console.error)
-        }
-      } else {
-        setSyncMessage("Health permission is required to fetch steps and calories.")
-      }
-    } catch (err) {
-      console.error("Sync error:", err)
-      setSyncMessage("Sync failed. Please try again.")
-    } finally {
-      setIsSyncing(false)
-    }
-  }
+  const username = useMemo(() => {
+    if (authStatus !== "authenticated" || !user) return ""
+    return profile?.name?.trim() || user.displayName?.trim() || ""
+  }, [authStatus, profile?.name, user])
 
 
   const quickActions = [
@@ -115,37 +40,6 @@ export default function Home() {
       icon: <MessageCircle />,
       color: "bg-pastel-violet",
       link: "/library"
-    },
-  ]
-
-  const metrics = [
-    { 
-      icon: <Moon className="text-indigo-400" />, 
-      label: "Sleep Analysis", 
-      value: healthData ? `${healthData.sleepHours.toFixed(1)} hrs` : "--", 
-      desc: healthData ? "Last Night" : "Connect to track", 
-      bg: "bg-indigo-50/50" 
-    },
-    { 
-      icon: <Flame className="text-orange-500" />, 
-      label: "Calories Burned", 
-      value: healthData ? `${healthData.caloriesBurned.toLocaleString()} kcal` : "--", 
-      desc: healthData ? "Active Today" : "Connect to track", 
-      bg: "bg-orange-50/50" 
-    },
-    { 
-      icon: <Plus className="text-emerald-500" />, 
-      label: t.home.metrics.dailySteps, 
-      value: healthData ? healthData.steps.toLocaleString() : "--", 
-      desc: healthData ? "Live" : t.home.metrics.dailyStepsDesc, 
-      bg: "bg-emerald-50/50" 
-    },
-    { 
-      icon: <Activity className="text-violet-500" />, 
-      label: "Active Minutes", 
-      value: healthData ? `${healthData.activityTime} Min` : "--", 
-      desc: healthData ? "Total Today" : "Track activity", 
-      bg: "bg-violet-50/50" 
     },
   ]
 
@@ -173,10 +67,15 @@ export default function Home() {
             transition={{ delay: 0.2 }}
             className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-[1.05] tracking-tight text-balance"
           >
-            {t.home.greeting}<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-pastel-pink to-pastel-violet">
-              {username || "there"}
-            </span>
+            {t.home.greeting}
+            {username ? (
+              <>
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-pastel-pink to-pastel-violet">
+                  {username}
+                </span>
+              </>
+            ) : null}
           </motion.h1>
 
           <motion.p
@@ -244,55 +143,6 @@ export default function Home() {
                 </div>
               </motion.div>
             </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* LIVE METRICS */}
-      <section className="space-y-5 md:space-y-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between px-1 md:px-3 gap-4">
-          <div className="space-y-1">
-            <h2 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">{t.home.liveMetrics}</h2>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">{t.home.connectedVia}</p>
-          </div>
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 font-bold text-xs text-slate-500 uppercase tracking-widest flex items-center gap-2 self-start md:self-auto disabled:opacity-50"
-          >
-            <Activity className={`w-4 h-4 text-pastel-pink ${isSyncing ? 'animate-pulse' : ''}`} /> 
-            {isSyncing ? "Syncing..." : t.home.syncDevice}
-          </motion.button>
-        </div>
-
-        {syncMessage ? (
-          <p className="px-1 md:px-3 text-sm font-medium text-slate-500">
-            {syncMessage}
-          </p>
-        ) : null}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-          {metrics.map((item, i) => (
-            <motion.div
-              key={item.label}
-              whileInView={{ opacity: 1, y: 0 }}
-              initial={{ opacity: 0, y: 20 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className={`p-4 md:p-6 rounded-2xl border border-slate-100/80 flex flex-col gap-4 ${item.bg} hover:shadow-xl transition-all duration-300 group shadow-md shadow-black/5`}
-            >
-              <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl bg-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
-                {item.icon}
-              </div>
-              <div className="space-y-1">
-                <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">{item.label}</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-lg md:text-2xl font-black text-slate-800">{item.value}</span>
-                  <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-tight">{item.desc}</span>
-                </div>
-              </div>
-            </motion.div>
           ))}
         </div>
       </section>

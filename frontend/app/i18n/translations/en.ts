@@ -62,19 +62,6 @@ const en = {
       learnExplore: "Learn & Explore",
       learnExploreDesc: "Browse our medical education library.",
     },
-    liveMetrics: "Live Metrics",
-    connectedVia: "Connected via Bluetooth/Sync",
-    syncDevice: "Sync Device",
-    metrics: {
-      heartRate: "Heart Rate",
-      heartRateDesc: "Stable",
-      oxygenLevel: "Oxygen Level",
-      oxygenLevelDesc: "Healthy",
-      dailySteps: "Daily Steps",
-      dailyStepsDesc: "Goal: 10k",
-      activityLogs: "Activity Logs",
-      activityLogsDesc: "Exercise",
-    },
   },
   // Login page
   login: {

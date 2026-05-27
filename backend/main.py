@@ -3,8 +3,8 @@ import uuid
 import traceback
 from io import BytesIO
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Header
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Header, BackgroundTasks
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles  # <--- Added for URL access
 from dotenv import load_dotenv
 from pathlib import Path
@@ -229,16 +229,18 @@ async def chat_with_ai(
     Handles medical chat queries using OpenRouter.
     """
     try:
-        from backend.services.chat_svc import get_chat_response
+        from backend.services.chat_svc import stream_chat_response
     except ModuleNotFoundError:
-        from services.chat_svc import get_chat_response
+        from services.chat_svc import stream_chat_response
 
     messages = request.get("messages", [])
     if not messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
-    response_text = await get_chat_response(messages)
-    return {"response": response_text}
+    return StreamingResponse(
+        stream_chat_response(messages),
+        media_type="text/plain; charset=utf-8",
+    )
 
 
 @app.post("/auth/register")
@@ -323,6 +325,7 @@ async def diagnose(
     symptoms: str = Form(...),
     locale: str = Form(default="en"),
     client_platform: str = Header(default="web", alias="X-Client-Platform"),
+    background_tasks: BackgroundTasks = None,
     _decoded_token: dict = Depends(verify_bearer_token),
 ):
     try:
@@ -390,13 +393,27 @@ async def diagnose(
         cache_key = f"{uid}_{image_hash}"
         cached = get_cached_diagnosis(cache_key)
         if cached:
-            increment_cache_hit(cache_key)
-            # Still save the record for data collection
-            save_diagnosis_record(uid, session_id, symptoms, cached, cached.get("image_url", ""), platform=client_platform)
+            if background_tasks is not None:
+                background_tasks.add_task(increment_cache_hit, cache_key)
+                background_tasks.add_task(
+                    save_diagnosis_record,
+                    uid,
+                    session_id,
+                    symptoms,
+                    cached,
+                    cached.get("image_url", ""),
+                    client_platform,
+                )
+            else:
+                increment_cache_hit(cache_key)
+                save_diagnosis_record(uid, session_id, symptoms, cached, cached.get("image_url", ""), platform=client_platform)
             return {**cached, "session_id": session_id, "cached": True}
 
         # ── 4. Save image locally ─────────────────────────────────────────
         extension = ALLOWED_IMAGE_EXTENSIONS[detected_format]
+
+        image_filename = f"{session_id}_input{extension}"
+        image_path = os.path.join(UPLOAD_DIR, image_filename)
 
         image_filename = f"{session_id}_input{extension}"
         image_path = os.path.join(UPLOAD_DIR, image_filename)
@@ -453,12 +470,18 @@ async def diagnose(
 
         # ── 9. Save to cache + data collection ───────────────────────────
         if response["disease_identification"] != "Analysis Error":
-            save_diagnosis_cache(cache_key, response)
+            if background_tasks is not None:
+                background_tasks.add_task(save_diagnosis_cache, cache_key, response)
+            else:
+                save_diagnosis_cache(cache_key, response)
             print(f"OK: Saved successful diagnosis to cache for {session_id}")
         else:
             print(f"WARNING: Skipping cache save for failed analysis in session {session_id}")
             
-        save_diagnosis_record(uid, session_id, symptoms, response, image_url, platform=client_platform)
+        if background_tasks is not None:
+            background_tasks.add_task(save_diagnosis_record, uid, session_id, symptoms, response, image_url, client_platform)
+        else:
+            save_diagnosis_record(uid, session_id, symptoms, response, image_url, platform=client_platform)
 
         return response
 

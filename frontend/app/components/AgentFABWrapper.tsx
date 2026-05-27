@@ -5,7 +5,7 @@
  * 
  * Follows same visibility rules as Navbar:
  * - Hidden during: splash (/), onboarding/*, login, /login, /register
- * - Hidden if user is NOT authenticated
+ * - Visible for authenticated users and guest sessions
  */
 
 import { usePathname } from "next/navigation"
@@ -27,7 +27,7 @@ function isPreAuthRoute(pathname: string): boolean {
 
 export default function AgentFABWrapper() {
   const pathname = usePathname()
-  const { user, authLoaded } = useAppStore()
+  const { authStatus, authLoaded } = useAppStore()
 
   // 1. Hide on pre-auth / onboarding routes
   if (isPreAuthRoute(pathname)) return null
@@ -35,8 +35,8 @@ export default function AgentFABWrapper() {
   // 2. Hide if auth not yet loaded
   if (!authLoaded) return null
 
-  // 3. Hide if not authenticated
-  if (!user) return null
+  // 3. Hide until auth state is known; guests can still use the assistant
+  if (authStatus === "initializing") return null
 
   return <AgentFAB />
 }
