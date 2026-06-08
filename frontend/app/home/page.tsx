@@ -9,6 +9,10 @@ import {
   MessageCircle,
   Sparkles,
   ChevronRight,
+  Activity,
+  Heart,
+  BookOpen,
+  Settings,
 } from "lucide-react"
 
 import { MedicalAssistanceIllustration } from "../components/Illustrations"
@@ -40,6 +44,44 @@ export default function Home() {
       icon: <MessageCircle />,
       color: "bg-pastel-violet",
       link: "/library"
+    },
+  ]
+
+  const allTools = [
+    {
+      title: t.home.quickActions.startDiagnosis,
+      desc: t.home.quickActions.startDiagnosisDesc,
+      icon: <Activity />,
+      color: "bg-pastel-pink",
+      link: "/diagnose",
+    },
+    {
+      title: t.home.tools.dietSupport.title,
+      desc: t.home.tools.dietSupport.desc,
+      icon: <Heart />,
+      color: "bg-pastel-violet",
+      link: "/diet",
+    },
+    {
+      title: t.home.tools.chatAssistant.title,
+      desc: t.home.tools.chatAssistant.desc,
+      icon: <MessageCircle />,
+      color: "bg-sky-500",
+      link: "/communication",
+    },
+    {
+      title: t.home.quickActions.learnExplore,
+      desc: t.home.quickActions.learnExploreDesc,
+      icon: <BookOpen />,
+      color: "bg-emerald-500",
+      link: "/library",
+    },
+    {
+      title: t.home.tools.accountSettings.title,
+      desc: t.home.tools.accountSettings.desc,
+      icon: <Settings />,
+      color: "bg-slate-700",
+      link: "/profile",
     },
   ]
 
@@ -115,13 +157,16 @@ export default function Home() {
             <h2 className="text-2xl md:text-3xl font-black text-slate-800">{t.home.whatDoYouNeed}</h2>
             <p className="text-slate-500 text-sm md:text-base font-medium">{t.home.chooseTool}</p>
           </div>
-          <Link
-            href="/diagnose"
-            className="text-violet-600 text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all"
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById('all-tools')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="text-violet-600 text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all cursor-pointer"
           >
             {t.home.viewAllTools}
             <ChevronRight className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -133,6 +178,37 @@ export default function Home() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
                 className="flo-card p-5 md:p-8 h-full flex flex-col justify-between cursor-pointer"
+              >
+                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${item.color} flex items-center justify-center text-white shadow-inner mb-4 md:mb-6`}>
+                  <div className="scale-110">{item.icon}</div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl md:text-2xl font-black text-slate-800">{item.title}</h3>
+                  <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section id="all-tools" className="space-y-5 md:space-y-8">
+        <div className="flex items-end justify-between px-1 md:px-3">
+          <div className="space-y-1">
+            <h2 className="text-2xl md:text-3xl font-black text-slate-800">{t.home.toolsTitle}</h2>
+            <p className="text-slate-500 text-sm md:text-base font-medium">{t.home.toolsSubtitle}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+          {allTools.map((item, i) => (
+            <Link key={item.title} href={item.link}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                className="flo-card p-5 md:p-7 h-full flex flex-col justify-between cursor-pointer"
               >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${item.color} flex items-center justify-center text-white shadow-inner mb-4 md:mb-6`}>
                   <div className="scale-110">{item.icon}</div>

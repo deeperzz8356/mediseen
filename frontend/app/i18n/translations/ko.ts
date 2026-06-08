@@ -1,3 +1,5 @@
+import en from "./en"
+
 const ko = {
 	splash: {
 		tagline: "클리니컬 스튜디오",
@@ -32,8 +34,34 @@ const ko = {
 		checkup: "스캔",
 		diet: "식이",
 		library: "라이브러리",
+		profile: "프로필",
 		reports: "리포트",
 		notSignedIn: "로그인되지 않음",
+	},
+	profile: {
+		...en.profile,
+		pageTitle: "프로필",
+		pageSubtitle: "이름, 언어 및 계정 설정을 업데이트하세요.",
+		profileInfoTitle: "프로필 정보",
+		profileInfoSubtitle: "이름, 나이, 성별을 업데이트하세요.",
+		saveProfile: "프로필 저장",
+		languageTitle: "언어",
+		legalSupportTitle: "법률 및 지원",
+		termsLabel: "이용 약관",
+		termsDesc: "서비스 약관을 읽어보세요",
+		privacyLabel: "개인정보 처리방침",
+		privacyDesc: "데이터를 어떻게 처리하는지",
+		accountTitle: "계정",
+		guestAccountDesc: "계정 설정을 관리하려면 로그인하세요.",
+		signedInAccountDesc: "이 기기에서 로그아웃하거나 계정을 영구 삭제하세요.",
+		loginSignup: "로그인 / 회원가입",
+		logout: "로그아웃",
+		deleteAccount: "계정 삭제",
+		loggingOut: "로그아웃 중…",
+		deleting: "삭제 중…",
+		signInPrompt: "계정 설정을 관리하려면 로그인하세요.",
+		uidLabel: "UID",
+		updateHint: "이름, 나이, 성별을 업데이트하세요.",
 	},
 	agent: {
 		title: "MediSeen 에이전트",
@@ -49,6 +77,22 @@ const ko = {
 		whatDoYouNeed: "무엇이 필요하신가요?",
 		chooseTool: "시작할 도구를 선택하세요",
 		viewAllTools: "모든 도구 보기",
+		toolsTitle: "모든 도구",
+		toolsSubtitle: "이 프로젝트가 할 수 있는 모든 것을 한곳에 모았습니다.",
+		tools: {
+			dietSupport: {
+				title: "식이 지원",
+				desc: "식단 안내와 웰니스 계획을 살펴보세요.",
+			},
+			chatAssistant: {
+				title: "채팅 도우미",
+				desc: "프로젝트 도우미와 대화하고 빠른 도움을 받아보세요.",
+			},
+			accountSettings: {
+				title: "계정 설정",
+				desc: "프로필, 언어, 앱 환경설정을 업데이트하세요.",
+			},
+		},
 		quickActions: {
 			startDiagnosis: "진단 시작",
 			startDiagnosisDesc: "의료 스캔에 대한 즉각적인 AI 분석.",

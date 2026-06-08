@@ -77,6 +77,7 @@ const te = {
     checkup: "స్కాన్",
     diet: "ఆహారం",
     library: "లైబ్రరీ",
+    profile: "ప్రొఫైల్",
     reports: "నివేదికలు",
     notSignedIn: "సైన్ ఇన్ కాలేదు",
   },

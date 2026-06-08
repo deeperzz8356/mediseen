@@ -7,8 +7,12 @@ import { LocaleProvider } from "./i18n/LocaleContext"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "MediSeen – AI Health Companion",
-  description: "Advanced AI-powered diagnostic and health tracking for everyone",
+  title: "MediSeen AI Healthcare Assistant",
+  description: "Explainable AI medical diagnostics and dynamic wellness routing.",
+  icons: {
+    icon: "/logo2.png",
+    apple: "/logo2.png",
+  },
 }
 
 export const viewport: Viewport = {
@@ -20,6 +24,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/logo2.png" />
+        <link rel="apple-touch-icon" href="/logo2.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#ffffff" />
+      </head>
       <body className="antialiased bg-background text-foreground min-h-screen flex flex-col">
         <LocaleProvider>
           {/* Firebase + Zustand bootstrap */}

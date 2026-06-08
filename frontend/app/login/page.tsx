@@ -20,6 +20,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from "firebase/auth"
 import type { FirebaseError } from "firebase/app"
 import { auth, signInWithGoogle } from "@/lib/firebase"
@@ -137,8 +138,12 @@ function LoginContent() {
     viewRef.current = view
   }, [view])
 
-  const verifyAndRedirect = useCallback(async (user: NonNullable<typeof auth>["currentUser"]) => {
+  const verifyAndRedirect = useCallback(async (
+    user: NonNullable<typeof auth>["currentUser"],
+    options?: { navigate?: boolean }
+  ) => {
     if (!user) return
+    const navigate = options?.navigate ?? true
     if (!API_BASE_URL) {
       setError("Server configuration is missing. Please contact support.")
       return
@@ -173,11 +178,11 @@ function LoginContent() {
       const hasCompletedProfile = hasBackendProfile || getProfileCompletedForUid(user.uid)
 
       setHasProfile(hasCompletedProfile)
-      if (hasCompletedProfile) {
+      if (navigate && hasCompletedProfile) {
         startTransition(() => {
           router.replace("/home")
         })
-      } else {
+      } else if (navigate) {
         if (viewRef.current !== "profile") {
           setView("profile")
         }
@@ -213,9 +218,26 @@ function LoginContent() {
     if (!auth) { setError("Authentication not configured."); return }
     setEmailLoading(true)
     authActionInFlightRef.current = true
+    let backgroundSyncStarted = false
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password)
-      await verifyAndRedirect(cred.user)
+      const user = cred.user
+      setUser(user)
+      setHasProfile(true)
+      setAuthLoaded(true)
+      startTransition(() => {
+        router.replace("/home")
+      })
+
+      backgroundSyncStarted = true
+      void (async () => {
+        try {
+          await verifyAndRedirect(user, { navigate: false })
+        } finally {
+          authActionInFlightRef.current = false
+        }
+      })()
+      return
     } catch (err) {
       const fbErr = err as FirebaseError
       const code = fbErr.code
@@ -227,10 +249,11 @@ function LoginContent() {
       else if (code === "auth/wrong-password") setError("Incorrect password.")
       else if (code === "auth/invalid-email") setError("Invalid email address.")
       else if (code === "auth/operation-not-allowed") setError("Email/password sign-in is not enabled. Contact support.")
-      else setError(`Sign-in failed: ${message || "Unknown error"}`)
     } finally {
       setEmailLoading(false)
-      authActionInFlightRef.current = false
+      if (!backgroundSyncStarted) {
+        authActionInFlightRef.current = false
+      }
     }
   }
 
@@ -238,14 +261,34 @@ function LoginContent() {
     setError("")
     setGoogleLoading(true)
     authActionInFlightRef.current = true
+    let backgroundSyncStarted = false
     try {
       const user = await signInWithGoogle()
-      if (user) await verifyAndRedirect(user)
+      if (user) {
+        setUser(user)
+        setHasProfile(true)
+        setAuthLoaded(true)
+        startTransition(() => {
+          router.replace("/home")
+        })
+
+        backgroundSyncStarted = true
+        void (async () => {
+          try {
+            await verifyAndRedirect(user, { navigate: false })
+          } finally {
+            authActionInFlightRef.current = false
+          }
+        })()
+        return
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Google Sign-In failed.")
     } finally {
       setGoogleLoading(false)
-      authActionInFlightRef.current = false
+      if (!backgroundSyncStarted) {
+        authActionInFlightRef.current = false
+      }
     }
   }
 
@@ -263,59 +306,48 @@ function LoginContent() {
       const cred = await createUserWithEmailAndPassword(auth, email, password)
       const user = cred.user
 
-      // Immediately save profile
-      const token = await user.getIdToken()
-      
-      let profileSaved = false;
-      try {
-        const regRes = await fetch(`${API_BASE_URL}/auth/register`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ name: name.trim(), age: parseInt(age), gender }),
-        })
-        profileSaved = regRes.ok;
-      } catch (fetchErr) {
-        console.error("Backend registration failed (possibly CORS or network):", fetchErr);
-        // We do not throw here because Firebase account WAS created successfully.
-        profileSaved = false;
-      }
+      setProfileCompletedForUid(user.uid)
+      setUser(user)
+      setHasProfile(true)
+      setProfile({
+        uid: user.uid,
+        name: name.trim(),
+        email: user.email || email,
+        age: parseInt(age, 10),
+        gender,
+        language: "en",
+        onboarding_completed: true,
+      })
+      setAuthLoaded(true)
 
-      if (!profileSaved) {
+      startTransition(() => {
+        router.replace("/home")
+      })
+
+      void (async () => {
         try {
-          await user.delete()
-          setError("Signup could not be completed due to a temporary server issue. Please try again.")
-          setView("signup")
-        } catch (deleteErr) {
-          console.error("Rollback failed after backend registration error:", deleteErr)
-          await signOut(auth).catch((signOutErr) => {
-            console.error("Sign-out after rollback failure also failed:", signOutErr)
+          const token = await user.getIdToken()
+          const regRes = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ name: name.trim(), age: parseInt(age, 10), gender }),
           })
-          setUser(user)
-          setError("We could not finalize setup automatically. Please sign in again to complete your profile.")
-          setView("profile")
+
+          if (!regRes.ok) {
+            const data = await regRes.json().catch(() => ({}))
+            console.error("Backend registration failed:", data?.detail || regRes.statusText)
+          }
+
+          void updateProfile(user, { displayName: name.trim() }).catch((profileErr) => {
+            console.error("Firebase profile update failed:", profileErr)
+          })
+        } catch (backgroundErr) {
+          console.error("Background signup sync failed:", backgroundErr)
         }
-        return
-      } else {
-        setProfileCompletedForUid(user.uid)
-        setUser(user)
-        setHasProfile(true)
-        setProfile({
-          uid: user.uid,
-          name: name.trim(),
-          email: user.email || email,
-          age: parseInt(age, 10),
-          gender,
-          language: "en",
-          onboarding_completed: true,
-        })
-        setAuthLoaded(true)
-        startTransition(() => {
-          router.replace("/home")
-        })
-      }
+      })()
     } catch (err) {
       const fbErr = err as FirebaseError
       const code = fbErr.code
@@ -367,8 +399,8 @@ function LoginContent() {
             className={cardClass}
           >
             <div className="text-center space-y-2">
-              <div className="w-16 h-16 rounded-2xl bg-white border border-slate-100 shadow-md flex items-center justify-center mx-auto overflow-hidden p-2 mb-2">
-                <Image src="/logo2.png" alt="MediSeen" width={52} height={52} className="object-contain" />
+              <div className="w-16 h-16 flex items-center justify-center mx-auto overflow-hidden mb-2">
+                <Image src="/logo2.png" alt="MediSeen" width={64} height={64} className="object-contain" />
               </div>
               <h1 className="text-2xl font-black text-slate-900">{t.login.welcomeBack}</h1>
               <p className="text-slate-400 font-medium text-sm">{t.login.subtitle}</p>

@@ -1,3 +1,5 @@
+import en from "./en"
+
 const zh = {
 	splash: {
 		tagline: "临床工作室",
@@ -32,8 +34,34 @@ const zh = {
 		checkup: "扫描",
 		diet: "饮食",
 		library: "资料库",
+		profile: "个人资料",
 		reports: "报告",
 		notSignedIn: "未登录",
+	},
+	profile: {
+		...en.profile,
+		pageTitle: "个人资料",
+		pageSubtitle: "更新你的姓名、语言和账户偏好。",
+		profileInfoTitle: "个人资料信息",
+		profileInfoSubtitle: "更新你的姓名、年龄和性别。",
+		saveProfile: "保存资料",
+		languageTitle: "语言",
+		legalSupportTitle: "法律与支持",
+		termsLabel: "条款和条件",
+		termsDesc: "阅读我们的服务协议",
+		privacyLabel: "隐私政策",
+		privacyDesc: "我们如何处理你的数据",
+		accountTitle: "账户",
+		guestAccountDesc: "登录后即可管理你的账户设置。",
+		signedInAccountDesc: "可从此设备退出登录或永久删除账户。",
+		loginSignup: "登录 / 注册",
+		logout: "退出登录",
+		deleteAccount: "删除账户",
+		loggingOut: "正在退出…",
+		deleting: "正在删除…",
+		signInPrompt: "登录后即可管理你的账户设置。",
+		uidLabel: "UID",
+		updateHint: "更新你的姓名、年龄和性别。",
 	},
 	agent: {
 		title: "MediSeen 助手",
@@ -49,6 +77,22 @@ const zh = {
 		whatDoYouNeed: "您需要什么？",
 		chooseTool: "选择一个工具开始",
 		viewAllTools: "查看所有工具",
+		toolsTitle: "全部工具",
+		toolsSubtitle: "把这个项目能做的一切集中在一个地方。",
+		tools: {
+			dietSupport: {
+				title: "饮食支持",
+				desc: "查看饮食建议和健康计划。",
+			},
+			chatAssistant: {
+				title: "聊天助手",
+				desc: "与项目助手交流并快速获取帮助。",
+			},
+			accountSettings: {
+				title: "账户设置",
+				desc: "更新个人资料、语言和应用偏好。",
+			},
+		},
 		quickActions: {
 			startDiagnosis: "开始诊断",
 			startDiagnosisDesc: "对您的医学扫描进行即时 AI 分析。",

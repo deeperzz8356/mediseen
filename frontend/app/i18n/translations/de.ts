@@ -1,3 +1,5 @@
+import en from "./en"
+
 const de = {
 	splash: {
 		tagline: "Klinisches Studio",
@@ -32,8 +34,34 @@ const de = {
 		checkup: "Scan",
 		diet: "Ernährung",
 		library: "Bibliothek",
+		profile: "Profil",
 		reports: "Berichte",
 		notSignedIn: "Nicht angemeldet",
+	},
+	profile: {
+		...en.profile,
+		pageTitle: "Profil",
+		pageSubtitle: "Aktualisieren Sie Name, Sprache und Kontoeinstellungen.",
+		profileInfoTitle: "Profilinformationen",
+		profileInfoSubtitle: "Aktualisieren Sie Name, Alter und Geschlecht.",
+		saveProfile: "Profil speichern",
+		languageTitle: "Sprache",
+		legalSupportTitle: "Rechtliches & Support",
+		termsLabel: "Allgemeine Geschäftsbedingungen",
+		termsDesc: "Lesen Sie unsere Servicevereinbarung",
+		privacyLabel: "Datenschutzrichtlinie",
+		privacyDesc: "Wie wir Ihre Daten behandeln",
+		accountTitle: "Konto",
+		guestAccountDesc: "Melden Sie sich an, um Ihre Kontoeinstellungen zu verwalten.",
+		signedInAccountDesc: "Melden Sie sich auf diesem Gerät ab oder löschen Sie Ihr Konto dauerhaft.",
+		loginSignup: "Anmelden / Registrieren",
+		logout: "Abmelden",
+		deleteAccount: "Konto löschen",
+		loggingOut: "Abmeldung…",
+		deleting: "Wird gelöscht…",
+		signInPrompt: "Melden Sie sich an, um Ihre Kontoeinstellungen zu verwalten.",
+		uidLabel: "UID",
+		updateHint: "Aktualisieren Sie Name, Alter und Geschlecht.",
 	},
 	agent: {
 		title: "MediSeen Agent",
@@ -49,6 +77,22 @@ const de = {
 		whatDoYouNeed: "Was brauchen Sie?",
 		chooseTool: "Wählen Sie ein Tool zum Starten",
 		viewAllTools: "Alle Tools anzeigen",
+		toolsTitle: "Alle Tools",
+		toolsSubtitle: "Alles, was das Projekt kann, an einem Ort.",
+		tools: {
+			dietSupport: {
+				title: "Ernährungshilfe",
+				desc: "Erkunden Sie Ernährungsberatung und Wellness-Pläne.",
+			},
+			chatAssistant: {
+				title: "Chat-Assistent",
+				desc: "Chatten Sie mit dem Projekt-Assistenten und erhalten Sie schnelle Hilfe.",
+			},
+			accountSettings: {
+				title: "Kontoeinstellungen",
+				desc: "Aktualisieren Sie Profil, Sprache und App-Einstellungen.",
+			},
+		},
 		quickActions: {
 			startDiagnosis: "Diagnose starten",
 			startDiagnosisDesc: "Sofortige KI-Analyse Ihrer medizinischen Scans.",

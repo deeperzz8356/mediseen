@@ -58,6 +58,22 @@ const mr = {
         },
         reports: {
           title: "आरोग्य अहवाल आणि ट्रॅकिंग",
+          toolsTitle: "सर्व साधने",
+          toolsSubtitle: "प्रोजेक्ट जे काही करू शकतो, ते सर्व एकाच ठिकाणी.",
+          tools: {
+            dietSupport: {
+              title: "आहार सहाय्य",
+              desc: "आहार मार्गदर्शन आणि वेलनेस योजना पहा.",
+            },
+            chatAssistant: {
+              title: "चॅट सहाय्यक",
+              desc: "प्रोजेक्ट सहायकाशी बोला आणि जलद मदत मिळवा.",
+            },
+            accountSettings: {
+              title: "खाते सेटिंग्ज",
+              desc: "प्रोफाइल, भाषा आणि अॅप प्राधान्ये अपडेट करा.",
+            },
+          },
           subtitle: "तुमचे आरोग्य, दृश्यमान",
           description: "पावले, झोप, कॅलरी आणि हृदयगती ट्रॅक करण्यासाठी Google Health Connect सह सिंक करा. डॉक्टरांसोबत शेअर करण्यासाठी तपशीलवार PDF अहवाल तयार करा.",
           features: ["Health Connect सिंक", "दृश्य चार्ट", "शेअर करण्यायोग्य PDF अहवाल"],
@@ -77,6 +93,7 @@ const mr = {
     checkup: "स्कॅन",
     diet: "आहार",
     library: "लायब्ररी",
+    profile: "प्रोफाइल",
     reports: "अहवाल",
     notSignedIn: "साइन इन केलेले नाही",
   },
@@ -127,9 +144,7 @@ const mr = {
     ...en.communication,
     consultations: "सल्लामसलत",
     activeConsultant: "सक्रिय सल्लागार",
-    placeholder: "AI ला विचारा...",
-    send: "पाठवा",
   },
-} satisfies typeof en
+}
 
 export default mr

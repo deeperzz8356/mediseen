@@ -77,6 +77,7 @@ const bn = {
     checkup: "স্ক্যান",
     diet: "ডায়েট",
     library: "লাইব্রেরি",
+    profile: "প্রোফাইল",
     reports: "রিপোর্ট",
     notSignedIn: "সাইন ইন করা নেই",
   },

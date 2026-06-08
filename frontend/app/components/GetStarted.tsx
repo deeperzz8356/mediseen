@@ -47,8 +47,8 @@ export default function GetStarted({ onStart }: GetStartedProps) {
           </motion.div>
           
           <div className="relative z-10 text-center space-y-6">
-             <div className="w-24 h-24 rounded-[2.5rem] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.08)] flex items-center justify-center mx-auto overflow-hidden p-3 border border-slate-50">
-                <Image src="/logo2.png" alt="logo" width={80} height={80} className="object-contain" />
+             <div className="w-24 h-24 flex items-center justify-center mx-auto overflow-hidden">
+               <Image src="/logo2.png" alt="logo" width={96} height={96} className="object-contain" />
              </div>
              <div className="px-5 py-2 rounded-full bg-white/90 backdrop-blur-md border border-white/50 text-[10px] font-black text-pastel-violet uppercase tracking-[0.3em] inline-block shadow-sm">
                {t.getStarted.badge}

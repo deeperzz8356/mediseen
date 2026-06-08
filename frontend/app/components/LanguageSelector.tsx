@@ -51,6 +51,14 @@ export default function LanguageSelector({
     setSelected(locale)
   }, [locale])
 
+  const handleLanguageTap = (nextLanguage: AppLanguage) => {
+    setSelected(nextLanguage)
+    void setLanguage(nextLanguage)
+    if (canSyncLocale(nextLanguage)) {
+      setLocale(nextLanguage)
+    }
+  }
+
   const handleConfirm = async () => {
     await setLanguage(selected)
     if (canSyncLocale(selected)) {
@@ -100,7 +108,7 @@ export default function LanguageSelector({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              onClick={() => setSelected(lang.code)}
+              onClick={() => handleLanguageTap(lang.code)}
               className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
                 isSelected
                   ? "border-violet-400 bg-violet-50 shadow-md shadow-violet-100"

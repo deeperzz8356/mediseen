@@ -36,14 +36,14 @@ export default function Navbar() {
 	}, [])
 
 	const navItems: NavItem[] = [
-		{ name: t.navbar.home, shortName: "Home", href: "/home", icon: Home },
-		{ name: t.navbar.diet, shortName: "Diet", href: "/diet", icon: Heart },
-		{ name: t.navbar.checkup, shortName: "Scan", href: "/diagnose", icon: Activity },
-		{ name: t.navbar.library, shortName: "Library", href: "/library", icon: BookOpen },
-		{ name: "Profile", shortName: "Profile", href: authStatus === "guest" ? "/login" : "/profile", icon: Settings },
+		{ name: t.navbar.home, shortName: t.navbar.home, href: "/home", icon: Home },
+		{ name: t.navbar.diet, shortName: t.navbar.diet, href: "/diet", icon: Heart },
+		{ name: t.navbar.checkup, shortName: t.navbar.checkup, href: "/diagnose", icon: Activity },
+		{ name: t.navbar.library, shortName: t.navbar.library, href: "/library", icon: BookOpen },
 	]
 
 	const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+	const isProfileActive = isActiveRoute("/profile")
 
 	const getInitials = (currentUser: User) => {
 		// Prefer the profile name set via the form; then Firebase displayName.
@@ -73,13 +73,13 @@ export default function Navbar() {
 			>
 				{/* Branding */}
 				<Link href="/home" className="flex items-center gap-4 active:scale-95 transition-transform">
-					<div className="w-24 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-slate-50 overflow-hidden p-1">
+					<div className="w-12 h-12 flex items-center justify-center overflow-hidden">
 						<Image 
 							src="/logo2.png" 
 							alt="MediSeen Logo" 
-							width={80} 
-							height={32} 
-							className="object-contain" 
+							width={48} 
+							height={48} 
+							className="object-contain"
 						/>
 					</div>
 					<div className="flex flex-col">
@@ -147,29 +147,22 @@ export default function Navbar() {
 						</AnimatePresence>
 					</div>
 
-					{/* Profile Button */}
-					{authStatus === "guest" ? (
-						<button
-							onClick={() => router.push("/login")}
-							className="px-4 h-10 rounded-xl bg-slate-900 text-white border border-slate-900 shadow-sm flex items-center justify-center font-black text-xs uppercase tracking-widest active:scale-90 transition-all"
-						>
-							{t.navbar.notSignedIn}
-						</button>
-					) : (
-						<Link
-							href="/profile"
-							className="w-10 h-10 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center justify-center overflow-hidden active:scale-90 transition-all"
-							aria-label="Profile"
-						>
-							{user ? (
-								<div className="w-full h-full bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-xs">
-									{getInitials(user)}
-								</div>
-							) : (
-								<Image src="/logo2.png" alt="Profile" width={24} height={24} className="rounded-lg" />
-							)}
-						</Link>
-					)}
+					{/* Profile Button (link to profile settings) */}
+					<Link
+						href="/profile"
+						className={`w-10 h-10 rounded-xl border shadow-sm flex items-center justify-center overflow-hidden active:scale-90 transition-all ${
+							isProfileActive ? "border-slate-900 bg-slate-900 text-white" : "bg-white border-slate-100"
+						}`}
+						aria-label="Profile"
+					>
+						{user ? (
+							<div className="w-full h-full bg-gradient-to-br from-blue-100 to-violet-100 text-blue-700 flex items-center justify-center font-black text-xs">
+								{getInitials(user)}
+							</div>
+						) : (
+							<Image src="/logo2.png" alt="Profile" width={24} height={24} className="object-contain" />
+						)}
+					</Link>
 				</div>
 			</div>
 
@@ -195,13 +188,16 @@ export default function Navbar() {
 							</Link>
 						)
 					})}
-				</div>
-				<Link 
-					href="/profile" 
-					className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all"
-				>
-					<Settings className="w-5 h-5" />
-				</Link>
+					</div>
+					<Link
+						href="/profile"
+						className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all ${
+							isProfileActive ? "bg-slate-900 border-slate-900 text-white" : "bg-slate-50 border-slate-100 text-slate-400 hover:text-slate-900"
+						}`}
+						title={t.navbar.profile}
+					>
+						<Settings className="w-5 h-5" />
+					</Link>
 			</nav>
 
 			{/* Mobile Bottom Bar - Navigation */}
@@ -231,6 +227,16 @@ export default function Navbar() {
 								</Link>
 							)
 						})}
+						<Link
+							href="/profile"
+							className={`relative flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 min-h-[64px] transition-all ${
+								isProfileActive ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20" : "text-slate-500 active:bg-slate-50"
+							}`}
+							title={t.navbar.profile}
+						>
+							<Settings className={`w-5 h-5 flex-shrink-0 ${isProfileActive ? "scale-110" : ""}`} />
+							<span className="text-[9px] font-black leading-tight tracking-tight uppercase">{t.navbar.profile}</span>
+						</Link>
 					</div>
 				</div>
 			</nav>

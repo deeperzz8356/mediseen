@@ -14,80 +14,24 @@ import {
   FileText 
 } from "lucide-react"
 
-const sidebarCopy = {
-  en: {
-    overview: "Overview",
-    diagnostics: "Diagnostics",
-    patients: "Patients",
-    research: "Research",
-    diseaseKnowledge: "Disease Knowledge",
-    reports: "Reports",
-    statusTitle: "MediSeen AI System",
-    statusLabel: "All systems operational",
-  },
-  hi: {
-    overview: "अवलोकन",
-    diagnostics: "निदान",
-    patients: "मरीज़",
-    research: "अनुसंधान",
-    diseaseKnowledge: "रोग ज्ञान",
-    reports: "रिपोर्ट",
-    statusTitle: "MediSeen AI सिस्टम",
-    statusLabel: "सभी सिस्टम चालू हैं",
-  },
-  es: {
-    overview: "Resumen",
-    diagnostics: "Diagnóstico",
-    patients: "Pacientes",
-    research: "Investigación",
-    diseaseKnowledge: "Conocimiento de enfermedades",
-    reports: "Informes",
-    statusTitle: "Sistema IA MediSeen",
-    statusLabel: "Todos los sistemas operativos",
-  },
-  fr: {
-    overview: "Vue d'ensemble",
-    diagnostics: "Diagnostic",
-    patients: "Patients",
-    research: "Recherche",
-    diseaseKnowledge: "Connaissances sur les maladies",
-    reports: "Rapports",
-    statusTitle: "Système IA MediSeen",
-    statusLabel: "Tous les systèmes sont opérationnels",
-  },
-  ar: {
-    overview: "نظرة عامة",
-    diagnostics: "التشخيص",
-    patients: "المرضى",
-    research: "البحث",
-    diseaseKnowledge: "معرفة الأمراض",
-    reports: "التقارير",
-    statusTitle: "نظام MediSeen للذكاء الاصطناعي",
-    statusLabel: "جميع الأنظمة تعمل بشكل طبيعي",
-  },
-} as const
-
-const menuItems = [
-  { key: "overview", path: "/", icon: <LayoutDashboard className="w-5 h-5" /> },
-  { key: "diagnostics", path: "/diagnostics", icon: <Activity className="w-5 h-5" /> },
-  { key: "patients", path: "/patients", icon: <Users className="w-5 h-5" /> },
-  { key: "research", path: "/research", icon: <FlaskConical className="w-5 h-5" /> },
-  { key: "diseaseKnowledge", path: "/disease-info", icon: <BookHeart className="w-5 h-5" /> },
-  { key: "reports", path: "/reports", icon: <FileText className="w-5 h-5" /> },
-]
-
 export default function Sidebar() {
   const pathname = usePathname()
-  const { locale } = useLocale()
-  const copy = sidebarCopy[locale as keyof typeof sidebarCopy] ?? sidebarCopy.en
+  const { t } = useLocale()
+
+  const menuItems = [
+    { key: "home", label: t.navbar.home, path: "/home", icon: <LayoutDashboard className="w-5 h-5" /> },
+    { key: "diagnose", label: t.navbar.checkup, path: "/diagnose", icon: <Activity className="w-5 h-5" /> },
+    { key: "diet", label: t.navbar.diet, path: "/diet", icon: <BookHeart className="w-5 h-5" /> },
+    { key: "profile", label: t.navbar.profile, path: "/profile", icon: <Users className="w-5 h-5" /> },
+  ]
 
   return (
     <div className="w-64 h-screen bg-[#1E293B] border-r border-slate-800 flex flex-col justify-between py-8 px-4 sticky top-0 hidden md:flex">
       <div>
         <div className="mb-10 px-4">
           <Link href="/home" className="flex items-center gap-3 active:scale-95 transition-transform">
-            <div className="w-20 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm overflow-hidden p-1">
-              <Image src="/logo2.png" alt="logo" width={64} height={24} className="object-contain" />
+            <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+              <Image src="/logo2.png" alt="logo" width={40} height={40} className="object-contain" />
             </div>
             <div className="flex flex-col">
               <span className="font-black text-lg tracking-tighter text-white leading-none">
@@ -124,7 +68,7 @@ export default function Sidebar() {
                   />
                 )}
                 <div className="relative z-10">{item.icon}</div>
-                <span className="relative z-10">{copy[item.key as keyof typeof copy]}</span>
+                <span className="relative z-10">{item.label}</span>
               </Link>
             )
           })}
@@ -133,10 +77,10 @@ export default function Sidebar() {
 
       <div className="px-4">
         <div className="bg-gradient-to-r from-[#7DD3FC]/10 to-[#6EE7B7]/10 border border-[#6EE7B7]/20 rounded-2xl p-4">
-          <p className="text-xs text-slate-300 mb-2">{copy.statusTitle}</p>
+          <p className="text-xs text-slate-300 mb-2">MediSeen AI System</p>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-[#6EE7B7] animate-pulse"></div>
-            <span className="text-xs font-semibold text-[#6EE7B7]">{copy.statusLabel}</span>
+            <span className="text-xs font-semibold text-[#6EE7B7]">All systems operational</span>
           </div>
         </div>
       </div>

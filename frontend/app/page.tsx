@@ -78,14 +78,14 @@ export default function EntryPage() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="w-24 h-24 rounded-[2.25rem] bg-white shadow-2xl shadow-slate-200 flex items-center justify-center overflow-hidden p-4 border border-slate-50"
+          className="w-24 h-24 flex items-center justify-center overflow-hidden"
         >
           <Image
             src="/logo2.png"
             alt="MediSeen"
-            width={80}
-            height={80}
-            className="object-contain rounded-full"
+            width={96}
+            height={96}
+            className="object-contain"
             priority
           />
         </motion.div>

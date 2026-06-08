@@ -37,6 +37,7 @@ export default function DiagnosePage() {
   const [activityItems, setActivityItems] = useState<ScanActivity[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [showGuestPrompt, setShowGuestPrompt] = useState(false)
+  const [guestPromptSource, setGuestPromptSource] = useState<"activity" | null>(null)
   const { t } = useLocale()
   const { authStatus } = useAppStore()
 
@@ -53,11 +54,13 @@ export default function DiagnosePage() {
   useEffect(() => {
     if (authStatus !== "guest") {
       setShowGuestPrompt(false)
+      setGuestPromptSource(null)
     }
   }, [authStatus])
 
   const requireLoginForHistory = () => {
     if (authStatus === "guest") {
+      setGuestPromptSource("activity")
       setShowGuestPrompt(true)
       return true
     }
@@ -359,7 +362,7 @@ export default function DiagnosePage() {
       </main>
 
       <AnimatePresence>
-        {showGuestPrompt && (
+        {showGuestPrompt && guestPromptSource === "activity" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

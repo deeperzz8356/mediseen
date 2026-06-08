@@ -18,9 +18,23 @@ import { onAuthStateChanged } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { useAppStore } from "../store/useAppStore"
 
+const PROFILE_COMPLETED_KEY = "mediseen_profile_completed"
+
+function getProfileCompletedForUid(uid: string) {
+  if (typeof window === "undefined") return false
+
+  try {
+    const scopedFlag = localStorage.getItem(`${PROFILE_COMPLETED_KEY}_${uid}`)
+    const legacyFlag = localStorage.getItem(PROFILE_COMPLETED_KEY)
+    return scopedFlag === "true" || legacyFlag === "true"
+  } catch {
+    return false
+  }
+}
+
 export default function FirebaseProvider() {
   const pathname = usePathname()
-  const { bootstrap, setUser, setAuthLoaded, setAuthStatus, ensureGuestSession } = useAppStore()
+  const { bootstrap, setUser, setAuthLoaded, setAuthStatus, ensureGuestSession, setHasProfile } = useAppStore()
 
   // ── Bootstrap: load persisted Preferences on first mount ──────────
   useEffect(() => {
@@ -43,15 +57,17 @@ export default function FirebaseProvider() {
       if (user) {
         setUser(user)
         setAuthStatus("authenticated")
+        setHasProfile(getProfileCompletedForUid(user.uid))
       } else {
         setUser(null)
         setAuthStatus("unauthenticated")
+        setHasProfile(false)
         await ensureGuestSession().catch(() => null)
       }
       setAuthLoaded(true)
     })
     return () => unsub()
-  }, [ensureGuestSession, setAuthLoaded, setAuthStatus, setUser])
+  }, [ensureGuestSession, setAuthLoaded, setAuthStatus, setHasProfile, setUser])
 
   // ── Firebase SDK init (native only) ──────────────────────────────
   useEffect(() => {

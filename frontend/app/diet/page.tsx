@@ -76,7 +76,6 @@ function getDietTranslations(dietOverride: any) {
 }
 
 export default function DietPage() {
-  const [activeTab, setActiveTab] = useState<"generate" | "history">("generate")
   const { t } = useLocale()
   const { setLocale } = useLocale()
   const diet = getDietTranslations((t as any)?.diet)
@@ -146,47 +145,7 @@ export default function DietPage() {
         </p>
       </header>
 
-      {/* Tab Switcher */}
-      <div className="flex p-1.5 bg-slate-100/80 backdrop-blur-md rounded-2xl w-full md:w-fit border border-slate-200/50">
-        <button
-          onClick={() => setActiveTab("generate")}
-          className={`flex-1 md:w-48 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            activeTab === "generate" ? "bg-white text-slate-900 shadow-md border border-slate-100" : "text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          {diet.tabs.generatePlan}
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={`flex-1 md:w-48 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            activeTab === "history" ? "bg-white text-slate-900 shadow-md border border-slate-100" : "text-slate-400 hover:text-slate-600"
-          }`}
-        >
-          {diet.tabs.progressAndFeedback}
-        </button>
-      </div>
-
-      <AnimatePresence mode="wait">
-        {activeTab === "generate" ? (
-          <motion.div
-            key="generate"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <SmartDietGenerator />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="history"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <ProgressTracker />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <SmartDietGenerator />
     </div>
   )
 }
@@ -423,79 +382,3 @@ function SmartDietGenerator() {
   )
 }
 
-function ProgressTracker() {
-  const { t } = useLocale()
-  const diet = getDietTranslations((t as any)?.diet)
-  const [adherence, setAdherence] = useState(80)
-  const [weight, setWeight] = useState("69.5")
-
-  return (
-    <div className="space-y-8 pb-20">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flo-card p-8 rounded-[2.5rem] bg-white border border-slate-100 space-y-6">
-          <TrendingUp className="w-10 h-10 text-emerald-500" />
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.progress.planAdherence}</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-slate-800">{adherence}%</span>
-              <span className="text-xs font-bold text-emerald-500">+5% this week</span>
-            </div>
-          </div>
-        </div>
-          <div className="flo-card p-8 rounded-[2.5rem] bg-white border border-slate-100 space-y-6">
-          <Scale className="w-10 h-10 text-indigo-500" />
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{diet.progress.latestWeight}</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-slate-800">{weight} <span className="text-lg">kg</span></span>
-              <span className="text-xs font-bold text-indigo-500">-0.5kg change</span>
-            </div>
-          </div>
-        </div>
-          <div className="flo-card p-8 rounded-[2.5rem] bg-indigo-600 text-white space-y-6 shadow-xl shadow-indigo-600/20">
-          <Info className="w-10 h-10 text-indigo-200" />
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">{diet.progress.aiStatus}</p>
-            <h4 className="text-xl font-black">{diet.progress.recalibration}</h4>
-            <p className="text-xs font-medium text-indigo-100/70">{diet.progress.scheduled}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flo-card p-10 rounded-[3rem] bg-white border border-slate-100 space-y-8">
-        <div className="space-y-2">
-              <h3 className="text-2xl font-black text-slate-800">{diet.progress.weeklyFeedback}</h3>
-            <p className="text-slate-500 font-bold">{diet.progress.helpText}</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <label className="text-sm font-black text-slate-700">{diet.progress.howRate}</label>
-              <input type="range" min="0" max="100" value={adherence} onChange={(e) => setAdherence(Number(e.target.value))} className="w-full" />
-              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <span>{diet.progress.scaleLow}</span>
-                <span>{diet.progress.scaleHigh}</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <label className="text-sm font-black text-slate-700">{diet.progress.anyNewSymptoms}</label>
-              <textarea placeholder={diet.progress.symptomsPlaceholder} className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-5 text-sm font-bold outline-none focus:bg-white focus:border-indigo-400 transition-all" rows={4} />
-            </div>
-          </div>
-          
-          <div className="p-8 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col justify-center items-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-              <RefreshCcw className="w-8 h-8" />
-            </div>
-            <h4 className="text-lg font-black text-slate-800">{diet.progress.submitReview}</h4>
-            <p className="text-xs font-bold text-slate-500 max-w-xs leading-relaxed">{diet.progress.submitDesc}</p>
-            <button className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl">
-              {diet.progress.submitBtn}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}

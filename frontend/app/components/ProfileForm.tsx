@@ -54,6 +54,11 @@ export default function ProfileForm({
   const { authStatus } = useAppStore()
 
   useEffect(() => {
+    let localName = ""
+    let localAge = ""
+    let localGender: GenderOption | null = null
+    let localHasDetails = false
+
     try {
       const localData = localStorage.getItem(PROFILE_STORAGE_KEY)
       const statusFlag = localStorage.getItem(PROFILE_COMPLETED_KEY)
@@ -68,25 +73,19 @@ export default function ProfileForm({
           age?: string
           gender?: GenderOption
         }
-
-        setName(parsed.name ?? initialName)
-        setAge(parsed.age ?? initialAge?.toString() ?? "")
-        setGender(parsed.gender ?? initialGender)
-        setHasDetails(
-          statusFlag === "true" ||
-          scopedStatusFlag === "true" ||
-          Boolean(parsed.name || parsed.age || parsed.gender),
-        )
-        return
+        localName = parsed.name || ""
+        localAge = parsed.age || ""
+        localGender = parsed.gender || null
+        localHasDetails = statusFlag === "true" || scopedStatusFlag === "true" || Boolean(parsed.name || parsed.age || parsed.gender)
       }
     } catch {
-      // Fall through to the incoming props when local storage is unavailable.
+      // Ignore
     }
 
-    setName(initialName)
-    setAge(initialAge?.toString() ?? "")
-    setGender(initialGender)
-    setHasDetails(false)
+    setName(initialName || localName)
+    setAge(initialAge?.toString() || localAge)
+    setGender(initialGender || localGender || "prefer_not_to_say")
+    setHasDetails(localHasDetails)
   }, [initialAge, initialGender, initialName])
 
   useEffect(() => {
@@ -129,25 +128,6 @@ export default function ProfileForm({
 
     setSaving(true)
     try {
-      if (!isGuestSession && user) {
-        const token = await user.getIdToken()
-        const res = await fetch(`${API_BASE_URL}/auth/register`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ name: name.trim(), age: parseInt(age, 10), gender }),
-        })
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          throw new Error(data.detail || "Failed to save profile.")
-        }
-
-        await updateProfile(user, { displayName: name.trim() })
-      }
-
       setHasDetails(true)
       try {
         const userUid = auth?.currentUser?.uid
@@ -165,6 +145,33 @@ export default function ProfileForm({
 
       setSuccess(true)
       onSaved?.({ name: name.trim(), age: parseInt(age, 10), gender })
+
+      if (!isGuestSession && user) {
+        void (async () => {
+          try {
+            const token = await user.getIdToken()
+            const res = await fetch(`${API_BASE_URL}/auth/register`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ name: name.trim(), age: parseInt(age, 10), gender }),
+            })
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}))
+              console.error("Background profile save failed:", data.detail || "Failed to save profile.")
+            }
+
+            void updateProfile(user, { displayName: name.trim() }).catch((profileErr) => {
+              console.error("Firebase profile update failed:", profileErr)
+            })
+          } catch (backgroundErr) {
+            console.error("Background profile sync failed:", backgroundErr)
+          }
+        })()
+      }
 
       // Auto-clear success after 3s
       setTimeout(() => setSuccess(false), 3000)

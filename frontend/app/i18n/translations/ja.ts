@@ -1,3 +1,5 @@
+import en from "./en"
+
 const ja = {
 	splash: {
 		tagline: "クリニカルスタジオ",
@@ -32,8 +34,34 @@ const ja = {
 		checkup: "スキャン",
 		diet: "栄養",
 		library: "ライブラリ",
+		profile: "プロフィール",
 		reports: "レポート",
 		notSignedIn: "サインインしていません",
+	},
+	profile: {
+		...en.profile,
+		pageTitle: "プロフィール",
+		pageSubtitle: "名前、言語、アカウント設定を更新します。",
+		profileInfoTitle: "プロフィール情報",
+		profileInfoSubtitle: "名前、年齢、性別を更新します。",
+		saveProfile: "プロフィールを保存",
+		languageTitle: "言語",
+		legalSupportTitle: "法的情報とサポート",
+		termsLabel: "利用規約",
+		termsDesc: "サービス契約を読む",
+		privacyLabel: "プライバシーポリシー",
+		privacyDesc: "データの取り扱いについて",
+		accountTitle: "アカウント",
+		guestAccountDesc: "アカウント設定を管理するにはサインインしてください。",
+		signedInAccountDesc: "この端末からログアウトするか、アカウントを完全に削除します。",
+		loginSignup: "ログイン / 新規登録",
+		logout: "ログアウト",
+		deleteAccount: "アカウントを削除",
+		loggingOut: "ログアウト中…",
+		deleting: "削除中…",
+		signInPrompt: "アカウント設定を管理するにはサインインしてください。",
+		uidLabel: "UID",
+		updateHint: "名前、年齢、性別を更新します。",
 	},
 	agent: {
 		title: "MediSeen エージェント",
@@ -49,6 +77,22 @@ const ja = {
 		whatDoYouNeed: "何が必要ですか？",
 		chooseTool: "開始するツールを選択",
 		viewAllTools: "すべてのツールを見る",
+		toolsTitle: "すべてのツール",
+		toolsSubtitle: "このプロジェクトでできることを一か所にまとめました。",
+		tools: {
+			dietSupport: {
+				title: "食事サポート",
+				desc: "食事のガイダンスやウェルネスプランを確認できます。",
+			},
+			chatAssistant: {
+				title: "チャットアシスタント",
+				desc: "プロジェクトのアシスタントと話して、すぐにヘルプを受けられます。",
+			},
+			accountSettings: {
+				title: "アカウント設定",
+				desc: "プロフィール、言語、アプリ設定を更新します。",
+			},
+		},
 		quickActions: {
 			startDiagnosis: "診断を開始",
 			startDiagnosisDesc: "医療スキャンの即時AI解析。",
