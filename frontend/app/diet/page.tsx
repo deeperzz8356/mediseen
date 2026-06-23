@@ -154,7 +154,11 @@ function SmartDietGenerator() {
   const [loading, setLoading] = useState(false)
   const [plan, setPlan] = useState<DietPlan | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [groceryLoading, setGroceryLoading] = useState(false)
+  const [groceryList, setGroceryList] = useState<string[] | null>(null)
+
   const { t } = useLocale()
+  const locale = (t as any).locale || "en"
   const diet = getDietTranslations((t as any)?.diet)
   
   // Profile State
@@ -205,6 +209,32 @@ function SmartDietGenerator() {
       setError(message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchGroceryList = async () => {
+    if (!plan) return
+    setGroceryLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API_BASE_URL}/diet/grocery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meal_plan: plan.meals, locale })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || "Failed to fetch grocery list")
+      setGroceryList(data.items)
+      
+      setTimeout(() => {
+        document.getElementById('grocery-list-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to generate grocery list"
+      console.error(err)
+      setError(message)
+    } finally {
+      setGroceryLoading(false)
     }
   }
 
@@ -311,8 +341,9 @@ function SmartDietGenerator() {
                 <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
                 <Apple className="w-7 h-7 text-emerald-500" /> {diet.meals.dailyMealSchedule}
               </h3>
-              <button className="flex items-center gap-2 text-xs font-black text-indigo-600 uppercase tracking-widest hover:gap-3 transition-all">
-                <ShoppingCart className="w-4 h-4" /> {diet.meals.groceryList} <ChevronRight className="w-4 h-4" />
+              <button onClick={fetchGroceryList} disabled={groceryLoading} className="flex items-center gap-2 text-xs font-black text-indigo-600 uppercase tracking-widest hover:gap-3 transition-all">
+                {groceryLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />}
+                {(diet as any).getGrocery || "Get Grocery List"} <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
@@ -351,6 +382,22 @@ function SmartDietGenerator() {
                 </motion.div>
               ))}
             </div>
+
+            {groceryList && (
+              <motion.div id="grocery-list-section" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-8 rounded-[2rem] bg-indigo-50 border border-indigo-100 space-y-4 shadow-sm mt-8">
+                <h4 className="text-xl font-black text-indigo-800 flex items-center gap-3">
+                  <ShoppingCart className="w-6 h-6" /> Grocery List
+                </h4>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {groceryList.map((item, idx) => (
+                    <li key={idx} className="flex items-center gap-3 font-bold text-indigo-700 bg-white/50 px-4 py-3 rounded-xl">
+                      <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
           </div>
 
           {/* Clinical Guardrails */}

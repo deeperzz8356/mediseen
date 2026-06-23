@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 
@@ -13,6 +13,7 @@ import {
   Heart,
   BookOpen,
   Settings,
+  X,
 } from "lucide-react"
 
 import { MedicalAssistanceIllustration } from "../components/Illustrations"
@@ -28,6 +29,16 @@ export default function Home() {
     if (authStatus !== "authenticated" || !user) return ""
     return profile?.name?.trim() || user.displayName?.trim() || ""
   }, [authStatus, profile?.name, user])
+
+  const [showSetupBanner, setShowSetupBanner] = useState(false)
+  useEffect(() => {
+    if (authStatus === "authenticated") {
+      const isComplete = localStorage.getItem('mediseen_setup_complete') === 'true'
+      if (!isComplete) {
+         setShowSetupBanner(true)
+      }
+    }
+  }, [authStatus])
 
 
   const quickActions = [
@@ -87,6 +98,34 @@ export default function Home() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 pt-20 md:pt-28 pb-28 md:pb-32 space-y-10 md:space-y-16 mobile-safe">
+
+      {showSetupBanner && (
+        <motion.div 
+          initial={{ opacity: 0, y: 50, scale: 0.95 }} 
+          animate={{ opacity: 1, y: 0, scale: 1 }} 
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="fixed bottom-24 right-4 md:right-8 z-50 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl p-6 shadow-2xl shadow-blue-900/10 w-[calc(100%-2rem)] md:w-96 flex flex-col gap-4"
+        >
+          <button 
+            onClick={() => setShowSetupBanner(false)}
+            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="pr-6">
+            <h3 className="text-xl font-black text-slate-800">Complete Your Profile</h3>
+            <p className="text-sm font-bold text-slate-500 mt-1">Please finish setting up your account to bypass the onboarding flow entirely.</p>
+          </div>
+          <Link 
+            href="/profile" 
+            onClick={() => setShowSetupBanner(false)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-black text-sm uppercase tracking-widest text-center hover:bg-blue-700 active:scale-95 transition-all"
+          >
+            Setup Now
+          </Link>
+        </motion.div>
+      )}
 
       {/* HERO */}
       <section className="relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 lg:p-20 bg-gradient-to-br from-slate-900 via-slate-800 to-violet-900 min-h-[350px] md:min-h-[450px] flex flex-col justify-center shadow-2xl shadow-violet-900/20">

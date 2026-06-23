@@ -59,12 +59,7 @@ export default function DiagnosePage() {
   }, [authStatus])
 
   const requireLoginForHistory = () => {
-    if (authStatus === "guest") {
-      setGuestPromptSource("activity")
-      setShowGuestPrompt(true)
-      return true
-    }
-
+    // We now allow guests to view their local history
     return false
   }
 
@@ -78,6 +73,21 @@ export default function DiagnosePage() {
     setActivityError("")
 
     try {
+      let localItems: ScanActivity[] = []
+      try {
+        const localData = localStorage.getItem("guest_diagnosis_history")
+        if (localData) {
+          localItems = JSON.parse(localData)
+        }
+      } catch (e) {
+        console.error("Failed to parse local history", e)
+      }
+
+      if (authStatus === "guest" || !currentUser) {
+        setActivityItems(localItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 6))
+        return
+      }
+
       const recordsRef = collection(db, "diagnosis_records")
       const activityQuery = query(recordsRef, where("uid", "==", currentUser.uid))
       const snapshot = await getDocs(activityQuery)
@@ -114,7 +124,7 @@ export default function DiagnosePage() {
     } finally {
       setActivityLoading(false)
     }
-  }, [currentUser, t.diagnose.activity.error])
+  }, [currentUser, t.diagnose.activity.error, authStatus])
 
   useEffect(() => {
     if (showActivity) {
@@ -162,6 +172,27 @@ export default function DiagnosePage() {
 
   const handleAnalysisComplete = (res: DiagnosisResult) => {
     setAnalysisResult(res)
+
+    if (authStatus === "guest") {
+      try {
+        const localData = localStorage.getItem("guest_diagnosis_history")
+        const localItems: ScanActivity[] = localData ? JSON.parse(localData) : []
+        localItems.push({
+          id: res.diseaseId || Date.now().toString(),
+          diagnosis: res.disease_identification,
+          confidence: res.confidence,
+          symptoms: [],
+          timestamp: new Date().toISOString(),
+          summary: res.patient_friendly_explanation || "",
+          reportUrl: res.reportUrl,
+          heatmapUrl: res.heatmapUrl,
+        })
+        localStorage.setItem("guest_diagnosis_history", JSON.stringify(localItems))
+      } catch (e) {
+        console.error("Failed to save to local history", e)
+      }
+    }
+
     if (showActivity) {
       void loadActivityHistory()
     }

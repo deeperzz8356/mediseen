@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">MediSeen AI Healthcare Assistant</string>
-    <string name="title_activity_main">MediSeen AI Healthcare Assistant</string>
+    <string name="app_name">MediSeen AI Health Assistance</string>
+    <string name="title_activity_main">MediSeen AI Health Assistance</string>
     <string name="package_name">com.mediseen.app</string>
     <string name="custom_url_scheme">com.mediseen.app</string>
     <string name="default_web_client_id">393582020539-idfmudgm0t9745d378b3tn4d88pij67d.apps.googleusercontent.com</string>

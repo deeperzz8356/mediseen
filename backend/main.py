@@ -185,12 +185,8 @@ async def swap_food_item(req: SwapRequest):
 
 @app.post("/diet/grocery")
 async def get_grocery_list(req: GroceryRequest):
-    # Aggregate items from the meal plan
-    items = set()
-    for meal in req.meal_plan:
-        for item in meal.items:
-            items.add(item)
-    return {"items": list(items)}
+    from backend.services.diet_svc import generate_grocery_list
+    return generate_grocery_list(req)
 
 @app.post("/diet/feedback")
 async def update_diet_feedback(req: FeedbackRequest):
@@ -491,6 +487,41 @@ async def diagnose(
         print("ERROR: DIAGNOSIS ERROR")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Diagnosis pipeline failed")
+
+@app.post("/diagnose/sync")
+async def sync_diagnosis_history(
+    records: list[dict],
+    _decoded_token: dict = Depends(verify_bearer_token)
+):
+    from datetime import datetime, timezone
+    import uuid
+    uid = _decoded_token.get("uid")
+    if not uid or _decoded_token.get("guest"):
+        raise HTTPException(status_code=400, detail="Must be logged in to sync")
+    
+    db = get_db()
+    if not db:
+        raise HTTPException(status_code=500, detail="DB Error")
+    
+    batch = db.batch()
+    for rec in records:
+        session_id = rec.get("id") or str(uuid.uuid4())
+        doc_ref = db.collection("diagnosis_records").document(session_id)
+        batch.set(doc_ref, {
+            "uid": uid,
+            "session_id": session_id,
+            "symptoms": ", ".join(rec.get("symptoms", [])),
+            "diagnosis": rec.get("diagnosis", ""),
+            "confidence": rec.get("confidence"),
+            "timestamp": rec.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            "report_url": rec.get("reportUrl"),
+            "heatmap_url": rec.get("heatmapUrl"),
+            "deep_knowledge": {
+                "simple_explanation": rec.get("summary", "")
+            }
+        }, merge=True)
+    batch.commit()
+    return {"status": "success", "synced": len(records)}
 
 # 7️⃣ Usage endpoint — how many diagnoses left today
 @app.get("/diagnose/usage")

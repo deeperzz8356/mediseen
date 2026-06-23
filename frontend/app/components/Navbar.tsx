@@ -14,9 +14,8 @@ import { LOCALES } from "../i18n"
 import { useAppStore } from "../store/useAppStore"
 
 type NavItem = {
-	name: string
-	shortName: string
-	href: string
+	label: string
+	path: string
 	icon: typeof Home
 }
 
@@ -36,10 +35,10 @@ export default function Navbar() {
 	}, [])
 
 	const navItems: NavItem[] = [
-		{ name: t.navbar.home, shortName: t.navbar.home, href: "/home", icon: Home },
-		{ name: t.navbar.diet, shortName: t.navbar.diet, href: "/diet", icon: Heart },
-		{ name: t.navbar.checkup, shortName: t.navbar.checkup, href: "/diagnose", icon: Activity },
-		{ name: t.navbar.library, shortName: t.navbar.library, href: "/library", icon: BookOpen },
+		{ path: "/home", label: t.navbar.home, icon: Home },
+		{ path: "/diet", label: t.navbar.diet, icon: Heart },
+		{ path: "/diagnose", label: t.navbar.checkup, icon: Activity },
+		{ path: "/library", label: t.navbar.library, icon: BookOpen },
 	]
 
 	const isActiveRoute = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
@@ -86,7 +85,7 @@ export default function Navbar() {
 						<span className="font-black text-xl tracking-tighter text-slate-900 leading-none">
 							Medi<span className="text-pastel-pink">Seen</span>
 						</span>
-						<span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Vision Intelligence</span>
+						<span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">AI Health Assistance</span>
 					</div>
 				</Link>
 
@@ -170,14 +169,14 @@ export default function Navbar() {
 			<nav className="fixed hidden md:flex left-4 bottom-4 top-[5.5rem] w-20 z-[70] bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl shadow-slate-900/10 py-8 border border-slate-100 flex-col items-center justify-between">
 				<div className="flex flex-col gap-6">
 					{navItems.map((item) => {
-						const active = isActiveRoute(item.href)
+						const active = isActiveRoute(item.path)
 						const Icon = item.icon
 
 						return (
 							<Link
-								key={item.href}
-								href={item.href}
-								title={item.name}
+								key={item.path}
+								href={item.path}
+								title={item.label}
 								className={`flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all ${
 									active 
 										? "bg-slate-900 text-white shadow-lg shadow-slate-900/20" 
@@ -209,13 +208,13 @@ export default function Navbar() {
 				}}>
 					<div className="grid grid-cols-5 gap-1">
 						{navItems.map((item) => {
-							const active = isActiveRoute(item.href)
+							const active = isActiveRoute(item.path)
 							const Icon = item.icon
 
 							return (
 								<Link
-									key={item.href}
-									href={item.href}
+									key={item.path}
+									href={item.path}
 									className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 min-h-[64px] transition-all ${
 										active 
 											? "bg-slate-900 text-white shadow-lg shadow-slate-900/20" 
@@ -223,7 +222,7 @@ export default function Navbar() {
 									}`}
 								>
 									<Icon className={`w-5 h-5 flex-shrink-0 ${active ? "scale-110" : ""}`} />
-									<span className="text-[9px] font-black leading-tight tracking-tight uppercase">{item.shortName}</span>
+									<span className="text-[9px] font-black leading-tight tracking-tight uppercase">{item.label}</span>
 								</Link>
 							)
 						})}

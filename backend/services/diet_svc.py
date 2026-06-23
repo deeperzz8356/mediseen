@@ -82,6 +82,7 @@ class SwapResponse(BaseModel):
 
 class GroceryRequest(BaseModel):
     meal_plan: List[MealItem]
+    locale: str = "en"
 
 class GroceryResponse(BaseModel):
     items: List[str]
@@ -497,3 +498,39 @@ def generate_meal_plan(calories: float, disease_rules: DietRules, req: DietGener
         avoid=avoid,
         recommended=recommended
     )
+
+def generate_grocery_list(req: GroceryRequest) -> GroceryResponse:
+    from backend.services.llm_svc import call_llm
+    import json
+    
+    items = set()
+    for meal in req.meal_plan:
+        for item in meal.items:
+            items.add(item)
+            
+    prompt = f"""
+    You are an expert nutritionist and culinary planner.
+    Convert this list of meals and ingredients into a structured, localized grocery list manifest.
+    
+    Meal Plan Items:
+    {', '.join(items)}
+    
+    CRITICAL TRANSLATION MANDATE:
+    You must output your complete evaluation payload, meal item keys, and derived grocery shopping ingredients arrays entirely translated into the following target language code: [{req.locale}].
+    Do not fall back to English equivalents for food ingredients, staples, or metrics when formatting for language options: en, hi, es, fr, ar, mr, bn, te.
+    
+    Return ONLY valid JSON matching this schema:
+    {{"items": ["item1", "item2", ...]}}
+    """
+    try:
+        response_text = call_llm(prompt)
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0]
+            
+        data = json.loads(response_text)
+        return GroceryResponse(items=data.get("items", list(items)))
+    except Exception as e:
+        print(f"Failed to generate localized grocery list: {e}")
+        return GroceryResponse(items=list(items))

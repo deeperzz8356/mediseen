@@ -58,6 +58,33 @@ export default function FirebaseProvider() {
         setUser(user)
         setAuthStatus("authenticated")
         setHasProfile(getProfileCompletedForUid(user.uid))
+        
+        // Sync guest diagnosis history
+        try {
+          const localData = localStorage.getItem("guest_diagnosis_history")
+          if (localData) {
+            const records = JSON.parse(localData)
+            if (records && records.length > 0) {
+              const token = await user.getIdToken()
+              import("../../config").then(({ API_BASE_URL }) => {
+                fetch(`${API_BASE_URL}/diagnose/sync`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                  },
+                  body: JSON.stringify(records)
+                }).then(res => {
+                  if (res.ok) {
+                    localStorage.removeItem("guest_diagnosis_history")
+                  }
+                }).catch(e => console.error("Failed to sync guest history API", e))
+              })
+            }
+          }
+        } catch(e) {
+          console.error("Failed to sync guest history", e)
+        }
       } else {
         setUser(null)
         setAuthStatus("unauthenticated")

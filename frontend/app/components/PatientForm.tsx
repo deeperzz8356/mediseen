@@ -44,6 +44,9 @@ export default function PatientForm() {
         PATIENT_FORM_STORAGE_KEY,
         JSON.stringify({ fullName, age, caseId, studyType, symptoms }),
       )
+      if (fullName && age) {
+        localStorage.setItem('mediseen_setup_complete', 'true')
+      }
     } catch {
       // Ignore storage failures in constrained WebViews.
     }

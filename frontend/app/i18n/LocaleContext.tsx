@@ -21,8 +21,20 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => getSavedLocale())
 
   const setLocale = (l: Locale) => {
-    saveLocaleSafe(l)
+    // Step 1: Force immediate, synchronous react tree state updates to free the UI thread
     setLocaleState(l)
+
+    // Step 2: Defer heavier Disk I/O operations safely to prevent thread locking
+    setTimeout(() => {
+      try {
+        saveLocaleSafe(l)
+        const newDir = LOCALES.find((loc) => loc.code === l)?.dir === "rtl" ? "rtl" : "ltr"
+        document.documentElement.lang = l
+        document.documentElement.dir = newDir
+      } catch (e) {
+        console.warn("Storage write handled safely.", e)
+      }
+    }, 0)
   }
 
   const dir = LOCALES.find((l) => l.code === locale)?.dir === "rtl" ? "rtl" : "ltr"

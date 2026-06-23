@@ -218,6 +218,10 @@ function LoginContent() {
     if (!auth) { setError("Authentication not configured."); return }
     setEmailLoading(true)
     authActionInFlightRef.current = true
+
+    // Step 2: Defer heavier Disk I/O operations safely to prevent thread locking
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
     let backgroundSyncStarted = false
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password)
@@ -261,6 +265,10 @@ function LoginContent() {
     setError("")
     setGoogleLoading(true)
     authActionInFlightRef.current = true
+
+    // Give React a tick to paint the loading spinner before Firebase locks the main thread
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
     let backgroundSyncStarted = false
     try {
       const user = await signInWithGoogle()
@@ -302,6 +310,10 @@ function LoginContent() {
     
     setEmailLoading(true)
     authActionInFlightRef.current = true
+
+    // Give React a tick to paint the loading spinner before Firebase locks the main thread
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password)
       const user = cred.user
@@ -371,6 +383,16 @@ function LoginContent() {
 
     try {
       await ensureGuestSession()
+      setUser({ uid: "guest_user", email: "", displayName: "Guest", isAnonymous: true } as any)
+      setProfile({
+        uid: "guest_user",
+        name: "Guest",
+        email: "",
+        age: 0,
+        gender: "prefer_not_to_say",
+        language: "en",
+        onboarding_completed: true
+      })
       setAuthStatus("guest")
       setAuthLoaded(true)
       startTransition(() => {

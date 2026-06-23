@@ -7,8 +7,8 @@ import { LocaleProvider } from "./i18n/LocaleContext"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "MediSeen AI Healthcare Assistant",
-  description: "Explainable AI medical diagnostics and dynamic wellness routing.",
+  title: "MediSeen AI Health Assistance",
+  description: "Explainable AI medical diagnostics, dynamic nutrition synthesis, and automated grocery mapping.",
   icons: {
     icon: "/logo2.png",
     apple: "/logo2.png",

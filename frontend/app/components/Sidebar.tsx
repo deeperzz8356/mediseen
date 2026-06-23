@@ -37,7 +37,7 @@ export default function Sidebar() {
               <span className="font-black text-lg tracking-tighter text-white leading-none">
                 Medi<span className="text-pastel-pink">Seen</span>
               </span>
-              <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Vision Intelligence</span>
+              <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">AI Health Assistance</span>
             </div>
           </Link>
         </div>
