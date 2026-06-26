@@ -45,17 +45,7 @@ export default function EntryPage() {
   useEffect(() => {
     if (!authLoaded || !onboardingLoaded || !languageLoaded || showSplash) return
 
-    if (authStatus === "authenticated" && user && hasProfile) {
-      router.replace("/home")
-      return
-    }
-
-    if (authStatus === "authenticated" && user && !hasProfile) {
-      router.replace("/login?complete=1")
-      return
-    }
-
-    if (onboardingDone && (authStatus === "guest" || authStatus === "unauthenticated")) {
+    if (onboardingDone) {
       router.replace("/home")
       return
     }

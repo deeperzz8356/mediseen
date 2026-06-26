@@ -66,7 +66,7 @@ export default function ResultPanel({ result, onReset, showReport: showReportPro
         className="text-center space-y-6"
       >
         <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">
-          <Activity className="w-4 h-4" /> AI Diagnostic Outcome
+          <Activity className="w-4 h-4" /> Diagnostic Outcome
         </div>
         
         <h2 className="text-5xl md:text-8xl font-black text-slate-900 tracking-tighter uppercase leading-none">

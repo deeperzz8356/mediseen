@@ -32,13 +32,14 @@ export default function Home() {
 
   const [showSetupBanner, setShowSetupBanner] = useState(false)
   useEffect(() => {
-    if (authStatus === "authenticated") {
+    if (authStatus === "authenticated" && user) {
       const isComplete = localStorage.getItem('mediseen_setup_complete') === 'true'
-      if (!isComplete) {
+      const isGoogleSignIn = user.providerData.some(p => p.providerId === 'google.com');
+      if (!isComplete && isGoogleSignIn) {
          setShowSetupBanner(true)
       }
     }
-  }, [authStatus])
+  }, [authStatus, user])
 
 
   const quickActions = [

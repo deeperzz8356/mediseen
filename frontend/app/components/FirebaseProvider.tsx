@@ -66,7 +66,7 @@ export default function FirebaseProvider() {
             const records = JSON.parse(localData)
             if (records && records.length > 0) {
               const token = await user.getIdToken()
-              import("../../config").then(({ API_BASE_URL }) => {
+              import("../config").then(({ API_BASE_URL }) => {
                 fetch(`${API_BASE_URL}/diagnose/sync`, {
                   method: "POST",
                   headers: {

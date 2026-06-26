@@ -464,7 +464,7 @@ function LoginContent() {
 
             <div className="text-center text-sm text-slate-400 font-medium pt-2 space-y-2">
               <p>
-              {t.login.newToMediseen}{" "}
+              {t.login.newToMediSeen}{" "}
               <button onClick={() => { setError(""); setView("signup") }} className="text-violet-500 font-bold hover:underline">
                 {t.login.createAccount}
               </button>

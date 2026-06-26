@@ -83,9 +83,9 @@ export default function Navbar() {
 					</div>
 					<div className="flex flex-col">
 						<span className="font-black text-xl tracking-tighter text-slate-900 leading-none">
-							Medi<span className="text-pastel-pink">Seen</span>
+							Medi<span className="text-pastel-pink">seen</span>
 						</span>
-						<span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">AI Health Assistance</span>
+						<span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1">AI health assistant</span>
 					</div>
 				</Link>
 

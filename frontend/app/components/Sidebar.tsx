@@ -35,9 +35,9 @@ export default function Sidebar() {
             </div>
             <div className="flex flex-col">
               <span className="font-black text-lg tracking-tighter text-white leading-none">
-                Medi<span className="text-pastel-pink">Seen</span>
+                Medi<span className="text-pastel-pink">seen</span>
               </span>
-              <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">AI Health Assistance</span>
+              <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">AI healthcare assistant</span>
             </div>
           </Link>
         </div>

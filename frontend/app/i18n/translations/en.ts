@@ -1,13 +1,13 @@
 const en = {
   // Splash
   splash: {
-    tagline: "Clinical Studio",
+    tagline: "Health Studio",
   },
   // GetStarted
   getStarted: {
-    badge: "Empowering Clinical Decisions",
-    headline: "Health Analysis,\nRedefined.",
-    subtitle: "Get clear, AI-powered insights from your medical reports and scans instantly.",
+    badge: "Empowering Health Decisions",
+    headline: "Health Scan,\nRedefined.",
+    subtitle: "Get clear, AI-powered insights from your health reports and scans instantly.",
     features: {
       secureData: "Secure Data",
       fastResults: "Fast Results",
@@ -20,13 +20,13 @@ const en = {
   // Language Selection
   languageSelection: {
     title: "Select Language",
-    subtitle: "Choose your preferred language for a better clinical experience.",
+    subtitle: "Choose your preferred language for a better health experience.",
     finish: "Finish Setup",
   },
   // Auth (landing page auth step)
   auth: {
     welcomeBack: "Welcome",
-    subtitle: "Continue with Google to access your clinical dashboard secure data.",
+    subtitle: "Continue with Google to access your health dashboard secure data.",
     signInGoogle: "Sign in with Google",
     or: "OR",
     mailLogin: "Mail Login",
@@ -69,15 +69,15 @@ const en = {
   agent: {
     title: "MediSeen Agent",
     activeModel: "Active Model",
-    greeting: "Hello! I am your MediSeen AI Assistant. How can I help you today?",
-    analyzing: "I am analyzing your query with our clinical model...",
+    greeting: "Hello! I am your MediSeen. How can I help you today?",
+    analyzing: "I am scanning your query with our health model...",
     placeholder: "Ask me anything...",
   },
   // Home page
   home: {
-    badge: "Empowering Your Clinical Decisions",
+    badge: "Empowering Your Health Decisions",
     greeting: "Hello,",
-    subtitle: "How can I help you today? I'm ready to analyze scans or answer questions.",
+    subtitle: "How can I help you today? I'm ready to scan reports or answer questions.",
     whatDoYouNeed: "What do you need?",
     chooseTool: "Choose a tool to get started",
     viewAllTools: "View all tools",
@@ -89,8 +89,8 @@ const en = {
         desc: "Explore diet guidance and wellness plans.",
       },
       chatAssistant: {
-        title: "Chat assistant",
-        desc: "Talk to the project assistant and get quick help.",
+        title: "Chat asistant",
+        desc: "Talk to the project asistant and get quick help.",
       },
       accountSettings: {
         title: "Account settings",
@@ -98,22 +98,22 @@ const en = {
       },
     },
     quickActions: {
-      startDiagnosis: "Start Diagnosis",
-      startDiagnosisDesc: "Instant AI analysis for your medical scans.",
+      startDiagnosis: "Start Scan",
+      startDiagnosisDesc: "Instant AI insights for your health reports.",
       learnExplore: "Learn & Explore",
-      learnExploreDesc: "Browse our medical education library.",
+      learnExploreDesc: "Browse our health education library.",
     },
   },
   // Login page
   login: {
     welcomeBack: "Welcome",
-    subtitle: "Login to access the AI diagnostic platform",
+    subtitle: "Login to access the AI health insights platform",
     emailLabel: "Email Address",
     emailPlaceholder: "doctor@hospital.com",
     passwordLabel: "Password",
     signingIn: "Signing In...",
     signIn: "Sign In",
-    newToMediseen: "New to Mediseen?",
+    newToMediSeen: "New to MediSeen?",
     createAccount: "Create Account",
     errors: {
       emailPasswordRequired: "Email and password required",
@@ -180,10 +180,10 @@ const en = {
       getStarted: "Get Started",
       cards: {
         aiDetection: {
-          title: "AI Disease Detection",
-          subtitle: "Instant medical insights",
-          description: "Upload any medical scan or report and our advanced AI analyzes it in seconds. Get clear, easy-to-understand diagnoses with confidence scores.",
-          features: ["Chest X-Ray analysis", "Skin condition detection", "98% accuracy"],
+          title: "AI Health Insights",
+          subtitle: "Instant health insights",
+          description: "Upload any health scan or report and our advanced AI scans it in seconds. Get clear, easy-to-understand insights with confidence scores.",
+          features: ["Chest X-Ray scan", "Skin condition insights", "High accuracy"],
         },
         diet: {
           title: "Diet Recommendations",
@@ -198,22 +198,22 @@ const en = {
           features: ["Health Connect sync", "Visual charts", "Shareable PDF reports"],
         },
         assistant: {
-          title: "AI Medical Assistant",
+          title: "AI Health Asistant",
           subtitle: "Ask anything, anytime",
-          description: "Chat with our AI medical consultant powered by the latest medical knowledge. Get detailed explanations about your diagnoses and treatment options.",
-          features: ["24/7 medical guidance", "Multi-language support", "Evidence-based answers"],
+          description: "Chat with our AI health consultant powered by the latest knowledge. Get detailed explanations about your health results and management options.",
+          features: ["24/7 health guidance", "Multi-language support", "Evidence-based answers"],
         },
       },
     },
   },
   patientForm: {
     title: "Patient Profile",
-    subtitle: "Capture clinical records for AI analysis.",
+    subtitle: "Capture health records for AI scan.",
     fullName: "Full Name",
     age: "Age",
     caseId: "Case ID",
     studyType: "Study Type",
-    symptoms: "Clinical Symptoms & Notes",
+    symptoms: "Symptoms & Notes",
     placeholders: {
       fullName: "e.g. John Doe",
       age: "e.g. 45",
@@ -229,10 +229,10 @@ const en = {
   },
   // Diagnose page
   diagnose: {
-    badge: "Smart Assistant",
+    badge: "Smart Asistant",
     title: "Health",
-    titleHighlight: "Assistant",
-    subtitle: "Upload your medical scan, and our assistant will help you understand it in seconds.",
+    titleHighlight: "Asistant",
+    subtitle: "Upload your health scan, and our asistant will help you understand it in seconds.",
     scanReport: "Scan Report",
     browseHistory: "Activity",
     camera: {
@@ -242,12 +242,12 @@ const en = {
     steps: {
       currentStep: "Current Step",
       uploadScan: "Upload Scan",
-      aiAnalysis: "AI Analysis",
+      aiAnalysis: "AI Scan",
       results: "Results",
     },
     waiting: {
       title: "Waiting for Your Scan",
-      subtitle: "Fill in the details on the left to start your intelligent analysis.",
+      subtitle: "Fill in the details on the left to start your intelligent scan.",
     },
     activity: {
       title: "Activity",
@@ -265,7 +265,7 @@ const en = {
     },
     upload: {
       stepTitle: "1. Upload Report",
-      stepSubtitle: "Select your medical image or scan",
+      stepSubtitle: "Select your health image or scan",
       permissionPermanent: "Permission permanently denied",
       permissionRequired: "Permission required",
       permissionPermanentDesc: "Open device Settings to enable access.",
@@ -275,14 +275,14 @@ const en = {
       changeImage: "Change Image",
       symptomsLabel: "2. Describe Symptoms",
       symptomsPlaceholder: "Type your symptoms here (e.g. heartache, dizziness...)",
-      analyzingReport: "Analyzing Report...",
-      startAnalysis: "Start AI Analysis",
-      analysisCompletePrefix: "Analysis complete:",
+      analyzingReport: "Scanning Report...",
+      startAnalysis: "Start AI Scan",
+      analysisCompletePrefix: "Scan complete:",
       cameraPermissionRequired: "Camera permission is required to take photos of your reports.",
       cameraAccessFailed: "Could not access camera. Please check your settings.",
     },
     results: {
-      badge: "Step 3: Analysis Results",
+      badge: "Step 3: Scan Results",
       title: "Your Health Insights",
       subtitle: "Discover what our AI found in your scan.",
       viewHeatmap: "View Heatmap",
@@ -290,7 +290,7 @@ const en = {
       fullReport: "Full Report",
       hideReport: "Hide Report",
     },
-    footer: "Clinical Decision Support System © 2026",
+    footer: "Health Decision Support System © 2026",
   },
   // Disease Info page
   diseaseInfo: {
@@ -315,32 +315,32 @@ const en = {
     skinHealth: {
       title: "Skin Health",
       subtitle: "Comprehensive guide to common skin conditions",
-      clinicalVisuals: "Clinical Visuals",
+      clinicalVisuals: "Visuals",
       viewDetails: "View Details",
-      otherConditions: "Other Clinical Conditions",
+      otherConditions: "Other Conditions",
     },
     overlay: {
       whatItFeels: "What it feels like",
       whyItHappens: "Why it happens",
       conditionTypes: "Condition Types",
       howToBetter: "How to feel better",
-      disclaimer: "Clinical Awareness Guide • Consult specialists for diagnosis.",
-      startDiagnosis: "Start Diagnosis",
+      disclaimer: "Health Awareness Guide • Consult specialists for professional health advice.",
+      startDiagnosis: "Start Scan",
     },
   },
   library: {
-    badge: "Clinical Knowledge Base",
+    badge: "Health Knowledge Base",
     title: "MediSeen Library",
-    subtitle: "Search thousands of conditions or use our quick-access clinical shortcuts.",
+    subtitle: "Search conditions or use our quick-access health shortcuts.",
     searchPlaceholder: "Search symptoms, diseases, or precautions...",
     explore: "Explore",
-    shortcutsTitle: "Clinical Shortcuts",
+    shortcutsTitle: "Health Shortcuts",
     shortcutsCount: "8 Curated Conditions",
     viewData: "View Data",
-    querying: "Querying clinical database...",
-    verifiedData: "Verified Clinical Data",
+    querying: "Querying health database...",
+    verifiedData: "Verified Health Data",
     overviewPrefix: "Comprehensive therapeutic overview and management protocols for",
-    symptomsTitle: "Clinical Symptoms",
+    symptomsTitle: "Symptoms",
     precautionsTitle: "Precautions",
     nutritionTitle: "Nutrition Strategy",
     dietaryGuidancePrefix: "Precision dietary guidance optimized for",
@@ -352,7 +352,7 @@ const en = {
   },
   // Diet page
   diet: {
-    badge: "Clinical Nutrition Engine",
+    badge: "Nutrition Engine",
     title: "Your Health",
     titleHighlight: "& Nutrition",
     subtitle: "Actionable food, lifestyle, and habit plans to help you feel your best.",
@@ -403,7 +403,7 @@ const en = {
       anyNewSymptoms: "Any new symptoms?",
       symptomsPlaceholder: "e.g. Bloating, low energy...",
       submitReview: "Submit for AI Review",
-      submitDesc: "Our clinical engine will analyze your feedback and adjust your macro targets and food selection for next week.",
+      submitDesc: "Our health engine will scan your feedback and adjust your macro targets and food selection for next week.",
       submitBtn: "Submit Feedback",
     },
   },
@@ -414,7 +414,7 @@ const en = {
     placeholder: "Ask the AI...",
     send: "SEND",
     contacts: {
-      aiBot: "AI Diagnostic Bot",
+      aiBot: "AI Scan Bot",
       aiBotLast: "I've updated the record...",
       radiologist: "Radiologist Dept",
       radiologistLast: "Standard protocol looks...",
@@ -424,7 +424,7 @@ const en = {
     initialMessages: {
       msg1: "Hello Sarah, I've reviewed the latest X-ray from patient #HACK-2024-001. AI results are ready.",
       msg2: "Thank you for the update. Should we proceed with the standard antibiotic protocol?",
-      msg3: "Yes, based on the high confidence score (94%), amoxicillin is the recommended first-line treatment. Detailed guidelines are in the Education tab.",
+      msg3: "Yes, based on the high confidence score (94%), amoxicillin is the recommended first-line management suggestion. Detailed guidelines are in the Education tab.",
       autoReply: "Acknowledged. I've updated the patient records with your notes.",
     },
   },

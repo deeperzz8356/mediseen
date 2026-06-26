@@ -3,11 +3,12 @@ import NavbarWrapper from "./components/NavbarWrapper"
 import AgentFABWrapper from "./components/AgentFABWrapper"
 import AdManager from "./components/AdManager"
 import FirebaseProvider from "./components/FirebaseProvider"
+import NavigationTracker from "./components/NavigationTracker"
 import { LocaleProvider } from "./i18n/LocaleContext"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "MediSeen AI Health Assistance",
+  title: "Mediseen AI health assistant",
   description: "Explainable AI medical diagnostics, dynamic nutrition synthesis, and automated grocery mapping.",
   icons: {
     icon: "/logo2.png",
@@ -37,6 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           {/* AdMob (no-op on web) */}
           <AdManager />
+
+          {/* Navigation persistence */}
+          <NavigationTracker />
 
           {/* Navbar: hidden until authenticated */}
           <NavbarWrapper />

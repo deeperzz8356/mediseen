@@ -106,7 +106,7 @@ export default function PrivacyPage() {
           Effective date: <span className="font-bold text-slate-600">March 24, 2026</span>
         </p>
         <p className="text-slate-500 font-medium leading-relaxed">
-          This privacy policy applies to the <span className="font-bold text-slate-700">Mediseen</span> app for mobile devices,
+          This privacy policy applies to the <span className="font-bold text-slate-700">MediSeen</span> app for mobile devices,
           created as a free service. This service is intended for use &quot;AS IS&quot;.
         </p>
       </motion.div>

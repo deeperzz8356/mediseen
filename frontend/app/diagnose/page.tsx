@@ -26,11 +26,12 @@ type ScanActivity = {
   heatmapUrl?: string
 }
 
+import { useProgressStore } from "../store/useProgressStore"
+
 export default function DiagnosePage() {
-  const [analysisResult, setAnalysisResult] = useState<DiagnosisResult | null>(null)
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
-  const [showHeatmap, setShowHeatmap] = useState(false)
-  const [showReport, setShowReport] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
+  const { analysisResult, uploadedImage, showHeatmap, showReport, setScanState, resetScan } = useProgressStore()
+
   const [showActivity, setShowActivity] = useState(false)
   const [activityLoading, setActivityLoading] = useState(false)
   const [activityError, setActivityError] = useState("")
@@ -42,6 +43,7 @@ export default function DiagnosePage() {
   const { authStatus } = useAppStore()
 
   useEffect(() => {
+    setIsHydrated(true)
     if (!auth) return
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -133,10 +135,7 @@ export default function DiagnosePage() {
   }, [showActivity, loadActivityHistory])
 
   const handleReset = () => {
-    setAnalysisResult(null)
-    setUploadedImage(null)
-    setShowHeatmap(false)
-    setShowReport(false)
+    resetScan()
   }
 
   const takePhoto = async () => {
@@ -159,7 +158,7 @@ export default function DiagnosePage() {
       })
 
       if (image.base64String) {
-        setUploadedImage(`data:image/jpeg;base64,${image.base64String}`)
+        setScanState({ uploadedImage: `data:image/jpeg;base64,${image.base64String}` })
       }
     } catch (error) {
       console.error("Camera error:", error)
@@ -171,7 +170,7 @@ export default function DiagnosePage() {
   }
 
   const handleAnalysisComplete = (res: DiagnosisResult) => {
-    setAnalysisResult(res)
+    setScanState({ analysisResult: res })
 
     if (authStatus === "guest") {
       try {
@@ -200,6 +199,8 @@ export default function DiagnosePage() {
       document.getElementById('results-section-header')?.scrollIntoView({ behavior: 'smooth' })
     }, 100)
   }
+
+  if (!isHydrated) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-8 md:space-y-12 pb-32 pt-8 md:pt-12">
@@ -370,7 +371,7 @@ export default function DiagnosePage() {
             >
               <UploadPanel
                 onAnalysisComplete={handleAnalysisComplete}
-                onImageUpload={(img) => setUploadedImage(img)}
+                onImageUpload={(img) => setScanState({ uploadedImage: img })}
                 externalPreview={uploadedImage}
               />
             </motion.div>
@@ -385,7 +386,7 @@ export default function DiagnosePage() {
                 result={analysisResult} 
                 onReset={handleReset} 
                 showReport={showReport}
-                setShowReport={setShowReport}
+                setShowReport={(val) => setScanState({ showReport: val })}
               />
             </motion.div>
           )}
@@ -461,7 +462,7 @@ export default function DiagnosePage() {
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={() => setShowHeatmap(!showHeatmap)}
+                  onClick={() => setScanState({ showHeatmap: !showHeatmap })}
                   className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl hover:scale-105 active:scale-95 ${
                     showHeatmap ? 'bg-black text-white' : 'bg-white text-black border border-black/10'
                   }`}
@@ -471,7 +472,7 @@ export default function DiagnosePage() {
                 </button>
 
                 <button
-                  onClick={() => setShowReport(!showReport)}
+                  onClick={() => setScanState({ showReport: !showReport })}
                   className={`flex items-center gap-3 px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl hover:scale-105 active:scale-95 ${
                     showReport ? 'bg-black text-white' : 'bg-white text-black border border-black/10'
                   }`}

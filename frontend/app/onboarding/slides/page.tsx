@@ -93,7 +93,7 @@ export default function OnboardingSlidesPage() {
 
   const finish = async () => {
     await setOnboardingDone(true)
-    router.replace("/login")
+    router.replace("/home")
   }
 
   const handleNext = () => (isLast ? finish() : navigate(currentIndex + 1))

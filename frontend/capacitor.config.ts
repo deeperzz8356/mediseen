@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.mediseen.app',
-  appName: 'MediSeen',
+  appName: 'Mediseen AI health assistant',
   webDir: 'out',
 
   // ── Android WebView stability ──────────────────────────────────────

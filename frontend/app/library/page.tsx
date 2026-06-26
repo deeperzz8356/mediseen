@@ -23,6 +23,8 @@ import { API_BASE_URL } from "../config"
 import { useLocale } from "../i18n/LocaleContext"
 import { useAppStore } from "../store/useAppStore"
 
+import { useProgressStore } from "../store/useProgressStore"
+
 interface MedicalContext {
   disease: string
   symptoms: string[]
@@ -35,9 +37,11 @@ interface MedicalContext {
 }
 
 export default function LibraryPage() {
-  const [query, setQuery] = useState("")
+  const [isHydrated, setIsHydrated] = useState(false)
+  const { libraryQuery, libraryData, setLibraryState, resetLibrary } = useProgressStore()
+  
+  const [localQuery, setLocalQuery] = useState("")
   const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<MedicalContext | null>(null)
   const [error, setError] = useState("")
   const [showDetails, setShowDetails] = useState(false)
   const { t } = useLocale()
@@ -49,6 +53,11 @@ export default function LibraryPage() {
   const { authStatus } = useAppStore()
 
   useEffect(() => {
+    setIsHydrated(true)
+    if (libraryQuery && !localQuery) {
+      setLocalQuery(libraryQuery)
+    }
+    
     try {
       const seen = localStorage.getItem("seen_en_library")
       if (!seen && authStatus === "guest" && t && (t as any).locale !== "en") {
@@ -57,7 +66,7 @@ export default function LibraryPage() {
         localStorage.setItem("seen_en_library", "1")
       }
     } catch (e) {}
-  }, [authStatus, t])
+  }, [authStatus, t, libraryQuery, localQuery])
 
   useEffect(() => {
     if (!showEnglishAlert || remainingMs <= 0) return
@@ -87,27 +96,29 @@ export default function LibraryPage() {
   ]
 
   const fetchKnowledge = async (diseaseName?: string) => {
-    const searchTarget = diseaseName || query
+    const searchTarget = diseaseName || localQuery
     if (!searchTarget.trim()) return
     
-    if (diseaseName) setQuery(diseaseName)
+    if (diseaseName) setLocalQuery(diseaseName)
     
     setLoading(true)
     setError("")
-    setData(null)
+    resetLibrary()
     setShowDetails(false)
 
     try {
       const res = await fetch(`${API_BASE_URL}/medical/context?disease=${encodeURIComponent(searchTarget)}`)
       if (!res.ok) throw new Error("Failed to fetch medical context")
       const json = await res.json()
-      setData(json)
+      setLibraryState(searchTarget, json)
     } catch (err) {
       setError(t.library.error)
     } finally {
       setLoading(false)
     }
   }
+
+  if (!isHydrated) return null;
 
   return (
     <div className="max-w-5xl mx-auto px-6 pt-28 pb-24 space-y-12">
@@ -143,8 +154,8 @@ export default function LibraryPage() {
         <div className="flex items-center gap-4 bg-white border-2 border-slate-100 rounded-[2.5rem] px-8 py-5 shadow-2xl shadow-slate-200/50 focus-within:border-violet-400 transition-all">
           <Search className="w-7 h-7 text-slate-300 group-focus-within:text-violet-500 transition-colors" />
           <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={localQuery}
+            onChange={(e) => setLocalQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && fetchKnowledge()}
             placeholder={t.library.searchPlaceholder}
             className="w-full bg-transparent outline-none text-xl font-bold text-slate-700 placeholder:text-slate-300"
@@ -159,7 +170,7 @@ export default function LibraryPage() {
       </div>
 
       {/* Shortcuts Grid */}
-      {!data && !loading && (
+      {!libraryData && !loading && (
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">{t.library.shortcutsTitle}</h3>
@@ -213,7 +224,7 @@ export default function LibraryPage() {
           </motion.div>
         )}
 
-        {data && !loading && (
+        {libraryData && !loading && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -229,9 +240,9 @@ export default function LibraryPage() {
                   <ShieldCheck className="w-4 h-4" />
                   {t.library.verifiedData}
                 </div>
-                <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight">{data.disease}</h2>
+                <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight">{libraryData.disease}</h2>
                 <p className="text-xl text-slate-400 font-medium max-w-2xl leading-relaxed">
-                  {t.library.overviewPrefix} <span className="text-white">{data.disease}</span>.
+                  {t.library.overviewPrefix} <span className="text-white">{libraryData.disease}</span>.
                 </p>
               </div>
             </div>
@@ -250,7 +261,7 @@ export default function LibraryPage() {
                     <h3 className="text-2xl font-black text-slate-800">{t.library.symptomsTitle}</h3>
                   </div>
                   <div className="grid gap-3">
-                    {data.symptoms.map((s, i) => (
+                    {libraryData.symptoms.map((s: string, i: number) => (
                       <motion.div 
                         key={i}
                         initial={{ opacity: 0, x: -10 }}
@@ -274,7 +285,7 @@ export default function LibraryPage() {
                     <h3 className="text-2xl font-black text-slate-800">{t.library.precautionsTitle}</h3>
                   </div>
                   <div className="grid gap-3">
-                    {data.precautions.map((p, i) => (
+                    {libraryData.precautions.map((p: string, i: number) => (
                       <motion.div 
                         key={i}
                         initial={{ opacity: 0, x: -10 }}
@@ -304,7 +315,7 @@ export default function LibraryPage() {
                       </div>
                       <h3 className="text-3xl md:text-4xl font-black">{t.library.nutritionTitle}</h3>
                       <p className="text-indigo-100 font-medium leading-relaxed">
-                        {t.library.dietaryGuidancePrefix} <span className="text-white font-bold">{data.disease}</span> management.
+                        {t.library.dietaryGuidancePrefix} <span className="text-white font-bold">{libraryData.disease}</span> management.
                       </p>
                     </div>
 
@@ -312,7 +323,7 @@ export default function LibraryPage() {
                     <div className="space-y-4">
                       <h4 className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">{t.library.therapeuticFavorites}</h4>
                       <div className="flex flex-wrap gap-2">
-                        {data.diet.recommended.map((item, i) => (
+                        {libraryData.diet.recommended.map((item: string, i: number) => (
                           <span key={i} className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-sm font-bold backdrop-blur-md">
                             {item}
                           </span>
@@ -324,7 +335,7 @@ export default function LibraryPage() {
                     <div className="space-y-4">
                       <h4 className="text-xs font-black uppercase tracking-[0.2em] text-rose-300">{t.library.strictlyAvoid}</h4>
                       <div className="flex flex-wrap gap-2">
-                        {data.diet.avoid.map((item, i) => (
+                        {libraryData.diet.avoid.map((item: string, i: number) => (
                           <span key={i} className="px-4 py-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-100 text-sm font-bold backdrop-blur-md">
                             {item}
                           </span>
@@ -351,7 +362,7 @@ export default function LibraryPage() {
             {/* Footer Reset */}
             <div className="pt-10 flex justify-center">
               <button 
-                onClick={() => { setData(null); setQuery(""); }}
+                onClick={() => { resetLibrary(); setLocalQuery(""); }}
                 className="px-8 py-3 rounded-xl bg-slate-100 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all"
               >
                 {t.library.clearResults}

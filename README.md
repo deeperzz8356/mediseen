@@ -8,22 +8,22 @@ app_port: 7860
 pinned: false
 ---
 
-# MediSeen: Comprehensive AI Healthcare & Diagnostic Platform
+# MediSeen: Comprehensive AI Health Insights & Educational Platform
 
 **Problem Statement ID:** HVAI-03  
 **Hackathon:** Hackverse 2.0
 
 ## 📝 Project Overview
-Current AI diagnostic models often operate as "Black Boxes", providing accurate results without explaining the underlying reasoning. Furthermore, healthcare tools are often fragmented, with separate apps for diagnosis, diet planning, and medical education.
+Current AI health analysis models often operate as "Black Boxes", providing accurate results without explaining the underlying reasoning. Furthermore, healthcare tools are often fragmented, with separate apps for health analysis, diet planning, and health education.
 
-**MediSeen** is a unified, multi-platform healthcare tool that implements **Explainable AI (XAI)** to bridge the trust gap in medical diagnostics, while offering a complete suite of patient-centric features. The core system classifies medical images (like Chest X-rays for Pneumonia) while simultaneously providing a multi-layered justification for its decisions. Additionally, MediSeen provides personalized diet plans, health data syncing, an AI-powered medical chat, and a robust medical library.
+**MediSeen** is a unified, multi-platform healthcare tool that implements **Explainable AI (XAI)** to bridge the trust gap in health analysis, while offering a complete suite of patient-centric features. The core system assesses health images while simultaneously providing a multi-layered justification for its insights. Additionally, MediSeen provides personalized diet plans, health data syncing, an AI-powered health chat, and a robust medical library.
 
 ### 🌟 Key Features
-1. **Explainable AI Diagnostics (LangGraph Pipeline):**
-   - **Visual Heatmaps (Grad-CAM):** Identifies the critical pixels and anatomical regions that influenced the model's prediction.
-   - **Radiology Feature Detection:** Cross-references saliency with clinical features like Lung Opacity, Consolidation, and Pleural Effusion.
+1. **Explainable AI Health Analysis (LangGraph Pipeline):**
+   - **Visual Heatmaps (Grad-CAM):** Identifies the critical pixels and anatomical regions that influenced the model's insight.
+   - **Clinical Feature Identification:** Cross-references saliency with clinical features like Lung Opacity, Consolidation, and Pleural Effusion.
    - **Natural Language Explanation:** Summarizes detected clinical features to provide a human-readable justification.
-2. **AI Medical Assistant Chat:** A conversational agent integrated via OpenRouter to answer medical queries interactively.
+2. **AI Health Assistant Chat:** A conversational agent integrated via OpenRouter to answer health queries interactively.
 3. **Personalized Diet & Nutrition:** Generates custom diet plans, supports grocery list generation, food swapping, and diet feedback recalibration.
 4. **Health Data Tracking:** Syncs and stores user health data (steps, calories, sleep) to Firestore.
 5. **Medical Library:** A centralized repository for medical context, conditions, and educational materials.
