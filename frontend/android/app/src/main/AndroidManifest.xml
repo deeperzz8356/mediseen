@@ -7,15 +7,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- ── Camera (requested lazily on Scan button tap) ───────────── -->
+    <!-- ── Camera (requested lazily on Scan button tap) ───────────── -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
-    <!-- ── Media access – Android 13+ photo picker / selected photos ─ -->
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <!-- ── Notifications – Android 13+ runtime permission ─────────── -->
     <!-- Only required on API 33+; handled lazily after explain-first UI -->
@@ -30,7 +25,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Mediseen"
         android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
         tools:replace="android:usesCleartextTraffic">
 
         <!--

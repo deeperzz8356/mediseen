@@ -125,6 +125,20 @@ export async function requestGalleryPermission(): Promise<PermissionResult> {
   }
 }
 
+export async function checkGalleryPermissionNeedsPrompt(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false
+  if (isAndroid14Plus()) return false
+
+  try {
+    const status = await Camera.checkPermissions()
+    const currentPhotos = status.photos as CameraPermissionState
+    
+    return currentPhotos === "prompt" || currentPhotos === "prompt-with-rationale" || currentPhotos === "denied"
+  } catch {
+    return false
+  }
+}
+
 // ─── Notification Permission ──────────────────────────────────────
 /**
  * Request notification permission.

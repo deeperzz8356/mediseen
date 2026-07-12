@@ -14,10 +14,12 @@ try:
     from backend.services.firebase_svc import get_db, upload_image, fetch_medical_context
     from backend.services.llm_svc import call_llm
 except ModuleNotFoundError:
+    # pyright: ignore[reportMissingImports]
     from services.firebase_svc import get_db, fetch_medical_context
+    # pyright: ignore[reportMissingImports]
     from services.storage_svc import upload_image
+    # pyright: ignore[reportMissingImports]
     from services.llm_svc import call_llm
-
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
@@ -46,10 +48,9 @@ LOCALE_NAMES = {
     "bn": "Bengali",
     "te": "Telugu",
 }
-
 REPORT_LABELS = {
     "en": {
-        "title": "MediSeen Clinical Report",
+        "title": "MediSeen Report",
         "session": "Session ID",
         "symptoms": "Symptoms",
         "scan": "Patient Scan",
