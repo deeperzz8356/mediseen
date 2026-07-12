@@ -87,6 +87,10 @@ class GroceryRequest(BaseModel):
 class GroceryResponse(BaseModel):
     items: List[str]
 
+class FeedbackRequest(BaseModel):
+    user_id: str
+    feedback: str
+
 
 def _clean_text(value: str) -> str:
     return (value or "").strip().lower()
