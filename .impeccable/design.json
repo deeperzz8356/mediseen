@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-28T00:00:00+05:30",
+  "title": "Design System: MediSeen Android",
+  "extensions": {
+    "colorMeta": {
+      "primary-violet": { "role": "primary", "displayName": "Clinical Violet", "canonical": "#8140F6", "tonalRamp": ["#241047", "#3C1A76", "#5825AA", "#7335DC", "#955DF8", "#B98DFF", "#D9C1FF", "#F3ECFF"] },
+      "action-pink": { "role": "secondary", "displayName": "Pulse Pink", "canonical": "#F4547B", "tonalRamp": ["#4D101F", "#7A1B35", "#AA294C", "#D83D66", "#F4547B", "#FA86A1", "#FFC0CF", "#FFF0F4"] },
+      "navigation-navy": { "role": "neutral", "displayName": "Navigation Navy", "canonical": "#0A1429", "tonalRamp": ["#07101F", "#132440", "#273B58", "#455972", "#66788F", "#98A5B6", "#CDD4DF", "#F2F5F9"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Health Headline", "purpose": "Primary screen and feature titles." },
+      "body": { "displayName": "Calm Body", "purpose": "Explanations, guidance, and form support." }
+    },
+    "shadows": [
+      { "name": "surface-low", "value": "Material elevation 3dp", "purpose": "Separates cards from the pale canvas without a heavy outline." }
+    ],
+    "motion": [
+      { "name": "onboarding-loop", "value": "continuous Lottie playback", "purpose": "Keeps the first-run health illustrations gently active." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "phone width; five-item bottom navigation" }
+    ]
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "The Calm Clinical Companion",
+    "overview": "MediSeen uses familiar Material structure with a bright, reassuring health identity. Large navy headings and generous spacing reduce cognitive load; white elevated surfaces organize tasks without making the app feel institutional.",
+    "keyCharacteristics": ["Pale cool canvas", "Navy active navigation", "Focused violet-to-pink actions", "Large touch targets"],
+    "rules": [
+      { "name": "Saturation Budget", "body": "Use strong violet or pink for a single primary action or selected state in each region.", "section": "colors" },
+      { "name": "Two-Step Scan", "body": "Every screen exposes an obvious bold heading and a clearly quieter body level before controls.", "section": "typography" }
+    ],
+    "dos": ["Keep primary actions visible on task-entry screens.", "Preserve 48dp touch targets and multilingual labels."],
+    "donts": ["Do not introduce competing primary actions.", "Do not replace native Android navigation or permission behavior with web-like controls."]
+  }
+}

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ── Core permissions ────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -16,6 +15,9 @@
     <!-- Only required on API 33+; handled lazily after explain-first UI -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Physical activity / step counter (Android 10+) -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
     <application
         android:allowBackup="false"
         android:fullBackupContent="false"
@@ -25,12 +27,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Mediseen"
         android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="false"
-        tools:replace="android:usesCleartextTraffic">
+        android:usesCleartextTraffic="false">
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
 
         <!--
-             MainActivity – Capacitor WebView host and launcher.
-             Handles deep links and Health Connect permission rationale.
+             MainActivity – native Kotlin and XML/View launcher.
         -->
         <activity
             android:name=".MainActivity"
@@ -74,11 +78,6 @@
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
-
-        <!-- AdMob Application ID (Test ID – replace with real ID in production) -->
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
 
     </application>
 </manifest>

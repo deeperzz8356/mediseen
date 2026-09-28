@@ -6,4 +6,20 @@
     <color name="tertiary_color">#7C3AED</color>
     <color name="surface_color">#F8FAFC</color>
     <color name="on_primary">#FFFFFF</color>
+    <color name="canvas">#F3F6FF</color>
+    <color name="ink">#0D172C</color>
+    <color name="muted_ink">#66758B</color>
+    <color name="quiet_ink">#9AA7B8</color>
+    <color name="hairline">#E8ECF3</color>
+    <color name="brand_violet">#8140F6</color>
+    <color name="brand_violet_deep">#5020BD</color>
+    <color name="brand_violet_soft">#F1EAFE</color>
+    <color name="brand_pink">#F4547B</color>
+    <color name="brand_pink_soft">#FFF0F4</color>
+    <color name="brand_blue">#4B9CF7</color>
+    <color name="brand_blue_soft">#E9F3FF</color>
+    <color name="positive">#0EC69B</color>
+    <color name="navy">#0A1429</color>
+    <color name="surface_subtle">#F8FAFD</color>
+    <color name="danger">#BA1A1A</color>
 </resources>

@@ -5,4 +5,5 @@
     <string name="package_name">com.mediseen.app</string>
     <string name="custom_url_scheme">com.mediseen.app</string>
     <string name="default_web_client_id">393582020539-idfmudgm0t9745d378b3tn4d88pij67d.apps.googleusercontent.com</string>
+    <string name="health_connect_privacy_policy_url">https://sites.google.com/view/sapappsolutionmediseenpolicy/home</string>
 </resources>
