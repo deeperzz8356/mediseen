@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -26,7 +27,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupMenu
+import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -123,6 +124,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private var cameraImage: Uri? = null
     private var diagnoseSymptoms = ""
     private var showHistory = false
+    private var diagnoseTab = "scan"
+    private var diagnoseStep = 1
     private var pendingScanConsumption = false
     private var rewardMessage: String? = null
     private var dietDisease = ""
@@ -211,6 +214,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         outState.putString("cameraImage", cameraImage?.toString())
         outState.putString("diagnoseSymptoms", diagnoseSymptoms)
         outState.putBoolean("showHistory", showHistory)
+        outState.putString("diagnoseTab", diagnoseTab)
+        outState.putInt("diagnoseStep", diagnoseStep)
         outState.putString("dietDisease", dietDisease)
         outState.putString("dietWeight", dietWeight)
         outState.putString("dietHeight", dietHeight)
@@ -240,6 +245,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         cameraImage = state.getString("cameraImage")?.toUri()
         diagnoseSymptoms = state.getString("diagnoseSymptoms", "")
         showHistory = state.getBoolean("showHistory", false)
+        diagnoseTab = state.getString("diagnoseTab", "scan")
+        diagnoseStep = state.getInt("diagnoseStep", 1).coerceIn(1, 3)
         dietDisease = state.getString("dietDisease", "")
         dietWeight = state.getString("dietWeight", "70")
         dietHeight = state.getString("dietHeight", "170")
@@ -357,6 +364,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         return root.findViewById(R.id.screen_content)
     }
 
+    private fun contentScreen(layout: Int, contentId: Int, host: ViewGroup = stageHost): LinearLayout {
+        host.removeAllViews()
+        val root = LayoutInflater.from(this).inflate(layout, host, false)
+        host.addView(root)
+        return root.findViewById(contentId)
+    }
+
     private fun renderLanguage() {
         stageHost.removeAllViews()
         val root = LayoutInflater.from(this).inflate(R.layout.screen_language, stageHost, false)
@@ -372,11 +386,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             panel(if (active) 0xFFF8F6FF.toInt() else Color.WHITE) {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                val flagResource = when (language.code) {
-                    "en" -> R.drawable.flag_en; "hi" -> R.drawable.flag_hi; "es" -> R.drawable.flag_es
-                    "fr" -> R.drawable.flag_fr; "ar" -> R.drawable.flag_ar; "te" -> R.drawable.flag_te
-                    else -> 0
-                }
+                val flagResource = flagForLanguage(language.code)
                 if (flagResource != 0) addView(ImageView(context).apply {
                     setImageResource(flagResource)
                     scaleType = ImageView.ScaleType.CENTER_CROP
@@ -399,13 +409,15 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     setTextColor(Color.WHITE)
                     background = context.rounded(if (active) ContextCompat.getColor(context, R.color.brand_violet) else Color.WHITE, 24, ContextCompat.getColor(context, if (active) R.color.brand_violet else R.color.hairline))
                 }, LinearLayout.LayoutParams(dp(36), dp(36)))
+                isSelected = active
+                contentDescription = "${language.name}${if (active) ", selected" else ""}"
                 setOnClickListener { selectedLanguage = language.code; renderApp() }
             }
         }
         }
     }
 
-    private fun renderNotification() = with(scrollScreen()) {
+    private fun renderNotification() = with(contentScreen(R.layout.screen_notification, R.id.notification_content)) {
         val top = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         top.addView(topAction("‹  Back") { vm.returnToLanguage() })
         top.addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
@@ -447,7 +459,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         )
     }
 
-    private fun renderOnboarding() = with(scrollScreen()) {
+    private fun renderOnboarding() = with(contentScreen(R.layout.screen_onboarding, R.id.onboarding_content)) {
         val page = onboardingPages[onboardingPage]
         val accent = when (onboardingPage) { 0 -> R.color.brand_pink; 1 -> R.color.positive; 2 -> R.color.brand_blue; else -> R.color.brand_violet }
         addView(LinearLayout(context).apply {
@@ -494,7 +506,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         if (onboardingPage > 0) secondaryAction("Back") { onboardingPage--; renderApp() }
     }
 
-    private fun renderAuth() = with(scrollScreen()) {
+    private fun renderAuth() = with(contentScreen(R.layout.screen_auth, R.id.auth_content)) {
         image(R.mipmap.ic_launcher_foreground, "MediSeen logo", 62)
         heading(if (createAccount) "Create your account" else "Welcome")
         body(if (createAccount) "Save your health history and continue across devices." else "Sign in to access your AI health workspace.")
@@ -527,9 +539,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             vm.clearAuthError()
             renderApp()
         }
+        secondaryAction("Privacy policy") {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://sites.google.com/view/sapappsolutionmediseenpolicy/home")))
+        }
     }
 
-    private fun renderProfileForm() = with(scrollScreen()) {
+    private fun renderProfileForm() = with(contentScreen(R.layout.screen_profile_form, R.id.profile_form_content)) {
         if (!profileDraftInitialized) {
             profileName = vm.profile?.name.orEmpty()
             profileAge = vm.profile?.age.orEmpty()
@@ -550,18 +565,28 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             if (profileName.isNotBlank() && age != null && age in 1..120) vm.saveProfile(UserProfile(name = profileName.trim(), age = profileAge, gender = profileGender, language = vm.locale))
             else error("Enter a name and an age from 1 to 120")
         }.isEnabled = !vm.authBusy
+        if (returningFromProfileEdit) secondaryAction("Cancel") {
+            profileDraftInitialized = false
+            vm.cancelProfileEdit()
+        }
     }
 
     private fun renderMain() {
-        val privacy = route == "privacy"
-        header.visibility = if (privacy) View.GONE else View.VISIBLE
-        bottomNavigation.visibility = if (privacy) View.GONE else View.VISIBLE
-        assistantFab.visibility = if (route in setOf("chat", "privacy", "profile")) View.GONE else View.VISIBLE
+        val legalDetail = route in setOf("privacy", "terms")
+        header.visibility = if (legalDetail) View.GONE else View.VISIBLE
+        bottomNavigation.visibility = if (legalDetail) View.GONE else View.VISIBLE
+        assistantFab.visibility = if (route in setOf("chat", "privacy", "terms", "profile")) View.GONE else View.VISIBLE
         headerTitle.text = tr(vm.locale, if (route == "chat") "chat" else route)
         headerProfile.text = vm.profile?.name?.trim()?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+        findViewById<View>(R.id.app_root).layoutDirection = if (vm.locale == "ar") View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+        bottomNavigation.menu.findItem(R.id.nav_home).title = tr(vm.locale, "home")
+        bottomNavigation.menu.findItem(R.id.nav_diet).title = tr(vm.locale, "diet")
+        bottomNavigation.menu.findItem(R.id.nav_diagnose).title = tr(vm.locale, "diagnose")
+        bottomNavigation.menu.findItem(R.id.nav_library).title = tr(vm.locale, "library")
+        bottomNavigation.menu.findItem(R.id.nav_profile).title = tr(vm.locale, "profile")
         val selectedId = when (route) {
             "diet" -> R.id.nav_diet; "diagnose" -> R.id.nav_diagnose; "library" -> R.id.nav_library
-            "profile", "privacy" -> R.id.nav_profile; else -> R.id.nav_home
+            "profile", "privacy", "terms" -> R.id.nav_profile; else -> R.id.nav_home
         }
         if (bottomNavigation.selectedItemId != selectedId) bottomNavigation.menu.findItem(selectedId)?.isChecked = true
         renderRoute()
@@ -571,12 +596,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         stopStepTracking()
         when (route) {
             "home" -> renderHome(); "diet" -> renderDiet(); "diagnose" -> renderDiagnose(); "library" -> renderLibrary()
-            "chat" -> renderChat(); "profile" -> renderProfile(); "privacy" -> renderPrivacy()
+            "chat" -> renderChat(); "profile" -> renderProfile(); "privacy" -> renderPrivacy(); "terms" -> renderTerms()
             else -> { route = "home"; renderHome() }
         }
     }
 
-    private fun renderHome() = with(scrollScreen(screenHost)) {
+    private fun renderHome() = with(contentScreen(R.layout.screen_home, R.id.home_content, screenHost)) {
         val name = vm.profile?.name?.takeIf(String::isNotBlank) ?: "there"
         panel(Color.TRANSPARENT) {
             background = ContextCompat.getDrawable(context, R.drawable.hero_gradient)
@@ -585,11 +610,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 textSize = 12f; letterSpacing = 0.08f; setTextColor(0xFFE6DCF9.toInt())
             }
             gap(22)
-            heading("Hello, $name", 34f).setTextColor(Color.WHITE)
+            heading("${tr(vm.locale, "hello")}, $name", 34f).setTextColor(Color.WHITE)
             gap(14)
             body("How can I help you today? I’m ready to scan reports or answer questions.", muted = false).setTextColor(0xFFE1E3EE.toInt())
             gap(24)
-            secondaryAction("Start scan") { navigate("diagnose") }.apply {
+            secondaryAction(tr(vm.locale, "start_scan")) { navigate("diagnose") }.apply {
                 layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
                     width = dp(160)
                     gravity = Gravity.START
@@ -600,7 +625,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         section("What do you need?")
         body("Choose a tool to get started")
         gap(12)
-        panel { section("Start a scan"); body("Get an AI-assisted image explanation"); setOnClickListener { navigate("diagnose") } }
+        panel { section(tr(vm.locale, "start_scan")); body("Get an AI-assisted image explanation"); setOnClickListener { navigate("diagnose") } }
         panel { section("Ask MediSeen"); body("Get clear answers to health questions"); setOnClickListener { navigate("chat") } }
         if (AdsRuntime.adsReady) {
             addView(FrameLayout(context).also { host ->
@@ -640,7 +665,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         val root = LayoutInflater.from(this).inflate(R.layout.screen_chat, screenHost, false)
         screenHost.addView(root)
         val messages = root.findViewById<LinearLayout>(R.id.chat_messages)
-        messages.heading("MediSeen assistant")
         messages.body("Educational guidance only. For urgent symptoms, seek medical care.")
         messages.gap(16)
         vm.chatMessages.forEach { message ->
@@ -668,16 +692,25 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             isEnabled = !vm.chatBusy
             setOnClickListener { val text = chatDraft; chatDraft = ""; vm.sendChat(text) }
         }
+        input.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND && chatDraft.isNotBlank() && !vm.chatBusy) {
+                val text = chatDraft
+                chatDraft = ""
+                vm.sendChat(text)
+                true
+            } else false
+        }
+        root.findViewById<View>(R.id.chat_close).setOnClickListener { navigate(previousRoute.takeIf { it != "chat" } ?: "home") }
         root.findViewById<ScrollView>(R.id.chat_scroll).post { root.findViewById<ScrollView>(R.id.chat_scroll).fullScroll(View.FOCUS_DOWN) }
     }
 
-    private fun renderDiet() = with(scrollScreen(screenHost)) {
+    private fun renderDiet() = with(contentScreen(R.layout.screen_diet, R.id.diet_content, screenHost)) {
         if (dietAge == "25" && !vm.profile?.age.isNullOrBlank()) dietAge = vm.profile?.age.orEmpty()
         if (vm.dietPrefillCondition.isNotBlank() && dietDisease.isBlank()) dietDisease = vm.dietPrefillCondition
         when (val state = vm.dietState) {
             is LoadState.Success -> renderDietPlan(this, state.value)
             else -> {
-                heading("Your health & nutrition")
+                heading(tr(vm.locale, "nutrition"))
                 body("Food and lifestyle guidance based on your needs and preferences.")
                 gap(18)
                 panel {
@@ -707,7 +740,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     choices("Dietary preferences", listOf("veg", "non-veg"), dietType) { dietType = it }
                     choices("Budget level", listOf("low", "medium", "high"), dietBudget) { dietBudget = it }
                 }
-                action("Create meal plan") {
+                action(tr(vm.locale, "create_plan")) {
                     val weight = dietWeight.toDoubleOrNull(); val height = dietHeight.toDoubleOrNull(); val age = dietAge.toIntOrNull()
                     if (dietDisease.isNotBlank() && weight != null && weight > 0 && height != null && height > 0 && age != null && age in 1..120) vm.generateDiet(DietInput(dietDisease.trim(), weight, height, age, dietGender, 1.375, dietGoal, dietType, dietBudget))
                     else error("Enter a condition and valid measurements")
@@ -722,11 +755,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         heading("Your nutrition plan")
         body("A practical meal schedule based on the details you provided.")
         gap(16)
-        panel(ContextCompat.getColor(context, R.color.ink)) {
-            body("DAILY TARGET", muted = false).setTextColor(0xFFCDD5E7.toInt())
-            heading("${plan.calories.roundToInt()} kcal", 32f).setTextColor(Color.WHITE)
-            body("Protein ${plan.protein.roundToInt()}g  •  Carbs ${plan.carbs.roundToInt()}g  •  Fats ${plan.fats.roundToInt()}g", muted = false).setTextColor(Color.WHITE)
-        }
+        macroCard("Daily target", "${plan.calories.roundToInt()} kcal", ContextCompat.getColor(context, R.color.ink), Color.WHITE)
+        macroCard("Protein", "${plan.protein.roundToInt()}g", 0xFFE8F8F2.toInt(), ContextCompat.getColor(context, R.color.positive))
+        macroCard("Carbs", "${plan.carbs.roundToInt()}g", ContextCompat.getColor(context, R.color.brand_violet_soft), ContextCompat.getColor(context, R.color.brand_violet))
+        macroCard("Fats", "${plan.fats.roundToInt()}g", ContextCompat.getColor(context, R.color.brand_pink_soft), ContextCompat.getColor(context, R.color.brand_pink))
         section("Daily meal schedule")
         plan.meals.forEach { meal -> panel { section("${meal.name.replaceFirstChar(Char::uppercase)}  ·  ${meal.calories.roundToInt()} kcal"); meal.items.forEach(::bullet) } }
         if (plan.recommended.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { section("Recommended foods"); plan.recommended.forEach(::bullet) }
@@ -745,11 +777,19 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         body("This plan is general guidance. Check food changes with your clinician if you have a medical condition.")
     }
 
-    private fun renderLibrary() = with(scrollScreen(screenHost)) {
+    private fun LinearLayout.macroCard(label: String, value: String, background: Int, accent: Int) {
+        panel(background) {
+            body(label.uppercase(), muted = false).apply { textSize = 12f; letterSpacing = 0.08f; setTypeface(typeface, Typeface.BOLD); setTextColor(accent) }
+            gap(8)
+            heading(value, 32f).setTextColor(if (background == ContextCompat.getColor(context, R.color.ink)) Color.WHITE else ContextCompat.getColor(context, R.color.ink))
+        }
+    }
+
+    private fun renderLibrary() = with(contentScreen(R.layout.screen_library, R.id.library_content, screenHost)) {
         when (val state = vm.libraryState) {
             is LoadState.Success -> renderMedicalContext(this, state.value)
             else -> {
-                heading("MediSeen Library")
+                heading(tr(vm.locale, "library_title"))
                 body("Search conditions or use these quick-access health topics.")
                 gap(16)
                 input("Search symptoms or conditions", libraryQuery) { libraryQuery = it }.apply {
@@ -828,54 +868,161 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
 
-    private fun renderDiagnose() = with(scrollScreen(screenHost)) {
+    private fun renderDiagnose() = with(contentScreen(R.layout.screen_diagnose, R.id.diagnose_content, screenHost)) {
         val resultState = vm.diagnosisState
         if (pendingScanConsumption && resultState is LoadState.Success) { ScanAccess.consumeScan(this@MainActivity); pendingScanConsumption = false }
         else if (pendingScanConsumption && resultState is LoadState.Error) pendingScanConsumption = false
+
+        heading(tr(vm.locale, "health_assistant"))
+        body("Upload a health scan or review today's on-device activity.")
+        gap(16)
+        renderDiagnoseTabs()
+
+        if (diagnoseTab == "activity") {
+            renderScanActivity()
+            return@with
+        }
+
         if (resultState is LoadState.Success) {
             if (vm.diagnosisContextState == LoadState.Idle) vm.loadDiagnosisContext(resultState.value.disease)
             renderDiagnosisResult(this, resultState.value)
             return@with
         }
-        heading("Health assistant")
-        body("Upload a health image and get a clear explanation of the result.")
-        gap(16)
-        secondaryAction("View today's activity") { navigate("home") }
-        secondaryAction(if (showHistory) "Hide scan history" else "View scan history") { showHistory = !showHistory; if (showHistory) vm.loadHistory(); renderApp() }
-        if (showHistory) {
-            if (vm.diagnosisHistory.isEmpty()) panel(ContextCompat.getColor(context, R.color.brand_blue_soft)) { body("Your previous scans will appear here after your first analysis.") }
-            vm.diagnosisHistory.forEach { item -> panel { section(item.disease); body("Confidence ${(item.confidence * if (item.confidence <= 1) 100 else 1).toInt()}%", muted = false); body(item.summary); if (item.timestamp.isNotBlank()) body(item.timestamp.take(19).replace('T', ' ')) } }
+
+        renderScanStepper()
+        when (diagnoseStep) {
+            1 -> renderUploadStep()
+            2 -> renderSymptomsStep()
+            else -> renderReviewStep(resultState)
         }
+    }
+
+    private fun LinearLayout.renderDiagnoseTabs() {
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            val scan = secondaryAction(tr(vm.locale, "scan_report")) { diagnoseTab = "scan"; renderApp() }
+            scan.contentDescription = "Open scan report workflow"
+            scan.layoutParams = LinearLayout.LayoutParams(0, dp(58), 1f).apply { marginEnd = dp(8) }
+            val activity = secondaryAction(tr(vm.locale, "activity")) { diagnoseTab = "activity"; renderApp() }
+            activity.contentDescription = "Open daily activity"
+            activity.layoutParams = LinearLayout.LayoutParams(0, dp(58), 1f)
+            val active = if (diagnoseTab == "scan") scan else activity
+            active.setTextColor(Color.WHITE)
+            active.background = context.rounded(Color.BLACK, 16)
+        })
+        gap(18)
+    }
+
+    private fun LinearLayout.renderScanStepper() {
         panel {
-            section("1. Upload report"); body("Select a clear health image or scan"); gap(12)
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                (1..3).forEach { step ->
+                    addView(TextView(context).apply {
+                        text = step.toString()
+                        gravity = Gravity.CENTER
+                        textSize = 15f
+                        setTypeface(typeface, Typeface.BOLD)
+                        setTextColor(if (step == diagnoseStep) Color.WHITE else ContextCompat.getColor(context, R.color.muted_ink))
+                        background = context.rounded(if (step == diagnoseStep) Color.BLACK else ContextCompat.getColor(context, R.color.surface_subtle), 14)
+                        contentDescription = "Step $step of 3${if (step == diagnoseStep) ", current" else ""}"
+                    }, LinearLayout.LayoutParams(dp(54), dp(54)))
+                    if (step < 3) addView(TextView(context).apply {
+                        text = "›"; gravity = Gravity.CENTER; textSize = 24f
+                        setTextColor(ContextCompat.getColor(context, R.color.quiet_ink))
+                    }, LinearLayout.LayoutParams(0, dp(54), 1f))
+                }
+            })
+        }
+    }
+
+    private fun LinearLayout.renderUploadStep() {
+        panel {
+            section("1. Upload report")
+            body("Select a clear health image or scan.")
+            gap(12)
             addView(ImageView(context).apply {
-                contentDescription = "Selected health image"; scaleType = ImageView.ScaleType.CENTER_INSIDE
+                contentDescription = if (diagnoseImage == null) "No health image selected" else "Selected health image"
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
                 if (diagnoseImage != null) load(diagnoseImage) else setImageResource(android.R.drawable.ic_menu_gallery)
                 background = context.rounded(ContextCompat.getColor(context, R.color.brand_blue_soft), 12)
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(210)))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)))
             gap(12)
             secondaryAction("Choose from gallery") { galleryPicker.launch("image/*") }
-            secondaryAction("Take a photo") { if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) launchCamera() else cameraPermission.launch(Manifest.permission.CAMERA) }
+            secondaryAction("Take a photo") {
+                if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) launchCamera()
+                else cameraPermission.launch(Manifest.permission.CAMERA)
+            }
         }
-        input("Symptoms or context", diagnoseSymptoms, maxLines = 4) { diagnoseSymptoms = it.take(2000) }
+        action("Continue to symptoms") { diagnoseStep = 2; renderApp() }.isEnabled = diagnoseImage != null
+        secondaryAction(if (showHistory) "Hide scan history" else "View scan history") {
+            showHistory = !showHistory
+            if (showHistory) vm.loadHistory()
+            renderApp()
+        }
+        if (showHistory) {
+            if (vm.diagnosisHistory.isEmpty()) panel(ContextCompat.getColor(context, R.color.brand_blue_soft)) { body("Your previous scans will appear here after your first analysis.") }
+            vm.diagnosisHistory.forEach { item -> panel { section(item.disease); body("Confidence ${(item.confidence * if (item.confidence <= 1) 100 else 1).toInt()}%", muted = false); body(item.summary) } }
+        }
+    }
+
+    private fun LinearLayout.renderSymptomsStep() {
+        panel {
+            section("2. Describe symptoms")
+            body("Add optional symptoms or context to help explain the image.")
+            gap(12)
+            input("Symptoms or context", diagnoseSymptoms, maxLines = 5) { diagnoseSymptoms = it.take(2000) }
+            body("${diagnoseSymptoms.length} / 2000 characters")
+        }
+        action("Review scan") { diagnoseStep = 3; renderApp() }
+        secondaryAction("Back to upload") { diagnoseStep = 1; renderApp() }
+    }
+
+    private fun LinearLayout.renderReviewStep(resultState: LoadState<DiagnosisResult>) {
+        panel {
+            section("3. Review and analyze")
+            body("Image selected")
+            body(if (diagnoseSymptoms.isBlank()) "No symptoms added" else diagnoseSymptoms, muted = false)
+            gap(10)
+            body("AI findings are educational and are not a medical diagnosis.")
+        }
         val scanAvailable = !BuildConfig.ADS_ENABLED || ScanAccess.hasAvailableScan(this@MainActivity)
         if (BuildConfig.ADS_ENABLED && AdsRuntime.adsReady) RewardedScanAd.preload(this@MainActivity)
         action(if (scanAvailable) "Analyze image" else "Watch ad to unlock 1 scan") {
             val selected = diagnoseImage ?: return@action
-            if (scanAvailable) { rewardMessage = null; pendingScanConsumption = true; vm.diagnose(DiagnoseInput(selected, diagnoseSymptoms, vm.locale)) }
-            else RewardedScanAd.show(this@MainActivity, onClosed = { earned -> rewardMessage = if (earned) "One scan unlocked. Tap Analyze image when you're ready." else "Finish the rewarded ad to unlock a scan."; renderApp() }, onUnavailable = { rewardMessage = "A reward ad isn't ready yet. Please try again shortly."; renderApp() })
+            if (scanAvailable) {
+                rewardMessage = null
+                pendingScanConsumption = true
+                vm.diagnose(DiagnoseInput(selected, diagnoseSymptoms, vm.locale))
+            } else RewardedScanAd.show(this@MainActivity,
+                onClosed = { earned -> rewardMessage = if (earned) "One scan unlocked. Tap Analyze image when you're ready." else "Finish the rewarded ad to unlock a scan."; renderApp() },
+                onUnavailable = { rewardMessage = "A reward ad isn't ready yet. Please try again shortly."; renderApp() })
         }.isEnabled = diagnoseImage != null && resultState !is LoadState.Loading
-        body(
-            if (!BuildConfig.ADS_ENABLED) "Scanning is available while ads are paused."
-            else if (scanAvailable) "Your daily or rewarded scan is available and is used only after a successful analysis."
-            else "Today's free scan is used. Watching the optional ad unlocks one additional scan.",
-        )
+        secondaryAction("Back to symptoms") { diagnoseStep = 2; renderApp() }
         rewardMessage?.let(::body)
-        when (resultState) { LoadState.Loading -> loading("Analyzing your image…"); is LoadState.Error -> error(resultState.message); else -> Unit }
+        when (resultState) { LoadState.Loading -> loading("Analyzing your image…"); is LoadState.Error -> { error(resultState.message); secondaryAction("Try again") { vm.clearDiagnosis(); renderApp() } }; else -> Unit }
+    }
+
+    private fun LinearLayout.renderScanActivity() {
+        section("Today's activity")
+        body("Activity is processed on this device and can be enabled or disabled at any time.")
+        gap(14)
+        val manager = getSystemService(SENSOR_SERVICE) as SensorManager
+        val sensorAvailable = manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null
+        val activityAllowed = Build.VERSION.SDK_INT < 29 || ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+        panel(ContextCompat.getColor(context, R.color.ink)) {
+            body("DAILY STEPS", muted = false).setTextColor(0xFFCDD5E7.toInt())
+            stepsText = heading(if (activityAllowed && sensorAvailable) currentSteps.toString() else "—", 34f).apply { setTextColor(Color.WHITE) }
+            body(if (!sensorAvailable) "Step sensor unavailable" else if (!activityAllowed) "Activity access needed" else "Estimated ${(currentSteps * 0.04).toInt()} kcal", muted = false).setTextColor(Color.WHITE)
+        }
+        if (sensorAvailable && !activityAllowed) action("Enable activity access") { activityPermission.launch(Manifest.permission.ACTIVITY_RECOGNITION) }
+        panel { section("Scan history"); body("Review completed analyses from the Scan report tab."); secondaryAction("Open scan history") { diagnoseTab = "scan"; diagnoseStep = 1; showHistory = true; vm.loadHistory(); renderApp() } }
+        if (activityAllowed && sensorAvailable) startStepTracking()
     }
 
     private fun renderDiagnosisResult(content: LinearLayout, result: DiagnosisResult) = with(content) {
-        secondaryAction("‹ New scan") { vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = "" }
+        secondaryAction("‹ New scan") { vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = ""; diagnoseStep = 1 }
         val confidence = (result.confidence * if (result.confidence <= 1) 100 else 1).coerceIn(0.0, 100.0).toInt()
         panel(ContextCompat.getColor(context, R.color.ink)) { body("SCAN OUTCOME", muted = false).setTextColor(0xFFCDD5E7.toInt()); heading(result.disease, 28f).setTextColor(Color.WHITE); body("Model confidence $confidence%", muted = false).setTextColor(0xFFE5E7F1.toInt()) }
         panel { section("What the scan suggests"); body(result.explanation.ifBlank { "No explanation was returned for this scan." }) }
@@ -888,21 +1035,22 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         result.heatmapUrl?.let { url -> panel { section("Visual explanation"); addView(ImageView(context).apply { contentDescription = "AI heatmap"; scaleType = ImageView.ScaleType.CENTER_INSIDE; load(url) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(250))) } }
         result.reportUrl?.let { url -> secondaryAction("Open full report") { startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } }
         panel(ContextCompat.getColor(context, R.color.brand_pink_soft)) { body("This AI result is educational and is not a medical diagnosis. Seek qualified medical advice before changing care.", muted = false) }
-        action("Start a new scan") { vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = "" }
+        action("Start a new scan") { vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = ""; diagnoseStep = 1 }
     }
 
-    private fun renderProfile() = with(scrollScreen(screenHost)) {
-        heading("Your profile"); body("Manage personal details, preferences and account controls."); gap(16)
+    private fun renderProfile() = with(contentScreen(R.layout.screen_profile, R.id.profile_content, screenHost)) {
+        heading(tr(vm.locale, "profile_title")); body("Manage personal details, preferences and account controls."); gap(16)
         panel {
             section(vm.profile?.name?.ifBlank { "Your details" } ?: "Your details")
             body(listOfNotNull(vm.profile?.email?.takeIf(String::isNotBlank), vm.profile?.age?.takeIf(String::isNotBlank)?.let { "Age $it" }, vm.profile?.gender?.takeUnless { it == "prefer_not_to_say" }?.replace('_', ' ')).joinToString(" • ").ifBlank { "Add your details" })
             gap(12); action("Change") { profileDraftInitialized = false; returningFromProfileEdit = true; vm.editProfile() }
         }
         section("Preferences")
-        panel { section("Language"); body(supportedLanguages.firstOrNull { it.code == vm.locale }?.nativeName ?: vm.locale); setOnClickListener { showLanguageDialog() } }
-        panel { section("Privacy and safety"); body("How your information is handled"); setOnClickListener { navigate("privacy") } }
+        panel { section(tr(vm.locale, "language")); body(supportedLanguages.firstOrNull { it.code == vm.locale }?.nativeName ?: vm.locale); setOnClickListener { showLanguageDialog() } }
+        panel { section(tr(vm.locale, "terms")); body("Read the service agreement"); setOnClickListener { navigate("terms") } }
+        panel { section(tr(vm.locale, "privacy")); body("How your information is handled"); setOnClickListener { navigate("privacy") } }
         if (AdsRuntime.privacyOptionsRequired) panel { section("Ad privacy choices"); body("Review advertising consent choices"); setOnClickListener { AdsRuntime.showPrivacyOptions(this@MainActivity) } }
-        section("Account")
+        section(tr(vm.locale, "account"))
         if (vm.profile?.uid?.startsWith("guest_") == true) secondaryAction("Login / Sign up") { vm.logout() }
         else {
             secondaryAction("Sign out") { vm.logout() }
@@ -913,9 +1061,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         body("Mediseen 1.2")
     }
 
-    private fun renderPrivacy() = with(scrollScreen(screenHost)) {
+    private fun renderPrivacy() = with(contentScreen(R.layout.screen_legal, R.id.legal_content, screenHost)) {
         secondaryAction("‹ Back") { navigate("profile") }
-        heading("Privacy & safety"); body("Your health information deserves careful handling."); gap(16)
+        heading(tr(vm.locale, "privacy")); body("Your health information deserves careful handling."); gap(16)
         panel { section("What the app accesses"); body("Camera and photos are accessed only when you choose an image. Activity access is used for the on-device step counter. Notification access is optional.") }
         panel { section("How analysis works"); body("Selected images and the symptoms you enter are sent securely to the Mediseen Python API for analysis. Signed-in results may be stored in your account history.") }
         panel { section("Your control"); body("You can use guest mode, deny optional permissions, sign out, or permanently delete your account and stored cloud records from the profile screen.") }
@@ -923,12 +1071,64 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         secondaryAction("View full privacy policy") { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://sites.google.com/view/sapappsolutionmediseenpolicy/home"))) }
     }
 
+    private fun renderTerms() = with(contentScreen(R.layout.screen_legal, R.id.legal_content, screenHost)) {
+        secondaryAction("‹ Back") { navigate("profile") }
+        heading(tr(vm.locale, "terms"))
+        body("The terms for using MediSeen's educational health tools.")
+        gap(16)
+        panel { section("Educational use"); body("MediSeen provides AI-assisted educational information and does not diagnose, prescribe, or replace professional medical care.") }
+        panel { section("Your responsibility"); body("Use clear, lawful images that you are permitted to upload. Seek emergency services for urgent symptoms and qualified clinical advice before changing treatment.") }
+        panel { section("Account and data"); body("You are responsible for keeping your sign-in details secure. You may use guest mode, sign out, or delete your signed-in account from Profile.") }
+        panel { section("Service availability"); body("Network services and AI results may occasionally be delayed or unavailable. Retry later if a request cannot be completed.") }
+        secondaryAction("View complete terms online") { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://sites.google.com/view/sapappsolutionmediseenpolicy/home"))) }
+    }
+
     private fun showLanguageMenu(anchor: View) {
-        PopupMenu(this, anchor).apply {
-            supportedLanguages.forEachIndexed { index, language -> menu.add(0, index, index, language.nativeName) }
-            setOnMenuItemClickListener { item -> vm.updateLanguage(supportedLanguages[item.itemId].code); true }
-            show()
+        val root = LayoutInflater.from(this).inflate(R.layout.popup_language, screenHost, false)
+        val content = root.findViewById<LinearLayout>(R.id.language_popup_content)
+        lateinit var popup: PopupWindow
+        supportedLanguages.forEach { language ->
+            val active = language.code == vm.locale
+            content.addView(LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(48)
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                background = rounded(if (active) ContextCompat.getColor(context, R.color.navy) else Color.WHITE, 14)
+                contentDescription = "${language.name}${if (active) ", selected" else ""}"
+                isSelected = active
+                val flag = flagForLanguage(language.code)
+                if (flag != 0) addView(ImageView(context).apply {
+                    setImageResource(flag); scaleType = ImageView.ScaleType.CENTER_CROP
+                    contentDescription = null
+                }, LinearLayout.LayoutParams(dp(30), dp(30)))
+                addView(TextView(context).apply {
+                    text = language.nativeName
+                    textSize = 15f
+                    setTypeface(typeface, if (active) Typeface.BOLD else Typeface.NORMAL)
+                    setTextColor(if (active) Color.WHITE else ContextCompat.getColor(context, R.color.ink))
+                    setPadding(dp(12), 0, dp(8), 0)
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                if (active) addView(TextView(context).apply { text = "•"; textSize = 22f; setTextColor(ContextCompat.getColor(context, R.color.brand_pink)) })
+                setOnClickListener { vm.updateLanguage(language.code); popup.dismiss() }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)).apply { bottomMargin = dp(4) })
         }
+        popup = PopupWindow(root, dp(280), dp(480), true).apply {
+            setBackgroundDrawable(ColorDrawable(Color.WHITE))
+            isOutsideTouchable = true
+            elevation = dp(10).toFloat()
+            showAsDropDown(anchor, -dp(224), dp(8))
+        }
+    }
+
+    private fun flagForLanguage(code: String): Int = when (code) {
+        "en" -> R.drawable.flag_en
+        "hi" -> R.drawable.flag_hi
+        "es" -> R.drawable.flag_es
+        "fr" -> R.drawable.flag_fr
+        "ar" -> R.drawable.flag_ar
+        "te" -> R.drawable.flag_te
+        else -> 0
     }
 
     private fun topAction(label: String, onClick: () -> Unit): TextView = TextView(this).apply {
@@ -959,10 +1159,19 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         when {
             vm.stage == AppStage.NOTIFICATION -> vm.returnToLanguage()
             vm.stage == AppStage.ONBOARDING && onboardingPage > 0 -> { onboardingPage--; renderApp() }
+            vm.stage == AppStage.PROFILE && returningFromProfileEdit -> {
+                profileDraftInitialized = false
+                vm.cancelProfileEdit()
+            }
             vm.stage != AppStage.MAIN -> finish()
-            route == "privacy" -> navigate("profile")
+            route in setOf("privacy", "terms") -> navigate("profile")
             route == "library" && vm.libraryState is LoadState.Success -> completeLibraryArticle()
-            route == "diagnose" && vm.diagnosisState is LoadState.Success -> vm.clearDiagnosis()
+            route == "diet" && vm.dietState is LoadState.Success -> vm.clearDiet()
+            route == "diagnose" && vm.diagnosisState is LoadState.Success -> {
+                vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = ""; diagnoseStep = 1
+            }
+            route == "diagnose" && diagnoseTab == "activity" -> { diagnoseTab = "scan"; renderApp() }
+            route == "diagnose" && diagnoseStep > 1 -> { diagnoseStep--; renderApp() }
             route == "chat" -> navigate(previousRoute.takeIf { it != "chat" } ?: "home")
             route != "home" -> navigate("home")
             else -> finish()

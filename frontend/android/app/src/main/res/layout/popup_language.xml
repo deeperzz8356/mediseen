@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="280dp" android:layout_height="520dp"
+    android:background="@android:color/white" android:fillViewport="true" android:padding="10dp">
+    <LinearLayout android:id="@+id/language_popup_content" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="vertical" />
+</androidx.core.widget.NestedScrollView>

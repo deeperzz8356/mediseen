@@ -27,7 +27,7 @@
                 android:layout_width="54dp"
                 android:layout_height="54dp"
                 android:background="@color/brand_pink_soft"
-                android:contentDescription="MediSeen logo"
+                android:contentDescription="@string/cd_brand_logo"
                 android:padding="3dp"
                 android:src="@mipmap/ic_launcher_foreground" />
 
@@ -41,7 +41,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="MediSeen"
+                    android:text="@string/brand_name"
                     android:textColor="@color/ink"
                     android:textSize="22sp"
                     android:textStyle="bold" />
@@ -50,7 +50,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:letterSpacing="0.18"
-                    android:text="AI HEALTH ASSISTANT"
+                    android:text="@string/brand_tagline"
                     android:textColor="@color/quiet_ink"
                     android:textSize="10sp"
                     android:textStyle="bold" />
@@ -69,10 +69,10 @@
 
             <ImageButton
                 android:id="@+id/header_language"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="@color/surface_subtle"
-                android:contentDescription="Choose language"
+                android:contentDescription="@string/cd_choose_language"
                 android:padding="12dp"
                 android:src="@drawable/ic_language"
                 app:tint="@color/ink" />
@@ -80,11 +80,11 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/header_profile"
                 style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginStart="10dp"
                 android:minWidth="0dp"
-                android:contentDescription="Open profile"
+                android:contentDescription="@string/cd_open_profile"
                 android:backgroundTint="@color/navy"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
@@ -129,6 +129,7 @@
         android:layout_gravity="end|bottom"
         android:layout_marginEnd="18dp"
         android:layout_marginBottom="94dp"
+        android:contentDescription="@string/cd_open_assistant"
         android:text=""
         android:textColor="@android:color/white"
         android:visibility="gone"

@@ -162,6 +162,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun editProfile() { stage = AppStage.PROFILE }
 
+    fun cancelProfileEdit() { stage = AppStage.MAIN }
+
     fun saveProfile(updated: UserProfile, stayOnCurrentScreen: Boolean = false) {
         val current = auth.currentUser
         if (current == null || profile?.uid?.startsWith("guest_") == true) {
