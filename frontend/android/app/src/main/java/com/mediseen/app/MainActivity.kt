@@ -849,19 +849,33 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun renderDietPlan(content: LinearLayout, plan: DietPlan) = with(content) {
-        secondaryAction("‹ Edit plan details") { vm.clearDiet() }
-        heading("Your nutrition plan")
-        body("A practical meal schedule based on the details you provided.")
-        gap(16)
         macroCard("Daily target", "${plan.calories.roundToInt()} kcal", ContextCompat.getColor(context, R.color.ink), Color.WHITE)
         macroCard("Protein", "${plan.protein.roundToInt()}g", Color.WHITE, ContextCompat.getColor(context, R.color.positive))
         macroCard("Carbs", "${plan.carbs.roundToInt()}g", Color.WHITE, ContextCompat.getColor(context, R.color.brand_violet))
         macroCard("Fats", "${plan.fats.roundToInt()}g", Color.WHITE, ContextCompat.getColor(context, R.color.brand_pink))
-        section("Daily meal schedule")
-        plan.meals.forEach { meal -> panel { section("${meal.name.replaceFirstChar(Char::uppercase)}  ·  ${meal.calories.roundToInt()} kcal"); meal.items.forEach(::bullet) } }
-        if (plan.recommended.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { section("Recommended foods"); plan.recommended.forEach(::bullet) }
-        if (plan.avoid.isNotEmpty()) panel(ContextCompat.getColor(context, R.color.brand_pink_soft)) { section("Foods to limit"); plan.avoid.forEach(::bullet) }
-        action("Create grocery list") { vm.loadGroceryList(plan) }
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(context).apply { text = "🍏"; textSize = 26f }, LinearLayout.LayoutParams(dp(40), dp(44)))
+            addView(TextView(context).apply { text = "Daily Meal\nSchedule"; textSize = 22f; setTypeface(typeface, Typeface.BOLD); setTextColor(ContextCompat.getColor(context, R.color.ink)) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(TextView(context).apply { text = "🛒   GET GROCERY\n      LIST     ›"; gravity = Gravity.CENTER; textSize = 10f; setTypeface(typeface, Typeface.BOLD); setTextColor(ContextCompat.getColor(context, R.color.brand_violet)); setOnClickListener { vm.loadGroceryList(plan) } })
+        })
+        gap(16)
+        val mealTimes = listOf("8:00 AM", "1:30 PM", "5:00 PM", "8:30 PM")
+        plan.meals.forEachIndexed { index, meal -> panel {
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    body("TIME: ${mealTimes.getOrElse(index) { "" }}").apply { textSize = 10f }
+                    section(meal.name.replaceFirstChar(Char::uppercase)).apply { textSize = 18f }
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                body("${meal.calories.roundToInt()} kcal").apply { textSize = 10f }
+            })
+            gap(16)
+            meal.items.forEach { item -> body("•   $item", muted = false).apply { textSize = 13f; setTextColor(ContextCompat.getColor(context, R.color.ink)) }; gap(10) }
+        } }
+        if (plan.recommended.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { section("♢  Clinical Recommendations"); gap(10); body(plan.recommended.joinToString("   •   "), muted = false).apply { textSize = 12f } }
+        if (plan.avoid.isNotEmpty()) panel(ContextCompat.getColor(context, R.color.brand_pink_soft)) { section("⊘  Strictly Avoid"); gap(10); body(plan.avoid.joinToString("   •   "), muted = false).apply { textSize = 12f } }
         when (val groceries = vm.groceryState) {
             LoadState.Loading -> loading("Preparing grocery list…")
             is LoadState.Error -> error(groceries.message)
@@ -876,11 +890,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun LinearLayout.macroCard(label: String, value: String, background: Int, accent: Int) {
-        panel(background) {
+        val card = panel(background) {
             body(label.uppercase(), muted = false).apply { textSize = 12f; letterSpacing = 0.08f; setTypeface(typeface, Typeface.BOLD); setTextColor(accent) }
             gap(8)
             heading(value, 32f).setTextColor(if (background == ContextCompat.getColor(context, R.color.ink)) Color.WHITE else ContextCompat.getColor(context, R.color.ink))
         }
+        card.layoutParams = (card.layoutParams as LinearLayout.LayoutParams).apply { height = dp(98); bottomMargin = dp(18) }
     }
 
     private fun renderLibrary() = with(contentScreen(R.layout.screen_library, R.id.library_content, screenHost)) {
@@ -1152,20 +1167,51 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun renderDiagnosisResult(content: LinearLayout, result: DiagnosisResult) = with(content) {
-        secondaryAction("‹ New scan") { vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = ""; diagnoseStep = 1 }
         val confidence = (result.confidence * if (result.confidence <= 1) 100 else 1).coerceIn(0.0, 100.0).toInt()
-        panel(ContextCompat.getColor(context, R.color.ink)) { body("SCAN OUTCOME", muted = false).setTextColor(0xFFCDD5E7.toInt()); heading(result.disease, 28f).setTextColor(Color.WHITE); body("Model confidence $confidence%", muted = false).setTextColor(0xFFE5E7F1.toInt()) }
-        panel { section("What the scan suggests"); body(result.explanation.ifBlank { "No explanation was returned for this scan." }) }
-        if (result.likelySymptoms.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { section("Symptom markers"); result.likelySymptoms.forEach(::bullet) }
+        body("✣  DIAGNOSTIC OUTCOME").apply { gravity = Gravity.CENTER; textSize = 10f; letterSpacing = 0.12f }
+        gap(12)
+        heading(result.disease.uppercase(), 28f).apply { gravity = Gravity.CENTER }
+        gap(14)
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                body("STATISTICAL CONFIDENCE").apply { textSize = 9f }
+                addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+                body("$confidence%").apply { textSize = 10f }
+            })
+            addView(LinearLayout(context).apply {
+                addView(View(context).apply { setBackgroundColor(ContextCompat.getColor(context, R.color.ink)) }, LinearLayout.LayoutParams(0, dp(2), confidence.toFloat()))
+                addView(View(context).apply { setBackgroundColor(ContextCompat.getColor(context, R.color.hairline)) }, LinearLayout.LayoutParams(0, dp(2), (100 - confidence).coerceAtLeast(1).toFloat()))
+            })
+        })
+        gap(16)
+        body(result.explanation.ifBlank { "The scan indicates findings that should be reviewed with a qualified clinician." }, muted = false).apply {
+            setTypeface(typeface, Typeface.ITALIC)
+            setPadding(dp(14), dp(8), dp(8), dp(8))
+            background = rounded(Color.WHITE, 0, ContextCompat.getColor(context, R.color.ink))
+        }
         val medical = (vm.diagnosisContextState as? LoadState.Success)?.value
-        if (medical != null && medical.recommended.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { section("Recommended foods"); medical.recommended.forEach(::bullet) }
-        if (medical != null && medical.avoid.isNotEmpty()) panel(ContextCompat.getColor(context, R.color.brand_pink_soft)) { section("Foods to limit"); medical.avoid.forEach(::bullet) }
-        if (result.rootCause.isNotBlank()) panel { section("Clinical explanation"); body(result.rootCause) }
-        if (result.managementSteps.isNotEmpty()) panel { section("Suggested next steps"); result.managementSteps.forEachIndexed { index, step -> bullet("${index + 1}. $step") } }
-        result.heatmapUrl?.let { url -> panel { section("Visual explanation"); addView(ImageView(context).apply { contentDescription = "AI heatmap"; scaleType = ImageView.ScaleType.CENTER_INSIDE; load(url) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(250))) } }
-        result.reportUrl?.let { url -> secondaryAction("Open full report") { startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } }
+        if (medical != null && medical.recommended.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { body("♢  RECOMMENDED FOODS").apply { textSize = 10f; setTypeface(typeface, Typeface.BOLD) }; body(medical.recommended.joinToString("  •  "), muted = false).apply { textSize = 12f } }
+        if (medical != null && medical.avoid.isNotEmpty()) panel(ContextCompat.getColor(context, R.color.brand_pink_soft)) { body("×  FOODS TO AVOID").apply { textSize = 10f; setTypeface(typeface, Typeface.BOLD) }; body(medical.avoid.joinToString("  •  "), muted = false).apply { textSize = 12f } }
+        if (result.likelySymptoms.isNotEmpty()) { body("NOTED SYMPTOM MARKERS").apply { textSize = 9f; letterSpacing = 0.12f }; body(result.likelySymptoms.joinToString("   "), muted = false).apply { background = rounded(Color.WHITE, 10); setPadding(dp(10), dp(8), dp(10), dp(8)); textSize = 11f } }
+        if (result.rootCause.isNotBlank()) panel { body("▣  CLINICAL PATHOPHYSIOLOGY").apply { textSize = 10f; letterSpacing = 0.1f; setTypeface(typeface, Typeface.BOLD) }; gap(12); body(result.rootCause) }
+        panel(ContextCompat.getColor(context, R.color.brand_violet_soft)) { body("✣  THE SIMPLE INTERPRETATION", muted = false).apply { textSize = 10f; setTypeface(typeface, Typeface.BOLD); setTextColor(ContextCompat.getColor(context, R.color.brand_violet)) }; gap(10); body(result.explanation) }
+        if (result.managementSteps.isNotEmpty()) {
+            body("CLINICAL ROADMAP").apply { textSize = 9f; letterSpacing = 0.12f }
+            result.managementSteps.take(5).forEachIndexed { index, step -> panel { body("0${index + 1}").apply { textSize = 10f; setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) }; body(step, muted = false).apply { textSize = 12f } } }
+        }
         panel(ContextCompat.getColor(context, R.color.brand_pink_soft)) { body("This AI result is educational and is not a medical diagnosis. Seek qualified medical advice before changing care.", muted = false) }
-        action("Start a new scan") { vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = ""; diagnoseStep = 1 }
+        action("START NEW CYCLE") { vm.clearDiagnosis(); diagnoseImage = null; diagnoseSymptoms = ""; diagnoseStep = 1 }.apply { background = rounded(Color.BLACK, 14) }
+        body("✓  AI STUDY COMPLETED", muted = false).apply { textSize = 10f; setTextColor(ContextCompat.getColor(context, R.color.positive)); setTypeface(typeface, Typeface.BOLD) }
+        section("YOUR HEALTH INSIGHTS")
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            val heatmap = secondaryAction("VIEW HEATMAP") { result.heatmapUrl?.let { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) } }
+            heatmap.layoutParams = LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginEnd = dp(8) }
+            val report = secondaryAction("FULL REPORT") { result.reportUrl?.let { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) } }
+            report.layoutParams = LinearLayout.LayoutParams(0, dp(46), 1f)
+        })
     }
 
     private fun renderProfile() = with(contentScreen(R.layout.screen_profile, R.id.profile_content, screenHost)) {
