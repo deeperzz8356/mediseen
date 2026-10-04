@@ -9,6 +9,7 @@ import androidx.test.espresso.Espresso.pressBack
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -59,7 +60,7 @@ class XmlUiSmokeTest {
         context.getSharedPreferences("mediseen_native", 0).edit().putBoolean("welcome_complete", true).commit()
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.language_confirm)).perform(click())
-            onView(withText("Skip")).perform(click())
+            onView(withContentDescription("Top notification skip")).perform(click())
             repeat(3) { onView(withText("Next")).perform(click()) }
             onView(withText("Get Started")).perform(click())
             onView(withText("Welcome")).check(matches(isDisplayed()))
@@ -84,7 +85,7 @@ class XmlUiSmokeTest {
             onView(withText("Activity")).perform(click())
             onView(withText("Today's activity")).check(matches(isDisplayed()))
             pressBack()
-            onView(withText("1. Upload report")).check(matches(isDisplayed()))
+            onView(withText("1. UPLOAD REPORT")).check(matches(isDisplayed()))
 
             onView(withId(R.id.nav_diet)).perform(click())
             onView(withId(R.id.diet_scroll)).check(matches(isDisplayed()))
@@ -92,7 +93,7 @@ class XmlUiSmokeTest {
             onView(withId(R.id.library_scroll)).check(matches(isDisplayed()))
             onView(withId(R.id.nav_profile)).perform(click())
             onView(withId(R.id.profile_scroll)).check(matches(isDisplayed()))
-            onView(withText("Terms and Conditions")).perform(click())
+            onView(withContentDescription("Terms and Conditions")).perform(click())
             onView(withId(R.id.legal_scroll)).check(matches(isDisplayed()))
             pressBack()
             onView(withId(R.id.profile_scroll)).check(matches(isDisplayed()))
@@ -116,8 +117,8 @@ class XmlUiSmokeTest {
 
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.nav_profile)).perform(click())
-            onView(withText("Change")).perform(click())
-            onView(withId(R.id.profile_form_scroll)).check(matches(isDisplayed()))
+            onView(withContentDescription("Change profile")).perform(click())
+            onView(withText("Update your name, age, and gender.")).check(matches(isDisplayed()))
             pressBack()
             onView(withId(R.id.profile_scroll)).check(matches(isDisplayed()))
 

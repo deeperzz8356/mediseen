@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
@@ -16,7 +17,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.InputType
+import android.text.style.ForegroundColorSpan
 import android.util.Patterns
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -43,7 +47,6 @@ import coil.load
 import com.airbnb.lottie.LottieAnimationView
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -94,8 +97,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private lateinit var header: View
     private lateinit var headerTitle: TextView
     private lateinit var headerLanguage: ImageButton
-    private lateinit var headerProfile: MaterialButton
-    private lateinit var bottomNavigation: BottomNavigationView
+    private lateinit var headerProfile: ImageButton
+    private lateinit var bottomNavigation: LinearLayout
+    private lateinit var navigationItems: Map<String, LinearLayout>
     private lateinit var assistantFab: ExtendedFloatingActionButton
 
     private var route = "home"
@@ -118,6 +122,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private var profileAge = ""
     private var profileGender = "prefer_not_to_say"
     private var profileDraftInitialized = false
+    private var profileExpanded = false
     private var chatDraft = ""
     private var libraryQuery = ""
     private var diagnoseImage: Uri? = null
@@ -276,22 +281,18 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         headerLanguage = findViewById(R.id.header_language)
         headerProfile = findViewById(R.id.header_profile)
         bottomNavigation = findViewById(R.id.bottom_navigation)
+        navigationItems = mapOf(
+            "home" to findViewById(R.id.nav_home),
+            "diet" to findViewById(R.id.nav_diet),
+            "diagnose" to findViewById(R.id.nav_diagnose),
+            "library" to findViewById(R.id.nav_library),
+            "profile" to findViewById(R.id.nav_profile),
+        )
         assistantFab = findViewById(R.id.assistant_fab)
     }
 
     private fun setupNavigation() {
-        bottomNavigation.setOnItemSelectedListener { item ->
-            val next = when (item.itemId) {
-                R.id.nav_home -> "home"
-                R.id.nav_diet -> "diet"
-                R.id.nav_diagnose -> "diagnose"
-                R.id.nav_library -> "library"
-                R.id.nav_profile -> "profile"
-                else -> return@setOnItemSelectedListener false
-            }
-            navigate(next)
-            true
-        }
+        navigationItems.forEach { (destination, item) -> item.setOnClickListener { navigate(destination) } }
         headerProfile.setOnClickListener { navigate("profile") }
         headerLanguage.setOnClickListener { showLanguageMenu(headerLanguage) }
         assistantFab.setOnClickListener { navigate("chat") }
@@ -380,50 +381,46 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         with(root.findViewById<LinearLayout>(R.id.language_content)) {
         heading("Choose Language")
         body("Select your preferred language for the app interface.")
-        gap(18)
+        gap(14)
         supportedLanguages.forEach { language ->
             val active = selectedLanguage == language.code
-            panel(if (active) 0xFFF8F6FF.toInt() else Color.WHITE) {
+            addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                val flagResource = flagForLanguage(language.code)
-                if (flagResource != 0) addView(ImageView(context).apply {
-                    setImageResource(flagResource)
-                    scaleType = ImageView.ScaleType.CENTER_CROP
-                    contentDescription = "${language.name} flag"
-                    background = context.rounded(Color.WHITE, 24)
-                    clipToOutline = true
-                }, LinearLayout.LayoutParams(dp(44), dp(44))) else addView(TextView(context).apply {
-                    text = language.code.uppercase(); textSize = 14f; gravity = Gravity.CENTER
-                    setTypeface(typeface, Typeface.BOLD); background = context.rounded(0xFFF0F2F7.toInt(), 24)
-                }, LinearLayout.LayoutParams(dp(44), dp(44)))
+                setPadding(dp(14), dp(8), dp(12), dp(8))
+                background = rounded(if (active) 0xFFF8F6FF.toInt() else Color.WHITE, 14, ContextCompat.getColor(context, if (active) R.color.brand_violet else R.color.hairline))
+                addView(TextView(context).apply {
+                    text = when (language.code) { "en" -> "🇬🇧"; "hi", "te" -> "🇮🇳"; "es" -> "🇪🇸"; "fr" -> "🇫🇷"; "ar" -> "🇸🇦"; "de" -> "🇩🇪"; "ko" -> "🇰🇷"; "ja" -> "🇯🇵"; else -> "🇨🇳" }
+                    textSize = 25f
+                    gravity = Gravity.CENTER
+                }, LinearLayout.LayoutParams(dp(38), dp(38)))
                 addView(LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
-                    setPadding(dp(14), 0, 0, 0)
+                    setPadding(dp(12), 0, 0, 0)
                     addView(TextView(context).apply { text = language.name; textSize = 16f; setTypeface(typeface, Typeface.BOLD); setTextColor(ContextCompat.getColor(context, R.color.ink)) })
-                    addView(TextView(context).apply { text = language.nativeName; textSize = 13f; setTextColor(ContextCompat.getColor(context, R.color.muted_ink)) })
+                    addView(TextView(context).apply { text = language.name; textSize = 12f; setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) })
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 addView(TextView(context).apply {
                     text = if (active) "✓" else ""
-                    textSize = 18f; gravity = Gravity.CENTER
+                    textSize = 16f; gravity = Gravity.CENTER
                     setTextColor(Color.WHITE)
                     background = context.rounded(if (active) ContextCompat.getColor(context, R.color.brand_violet) else Color.WHITE, 24, ContextCompat.getColor(context, if (active) R.color.brand_violet else R.color.hairline))
-                }, LinearLayout.LayoutParams(dp(36), dp(36)))
+                }, LinearLayout.LayoutParams(dp(30), dp(30)))
                 isSelected = active
                 contentDescription = "${language.name}${if (active) ", selected" else ""}"
                 setOnClickListener { selectedLanguage = language.code; renderApp() }
-            }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(62)).apply { bottomMargin = dp(9) })
         }
         }
     }
 
     private fun renderNotification() = with(contentScreen(R.layout.screen_notification, R.id.notification_content)) {
         val top = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        top.addView(topAction("‹  Back") { vm.returnToLanguage() })
+        top.addView(topAction("‹") { vm.returnToLanguage() }.apply { setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) })
         top.addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
-        top.addView(topAction("Skip") { vm.finishNotification() })
+        top.addView(topAction("Skip") { vm.finishNotification() }.apply { contentDescription = "Top notification skip"; setTypeface(typeface, Typeface.NORMAL); setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) })
         addView(top)
-        gap(30)
+        gap(70)
         addView(FrameLayout(context).apply {
             background = context.rounded(ContextCompat.getColor(context, R.color.brand_violet_soft), 28)
             addView(ImageView(context).apply {
@@ -433,28 +430,51 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             }, FrameLayout.LayoutParams(dp(38), dp(38), Gravity.CENTER))
         }, LinearLayout.LayoutParams(dp(88), dp(88)).apply { gravity = Gravity.CENTER_HORIZONTAL })
         gap(24)
-        heading("Stay on top of your health")
-        body("Allow optional notifications for health reminders and updates when they become available. You can change this later in device settings.")
-        gap(22)
+        heading("Stay on top of\nyour health", 25f).apply { gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT) }
+        gap(10)
+        body("Enable notifications to get timely health reminders\nand alerts.").apply { gravity = Gravity.CENTER; textSize = 14f }
+        gap(28)
         listOf(
-            "Your choice" to "Notifications are optional and never block the app.",
-            "Stay informed" to "Get updates when notification features are available.",
-            "In control" to "Manage notification access in Android settings.",
-        ).forEach { (title, detail) -> panel { section(title); body(detail) } }
+            Triple("Medicine Reminders", "Never miss a dose with timely reminders", R.color.brand_pink_soft),
+            Triple("AI Health Alerts", "Get notified about important health insights", R.color.brand_violet_soft),
+            Triple("Daily Health Tips", "Bite-sized tips to improve your well-being", R.color.brand_blue_soft),
+        ).forEach { (title, detail, tint) ->
+            panel {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(ImageView(context).apply {
+                    setImageResource(if (title == "Daily Health Tips") R.drawable.ic_scan else R.drawable.ic_notifications)
+                    imageTintList = ContextCompat.getColorStateList(context, if (title == "Daily Health Tips") R.color.brand_blue else if (title == "Medicine Reminders") R.color.brand_pink else R.color.brand_violet)
+                    background = rounded(ContextCompat.getColor(context, tint), 12)
+                    setPadding(dp(10), dp(10), dp(10), dp(10))
+                }, LinearLayout.LayoutParams(dp(38), dp(38)))
+                addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(14), 0, 0, 0)
+                    body(title, muted = false).apply { textSize = 14f; setTypeface(typeface, Typeface.BOLD) }
+                    body(detail).apply { textSize = 12f }
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            }
+        }
+        gap(10)
         action("Allow Notifications") {
             if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             else vm.finishNotification()
         }
-        secondaryAction("Not now") { vm.finishNotification() }
+        addView(topAction("Skip") { vm.finishNotification() }.apply {
+            contentDescription = "Bottom notification skip"
+            setTypeface(typeface, Typeface.NORMAL)
+            setTextColor(ContextCompat.getColor(context, R.color.quiet_ink))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
     }
 
     private data class OnboardingPage(val title: String, val subtitle: String, val description: String, val features: List<String>, val animation: Int)
 
     private val onboardingPages by lazy {
         listOf(
-            OnboardingPage("AI Health Insights", "INSTANT HEALTH INSIGHTS", "Upload any health scan or report and receive clear AI-assisted insights with confidence scores.", listOf("Chest X-Ray scan", "Skin condition insights", "High accuracy"), R.raw.onboarding_insights),
-            OnboardingPage("Diet Recommendations", "NUTRITION TAILORED FOR YOU", "Get personalized meal guidance based on your condition, age and health goals.", listOf("Condition-specific meals", "Macro tracking", "Food swap suggestions"), R.raw.onboarding_nutrition),
-            OnboardingPage("Health Reports & Tracking", "YOUR HEALTH, VISUALIZED", "Track steps and key activity signals, and keep useful health information together.", listOf("On-device steps", "Visual summaries", "Shareable reports"), R.raw.onboarding_reports),
+            OnboardingPage("AI Health Insights", "INSTANT HEALTH INSIGHTS", "Upload any health scan or report and our advanced AI scans it in seconds. Get clear, easy-to-understand insights with confidence scores.", listOf("Chest X-Ray scan", "Skin condition insights", "High accuracy"), R.raw.onboarding_insights),
+            OnboardingPage("Diet Recommendations", "NUTRITION TAILORED FOR YOU", "Get personalized diet plans based on your diagnosed conditions, age, and health goals. Know exactly what to eat and what to avoid.", listOf("Condition-specific meal plans", "Macro tracking", "Food swap suggestions"), R.raw.onboarding_nutrition),
+            OnboardingPage("Health Reports & Tracking", "YOUR HEALTH, VISUALIZED", "Sync with Google Health Connect to track steps, sleep, calories, and heart rate. Generate detailed PDF reports to share with your doctor.", listOf("Health Connect sync", "Visual charts", "Shareable PDF reports"), R.raw.onboarding_reports),
             OnboardingPage("AI Health Assistant", "ASK ANYTHING, ANYTIME", "Ask the assistant about health results and next steps in clear language.", listOf("Health guidance", "Multiple languages", "Clear answers"), R.raw.onboarding_assistant),
         )
     }
@@ -478,8 +498,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             playAnimation()
             setPadding(dp(8), dp(8), dp(8), dp(8))
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(390)).apply {
-                topMargin = dp(24)
-                bottomMargin = dp(26)
+                topMargin = dp(8)
+                bottomMargin = dp(8)
             }
             contentDescription = page.title
         })
@@ -499,18 +519,27 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             addView(FrameLayout(context).also { loadBannerAd(context, it, BannerAdPlacement.Onboarding) })
             gap(12)
         }
-        gap(20)
+        gap(16)
         action(if (onboardingPage == onboardingPages.lastIndex) "Get Started" else "Next") {
             if (onboardingPage == onboardingPages.lastIndex) vm.finishOnboarding() else { onboardingPage++; renderApp() }
+        }.apply {
+            background = ContextCompat.getDrawable(context, when (onboardingPage) {
+                0 -> R.drawable.action_insights
+                1 -> R.drawable.action_nutrition
+                2 -> R.drawable.action_reports
+                else -> R.drawable.brand_action
+            })
         }
-        if (onboardingPage > 0) secondaryAction("Back") { onboardingPage--; renderApp() }
     }
 
     private fun renderAuth() = with(contentScreen(R.layout.screen_auth, R.id.auth_content)) {
-        image(R.mipmap.ic_launcher_foreground, "MediSeen logo", 62)
-        heading(if (createAccount) "Create your account" else "Welcome")
-        body(if (createAccount) "Save your health history and continue across devices." else "Sign in to access your AI health workspace.")
-        gap(20)
+        image(R.mipmap.ic_launcher_foreground, "MediSeen logo", 48)
+        heading(if (createAccount) "Create your account" else "Welcome", 24f).apply {
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        body(if (createAccount) "Save your health history and continue across devices." else "Login to access the AI health insights platform").apply { gravity = Gravity.CENTER }
+        gap(18)
         input("Email address", authEmail, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS) { authEmail = it; vm.clearAuthError() }
         input("Password", authPassword, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD) { authPassword = it; vm.clearAuthError() }
         if (createAccount) input("Confirm password", authConfirm, InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD) { authConfirm = it; vm.clearAuthError() }
@@ -528,20 +557,26 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 if (createAccount) vm.signUp(authEmail.trim(), authPassword) else vm.signIn(authEmail.trim(), authPassword)
             } else renderApp()
         }.isEnabled = !vm.authBusy
-        secondaryAction("Continue with Google") {
+        addView(LinearLayout(context).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(View(context).apply { setBackgroundColor(ContextCompat.getColor(context, R.color.hairline)) }, LinearLayout.LayoutParams(0, dp(1), 1f))
+            addView(TextView(context).apply { text = "OR"; textSize = 11f; setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)); setPadding(dp(12), 0, dp(12), 0) })
+            addView(View(context).apply { setBackgroundColor(ContextCompat.getColor(context, R.color.hairline)) }, LinearLayout.LayoutParams(0, dp(1), 1f))
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36)))
+        secondaryAction("G   Continue with Google") {
             val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).requestIdToken(getString(R.string.default_web_client_id)).requestEmail().build()
             googleSignIn.launch(GoogleSignIn.getClient(this@MainActivity, options).signInIntent)
         }.isEnabled = !vm.authBusy
         secondaryAction("Continue as guest") { vm.continueAsGuest() }
-        secondaryAction(if (createAccount) "Already have an account? Sign in" else "New to MediSeen? Create an account") {
+        addView(topAction(if (createAccount) "Already have an account? Sign in" else "New to MediSeen?  Create Account") {
             createAccount = !createAccount
             authAttempted = false
             vm.clearAuthError()
             renderApp()
-        }
-        secondaryAction("Privacy policy") {
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
+        addView(topAction("PRIVACY POLICY") {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://sites.google.com/view/sapappsolutionmediseenpolicy/home")))
-        }
+        }.apply { textSize = 10f; letterSpacing = 0.12f; setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)))
     }
 
     private fun renderProfileForm() = with(contentScreen(R.layout.screen_profile_form, R.id.profile_form_content)) {
@@ -577,18 +612,29 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         bottomNavigation.visibility = if (legalDetail) View.GONE else View.VISIBLE
         assistantFab.visibility = if (route in setOf("chat", "privacy", "terms", "profile")) View.GONE else View.VISIBLE
         headerTitle.text = tr(vm.locale, if (route == "chat") "chat" else route)
-        headerProfile.text = vm.profile?.name?.trim()?.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
         findViewById<View>(R.id.app_root).layoutDirection = if (vm.locale == "ar") View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
-        bottomNavigation.menu.findItem(R.id.nav_home).title = tr(vm.locale, "home")
-        bottomNavigation.menu.findItem(R.id.nav_diet).title = tr(vm.locale, "diet")
-        bottomNavigation.menu.findItem(R.id.nav_diagnose).title = tr(vm.locale, "diagnose")
-        bottomNavigation.menu.findItem(R.id.nav_library).title = tr(vm.locale, "library")
-        bottomNavigation.menu.findItem(R.id.nav_profile).title = tr(vm.locale, "profile")
-        val selectedId = when (route) {
-            "diet" -> R.id.nav_diet; "diagnose" -> R.id.nav_diagnose; "library" -> R.id.nav_library
-            "profile", "privacy", "terms" -> R.id.nav_profile; else -> R.id.nav_home
+        val selectedRoute = when (route) {
+            "diet", "diagnose", "library" -> route
+            "profile", "privacy", "terms" -> "profile"
+            else -> "home"
         }
-        if (bottomNavigation.selectedItemId != selectedId) bottomNavigation.menu.findItem(selectedId)?.isChecked = true
+        navigationItems.forEach { (destination, item) ->
+            val selected = destination == selectedRoute
+            item.background = if (selected) ContextCompat.getDrawable(this, R.drawable.nav_indicator) else null
+            item.isSelected = selected
+            val icon = item.getChildAt(0) as ImageView
+            val label = item.getChildAt(1) as TextView
+            val color = ContextCompat.getColor(this, if (selected) android.R.color.white else R.color.muted_ink)
+            icon.imageTintList = ColorStateList.valueOf(color)
+            label.setTextColor(color)
+            label.text = when (destination) {
+                "home" -> tr(vm.locale, "home")
+                "diet" -> tr(vm.locale, "diet")
+                "diagnose" -> "SCAN"
+                "library" -> tr(vm.locale, "library")
+                else -> tr(vm.locale, "profile")
+            }.uppercase()
+        }
         renderRoute()
     }
 
@@ -602,31 +648,77 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun renderHome() = with(contentScreen(R.layout.screen_home, R.id.home_content, screenHost)) {
-        val name = vm.profile?.name?.takeIf(String::isNotBlank) ?: "there"
-        panel(Color.TRANSPARENT) {
+        val hero = panel(Color.TRANSPARENT) {
             background = ContextCompat.getDrawable(context, R.drawable.hero_gradient)
-            setPadding(dp(26), dp(54), dp(26), dp(54))
-            body("EMPOWERING YOUR HEALTH DECISIONS", muted = false).apply {
-                textSize = 12f; letterSpacing = 0.08f; setTextColor(0xFFE6DCF9.toInt())
+            setPadding(dp(24), dp(38), dp(24), dp(28))
+            body("✣  EMPOWERING YOUR HEALTH DECISIONS", muted = false).apply {
+                textSize = 10.5f
+                letterSpacing = 0.08f
+                setTextColor(0xFFF4F0FF.toInt())
+                background = rounded(0x22FFFFFF, 18, 0x55FFFFFF)
+                setPadding(dp(12), dp(7), dp(12), dp(7))
             }
-            gap(22)
-            heading("${tr(vm.locale, "hello")}, $name", 34f).setTextColor(Color.WHITE)
-            gap(14)
+            gap(18)
+            heading("${tr(vm.locale, "hello")},", 29f).setTextColor(Color.WHITE)
+            gap(16)
             body("How can I help you today? I’m ready to scan reports or answer questions.", muted = false).setTextColor(0xFFE1E3EE.toInt())
-            gap(24)
-            secondaryAction(tr(vm.locale, "start_scan")) { navigate("diagnose") }.apply {
+            gap(22)
+            secondaryAction("START SCAN   ›") { navigate("diagnose") }.apply {
+                textSize = 11f
+                letterSpacing = 0.08f
+                setPadding(dp(10), 0, dp(10), 0)
                 layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
-                    width = dp(160)
+                    width = dp(136)
+                    height = dp(44)
                     gravity = Gravity.START
                 }
             }
         }
+        hero.layoutParams = (hero.layoutParams as LinearLayout.LayoutParams).apply { height = dp(364) }
         gap(18)
-        section("What do you need?")
-        body("Choose a tool to get started")
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.BOTTOM
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                heading("What do you need?", 21f)
+                body("Choose a tool to get started").apply { textSize = 13f }
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(TextView(context).apply {
+                text = "View all tools  ›"
+                textSize = 12f
+                setTypeface(typeface, Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(context, R.color.brand_violet))
+                setPadding(dp(8), dp(8), 0, dp(4))
+                setOnClickListener { navigate("diagnose") }
+            })
+        })
         gap(12)
-        panel { section(tr(vm.locale, "start_scan")); body("Get an AI-assisted image explanation"); setOnClickListener { navigate("diagnose") } }
-        panel { section("Ask MediSeen"); body("Get clear answers to health questions"); setOnClickListener { navigate("chat") } }
+        panel {
+            addView(TextView(context).apply {
+                text = "+"
+                textSize = 30f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                background = rounded(ContextCompat.getColor(context, R.color.brand_pink), 12)
+            }, LinearLayout.LayoutParams(dp(42), dp(42)))
+            gap(12)
+            section(tr(vm.locale, "start_scan"))
+            body("Instant AI insights for your health reports.")
+            setOnClickListener { navigate("diagnose") }
+        }
+        panel {
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_chat)
+                contentDescription = "Ask MediSeen"
+                imageTintList = ContextCompat.getColorStateList(context, R.color.brand_violet)
+                background = rounded(ContextCompat.getColor(context, R.color.brand_violet_soft), 12)
+                setPadding(dp(9), dp(9), dp(9), dp(9))
+            }, LinearLayout.LayoutParams(dp(42), dp(42)))
+            section("Ask MediSeen")
+            body("Get clear answers to health questions")
+            setOnClickListener { navigate("chat") }
+        }
         if (AdsRuntime.adsReady) {
             addView(FrameLayout(context).also { host ->
                 loadNativeAd(context, host, NativeAdPlacement.Home) { loadBannerAd(context, host, BannerAdPlacement.HomeFallback) }
@@ -665,13 +757,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         val root = LayoutInflater.from(this).inflate(R.layout.screen_chat, screenHost, false)
         screenHost.addView(root)
         val messages = root.findViewById<LinearLayout>(R.id.chat_messages)
-        messages.body("Educational guidance only. For urgent symptoms, seek medical care.")
-        messages.gap(16)
-        vm.chatMessages.forEach { message ->
+        val shownMessages = if (vm.chatMessages.isEmpty()) listOf(com.mediseen.app.data.ChatMessage("assistant", "Hello! I am your MediSeen. How can I help you today?")) else vm.chatMessages
+        shownMessages.forEachIndexed { index, message ->
             val user = message.role == "user"
             messages.addView(TextView(this).apply {
-                text = message.text
-                textSize = 15f
+                text = if (index == 0 && !user) "Hello! I am your MediSeen. How can I help you today?" else message.text
+                textSize = 13.5f
                 setTextColor(if (user) Color.WHITE else ContextCompat.getColor(context, R.color.ink))
                 setPadding(dp(15), dp(12), dp(15), dp(12))
                 background = rounded(if (user) ContextCompat.getColor(context, R.color.brand_violet) else Color.WHITE, 16, if (user) null else ContextCompat.getColor(context, R.color.hairline))
@@ -710,11 +801,16 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         when (val state = vm.dietState) {
             is LoadState.Success -> renderDietPlan(this, state.value)
             else -> {
-                heading(tr(vm.locale, "nutrition"))
-                body("Food and lifestyle guidance based on your needs and preferences.")
+                body("♢  NUTRITION ENGINE", muted = false).apply { textSize = 11f; letterSpacing = 0.08f; setTypeface(typeface, Typeface.BOLD); setTextColor(ContextCompat.getColor(context, R.color.brand_violet)) }
+                gap(12)
+                val nutritionTitle = SpannableString("Your Health & Nutrition").apply {
+                    setSpan(ForegroundColorSpan(ContextCompat.getColor(context, R.color.brand_violet)), 12, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                heading(nutritionTitle.toString(), 28f).apply { text = nutritionTitle }
+                body("Actionable food, lifestyle, and habit plans to help you\nfeel your best.")
                 gap(18)
                 panel {
-                    body("TARGETED DISEASE", muted = false).apply {
+                    body("⌕  TARGETED DISEASE", muted = false).apply {
                         textSize = 12f; letterSpacing = 0.09f
                         setTextColor(ContextCompat.getColor(context, R.color.brand_violet))
                         setTypeface(typeface, Typeface.BOLD)
@@ -739,12 +835,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     gap(8)
                     choices("Dietary preferences", listOf("veg", "non-veg"), dietType) { dietType = it }
                     choices("Budget level", listOf("low", "medium", "high"), dietBudget) { dietBudget = it }
+                    gap(8)
+                    action("↻   CREATE MY PLAN") {
+                        val weight = dietWeight.toDoubleOrNull(); val height = dietHeight.toDoubleOrNull(); val age = dietAge.toIntOrNull()
+                        if (dietDisease.isNotBlank() && weight != null && weight > 0 && height != null && height > 0 && age != null && age in 1..120) vm.generateDiet(DietInput(dietDisease.trim(), weight, height, age, dietGender, 1.375, dietGoal, dietType, dietBudget))
+                        else error("Enter a condition and valid measurements")
+                    }.isEnabled = state !is LoadState.Loading
                 }
-                action(tr(vm.locale, "create_plan")) {
-                    val weight = dietWeight.toDoubleOrNull(); val height = dietHeight.toDoubleOrNull(); val age = dietAge.toIntOrNull()
-                    if (dietDisease.isNotBlank() && weight != null && weight > 0 && height != null && height > 0 && age != null && age in 1..120) vm.generateDiet(DietInput(dietDisease.trim(), weight, height, age, dietGender, 1.375, dietGoal, dietType, dietBudget))
-                    else error("Enter a condition and valid measurements")
-                }.isEnabled = state !is LoadState.Loading
                 when (state) { LoadState.Loading -> loading("Building your nutrition plan…"); is LoadState.Error -> error(state.message); else -> Unit }
             }
         }
@@ -756,9 +853,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         body("A practical meal schedule based on the details you provided.")
         gap(16)
         macroCard("Daily target", "${plan.calories.roundToInt()} kcal", ContextCompat.getColor(context, R.color.ink), Color.WHITE)
-        macroCard("Protein", "${plan.protein.roundToInt()}g", 0xFFE8F8F2.toInt(), ContextCompat.getColor(context, R.color.positive))
-        macroCard("Carbs", "${plan.carbs.roundToInt()}g", ContextCompat.getColor(context, R.color.brand_violet_soft), ContextCompat.getColor(context, R.color.brand_violet))
-        macroCard("Fats", "${plan.fats.roundToInt()}g", ContextCompat.getColor(context, R.color.brand_pink_soft), ContextCompat.getColor(context, R.color.brand_pink))
+        macroCard("Protein", "${plan.protein.roundToInt()}g", Color.WHITE, ContextCompat.getColor(context, R.color.positive))
+        macroCard("Carbs", "${plan.carbs.roundToInt()}g", Color.WHITE, ContextCompat.getColor(context, R.color.brand_violet))
+        macroCard("Fats", "${plan.fats.roundToInt()}g", Color.WHITE, ContextCompat.getColor(context, R.color.brand_pink))
         section("Daily meal schedule")
         plan.meals.forEach { meal -> panel { section("${meal.name.replaceFirstChar(Char::uppercase)}  ·  ${meal.calories.roundToInt()} kcal"); meal.items.forEach(::bullet) } }
         if (plan.recommended.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { section("Recommended foods"); plan.recommended.forEach(::bullet) }
@@ -789,9 +886,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         when (val state = vm.libraryState) {
             is LoadState.Success -> renderMedicalContext(this, state.value)
             else -> {
-                heading(tr(vm.locale, "library_title"))
-                body("Search conditions or use these quick-access health topics.")
-                gap(16)
+                body("▣  HEALTH KNOWLEDGE BASE", muted = false).apply { gravity = Gravity.CENTER; textSize = 11f; setTypeface(typeface, Typeface.BOLD); setTextColor(ContextCompat.getColor(context, R.color.brand_violet)) }
+                gap(14)
+                heading(tr(vm.locale, "library_title"), 28f).apply { gravity = Gravity.CENTER }
+                gap(10)
+                body("Search conditions or use our quick-access health\nshortcuts.").apply { gravity = Gravity.CENTER; textSize = 16f }
+                gap(24)
                 input("Search symptoms or conditions", libraryQuery) { libraryQuery = it }.apply {
                     isSingleLine = true
                     imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
@@ -802,12 +902,26 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         } else false
                     }
                 }
-                section("Health shortcuts")
+                gap(16)
+                addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    addView(TextView(context).apply { text = "HEALTH SHORTCUTS"; textSize = 11f; letterSpacing = 0.08f; setTypeface(typeface, Typeface.BOLD); setTextColor(ContextCompat.getColor(context, R.color.muted_ink)) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(TextView(context).apply { text = "8 CURATED CONDITIONS"; textSize = 9f; setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) })
+                })
+                gap(14)
+                val topicIcons = mapOf("Diabetes" to "🩸", "PCOS" to "🧬", "Hypertension" to "💗", "Acidity" to "🍋", "Anemia" to "🩸", "Obesity" to "⚖", "Thyroid" to "♢", "IBS" to "◉")
                 listOf("Diabetes", "PCOS", "Hypertension", "Acidity", "Anemia", "Obesity", "Thyroid", "IBS").chunked(2).forEachIndexed { rowIndex, topics ->
                     addView(LinearLayout(context).apply {
                         orientation = LinearLayout.HORIZONTAL
                         topics.forEachIndexed { column, topic ->
                             val card = panel {
+                                addView(TextView(context).apply {
+                                    text = topicIcons[topic]
+                                    textSize = 21f
+                                    gravity = Gravity.CENTER
+                                    background = rounded(ContextCompat.getColor(context, if (column == 0) R.color.brand_pink_soft else R.color.brand_violet_soft), 12)
+                                }, LinearLayout.LayoutParams(dp(38), dp(38)))
+                                gap(10)
                                 section(topic)
                                 gap(10)
                                 body("VIEW DATA  ›", muted = false).apply {
@@ -817,7 +931,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                 }
                                 setOnClickListener { libraryQuery = topic; vm.searchLibrary(topic) }
                             }
-                            card.layoutParams = LinearLayout.LayoutParams(0, dp(142), 1f).apply {
+                            card.layoutParams = LinearLayout.LayoutParams(0, dp(122), 1f).apply {
                                 bottomMargin = dp(14)
                                 if (column > 0) marginStart = dp(10)
                             }
@@ -840,20 +954,24 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     private fun renderMedicalContext(content: LinearLayout, medical: MedicalContext) = with(content) {
         if (AdsRuntime.adsReady) LibraryCompletionInterstitial.preload(this@MainActivity)
-        secondaryAction("‹ Explore other conditions") { completeLibraryArticle() }
-        panel(ContextCompat.getColor(context, R.color.ink)) { heading(medical.name, 27f).setTextColor(Color.WHITE); body("Symptoms, precautions and nutrition guidance in one place.", muted = false).setTextColor(0xFFE5E7F1.toInt()) }
-        if (medical.overview.isNotBlank()) panel { section("Overview"); body(medical.overview) }
-        if (medical.symptoms.isNotEmpty()) panel { section("Symptoms"); medical.symptoms.forEach(::bullet) }
-        if (medical.precautions.isNotEmpty()) panel(0xFFE8F8F2.toInt()) { section("Precautions"); medical.precautions.forEach(::bullet) }
-        if (medical.triggers.isNotEmpty()) panel(ContextCompat.getColor(context, R.color.brand_pink_soft)) { section("Common triggers"); medical.triggers.forEach(::bullet) }
-        panel(ContextCompat.getColor(context, R.color.brand_violet)) {
-            heading("Nutrition strategy").setTextColor(Color.WHITE)
-            if (medical.recommended.isNotEmpty()) { body("RECOMMENDED", muted = false).setTextColor(Color.WHITE); medical.recommended.forEach { bullet(it, Color.WHITE) } }
-            if (medical.avoid.isNotEmpty()) { gap(8); body("FOODS TO LIMIT", muted = false).setTextColor(Color.WHITE); medical.avoid.forEach { bullet(it, Color.WHITE) } }
-            gap(14)
-            secondaryAction("Create a personalized meal plan") { vm.setDietPrefill(medical.name); navigate("diet") }
+        panel(Color.TRANSPARENT) {
+            background = ContextCompat.getDrawable(context, R.drawable.hero_gradient)
+            body("✣  VERIFIED HEALTH DATA", muted = false).apply { textSize = 10f; letterSpacing = 0.08f; setTextColor(0xFFE6DCF9.toInt()) }
+            gap(16)
+            heading(medical.name, 30f).setTextColor(Color.WHITE)
+            gap(10)
+            body(medical.overview.ifBlank { "Comprehensive therapeutic overview and management guidance." }, muted = false).setTextColor(0xFFE5E7F1.toInt())
         }
-        body("Educational information only. A clinician can help interpret it for your situation.")
+        if (medical.symptoms.isNotEmpty()) panel { section("⚠  Symptoms"); medical.symptoms.forEach { item -> body("•  $item", muted = false).apply { background = rounded(ContextCompat.getColor(context, R.color.surface_subtle), 10); setPadding(dp(12), dp(10), dp(12), dp(10)) }; gap(6) } }
+        if (medical.precautions.isNotEmpty()) panel { section("♢  Precautions"); medical.precautions.forEach { item -> body("›  $item", muted = false).apply { background = rounded(0xFFF3FCF9.toInt(), 10); setPadding(dp(12), dp(10), dp(12), dp(10)) }; gap(6) } }
+        panel(ContextCompat.getColor(context, R.color.brand_violet)) {
+            heading("Nutrition Strategy").setTextColor(Color.WHITE)
+            if (medical.recommended.isNotEmpty()) { body("THERAPEUTIC FAVORITES", muted = false).setTextColor(Color.WHITE); medical.recommended.forEach { bullet(it, Color.WHITE) } }
+            if (medical.avoid.isNotEmpty()) { gap(8); body("STRICTLY AVOID", muted = false).setTextColor(Color.WHITE); medical.avoid.forEach { bullet(it, Color.WHITE) } }
+            gap(14)
+            secondaryAction("GENERATE PERSONALIZED DIET PLAN  →") { vm.setDietPrefill(medical.name); navigate("diet") }
+        }
+        addView(topAction("CLEAR RESULTS & SEARCH AGAIN") { completeLibraryArticle() }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
         if (AdsRuntime.adsReady) {
             gap(14)
             addView(FrameLayout(context).also { loadNativeAd(context, it, NativeAdPlacement.LibraryDetail) })
@@ -873,8 +991,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         if (pendingScanConsumption && resultState is LoadState.Success) { ScanAccess.consumeScan(this@MainActivity); pendingScanConsumption = false }
         else if (pendingScanConsumption && resultState is LoadState.Error) pendingScanConsumption = false
 
-        heading(tr(vm.locale, "health_assistant"))
-        body("Upload a health scan or review today's on-device activity.")
+        val scanTitle = SpannableString("HEALTH ASISTANT").apply {
+            setSpan(ForegroundColorSpan(ContextCompat.getColor(context, R.color.brand_pink)), 7, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        heading(scanTitle.toString(), 25f).apply { text = scanTitle }
+        body("Upload your health scan, and our assistant will help you understand it in\nseconds.")
         gap(16)
         renderDiagnoseTabs()
 
@@ -902,10 +1023,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             orientation = LinearLayout.HORIZONTAL
             val scan = secondaryAction(tr(vm.locale, "scan_report")) { diagnoseTab = "scan"; renderApp() }
             scan.contentDescription = "Open scan report workflow"
-            scan.layoutParams = LinearLayout.LayoutParams(0, dp(58), 1f).apply { marginEnd = dp(8) }
+            scan.layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(8) }
             val activity = secondaryAction(tr(vm.locale, "activity")) { diagnoseTab = "activity"; renderApp() }
             activity.contentDescription = "Open daily activity"
-            activity.layoutParams = LinearLayout.LayoutParams(0, dp(58), 1f)
+            activity.layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f)
             val active = if (diagnoseTab == "scan") scan else activity
             active.setTextColor(Color.WHITE)
             active.background = context.rounded(Color.BLACK, 16)
@@ -927,11 +1048,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         setTextColor(if (step == diagnoseStep) Color.WHITE else ContextCompat.getColor(context, R.color.muted_ink))
                         background = context.rounded(if (step == diagnoseStep) Color.BLACK else ContextCompat.getColor(context, R.color.surface_subtle), 14)
                         contentDescription = "Step $step of 3${if (step == diagnoseStep) ", current" else ""}"
-                    }, LinearLayout.LayoutParams(dp(54), dp(54)))
+                    }, LinearLayout.LayoutParams(dp(38), dp(38)))
                     if (step < 3) addView(TextView(context).apply {
                         text = "›"; gravity = Gravity.CENTER; textSize = 24f
                         setTextColor(ContextCompat.getColor(context, R.color.quiet_ink))
-                    }, LinearLayout.LayoutParams(0, dp(54), 1f))
+                    }, LinearLayout.LayoutParams(0, dp(38), 1f))
                 }
             })
         }
@@ -939,28 +1060,36 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     private fun LinearLayout.renderUploadStep() {
         panel {
-            section("1. Upload report")
-            body("Select a clear health image or scan.")
-            gap(12)
-            addView(ImageView(context).apply {
-                contentDescription = if (diagnoseImage == null) "No health image selected" else "Selected health image"
-                scaleType = ImageView.ScaleType.CENTER_INSIDE
-                if (diagnoseImage != null) load(diagnoseImage) else setImageResource(android.R.drawable.ic_menu_gallery)
-                background = context.rounded(ContextCompat.getColor(context, R.color.brand_blue_soft), 12)
+            section("1. UPLOAD REPORT")
+            body("SELECT YOUR HEALTH IMAGE OR SCAN").apply { textSize = 11f; letterSpacing = 0.08f }
+            gap(24)
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                background = context.rounded(ContextCompat.getColor(context, R.color.surface_subtle), 16, ContextCompat.getColor(context, R.color.hairline))
+                addView(ImageView(context).apply {
+                    contentDescription = if (diagnoseImage == null) "Upload health image" else "Selected health image"
+                    if (diagnoseImage != null) load(diagnoseImage) else setImageResource(android.R.drawable.stat_sys_upload)
+                    imageTintList = ContextCompat.getColorStateList(context, R.color.quiet_ink)
+                    background = rounded(Color.WHITE, 28)
+                    setPadding(dp(12), dp(12), dp(12), dp(12))
+                }, LinearLayout.LayoutParams(dp(52), dp(52)))
+                gap(14)
+                body(if (diagnoseImage == null) "Tap to browse or take a photo" else "Image selected — tap to replace", muted = false).apply { gravity = Gravity.CENTER; setTypeface(typeface, Typeface.BOLD) }
+                gap(8)
+                body("PNG, JPG OR HEIC").apply { gravity = Gravity.CENTER; textSize = 11f; letterSpacing = 0.12f }
+                setOnClickListener {
+                    MaterialAlertDialogBuilder(this@MainActivity).setItems(arrayOf("Choose from gallery", "Take a photo")) { _, which ->
+                        if (which == 0) galleryPicker.launch("image/*")
+                        else if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) launchCamera()
+                        else cameraPermission.launch(Manifest.permission.CAMERA)
+                    }.show()
+                }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)))
-            gap(12)
-            secondaryAction("Choose from gallery") { galleryPicker.launch("image/*") }
-            secondaryAction("Take a photo") {
-                if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) launchCamera()
-                else cameraPermission.launch(Manifest.permission.CAMERA)
-            }
+            gap(24)
+            body("2. DESCRIBE SYMPTOMS").apply { textSize = 12f; letterSpacing = 0.08f; setTypeface(typeface, Typeface.BOLD) }
         }
-        action("Continue to symptoms") { diagnoseStep = 2; renderApp() }.isEnabled = diagnoseImage != null
-        secondaryAction(if (showHistory) "Hide scan history" else "View scan history") {
-            showHistory = !showHistory
-            if (showHistory) vm.loadHistory()
-            renderApp()
-        }
+        if (diagnoseImage != null) action("Continue to symptoms") { diagnoseStep = 2; renderApp() }
         if (showHistory) {
             if (vm.diagnosisHistory.isEmpty()) panel(ContextCompat.getColor(context, R.color.brand_blue_soft)) { body("Your previous scans will appear here after your first analysis.") }
             vm.diagnosisHistory.forEach { item -> panel { section(item.disease); body("Confidence ${(item.confidence * if (item.confidence <= 1) 100 else 1).toInt()}%", muted = false); body(item.summary) } }
@@ -1039,16 +1168,49 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun renderProfile() = with(contentScreen(R.layout.screen_profile, R.id.profile_content, screenHost)) {
-        heading(tr(vm.locale, "profile_title")); body("Manage personal details, preferences and account controls."); gap(16)
         panel {
-            section(vm.profile?.name?.ifBlank { "Your details" } ?: "Your details")
-            body(listOfNotNull(vm.profile?.email?.takeIf(String::isNotBlank), vm.profile?.age?.takeIf(String::isNotBlank)?.let { "Age $it" }, vm.profile?.gender?.takeUnless { it == "prefer_not_to_say" }?.replace('_', ' ')).joinToString(" • ").ifBlank { "Add your details" })
-            gap(12); action("Change") { profileDraftInitialized = false; returningFromProfileEdit = true; vm.editProfile() }
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                section("Profile Information")
+                addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+                addView(TextView(context).apply { text = if (profileExpanded) "⌄" else "›"; textSize = 24f; setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) })
+            })
+            body(if (profileExpanded) "Update your name, age, and gender." else "Tap to change your profile details.")
+            gap(16)
+            if (!profileExpanded) {
+                addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    background = rounded(ContextCompat.getColor(context, R.color.surface_subtle), 14)
+                    setPadding(dp(14), dp(12), dp(12), dp(12))
+                    addView(LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; section(vm.profile?.name?.ifBlank { "Guest" } ?: "Guest").apply { textSize = 14f }; body("Open the dropdown to edit your\nprofile.").apply { textSize = 12f } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(TextView(context).apply { text = "CHANGE\nPROFILE"; contentDescription = "Change profile"; gravity = Gravity.CENTER; textSize = 11f; letterSpacing = 0.08f; setTypeface(typeface, Typeface.BOLD); setTextColor(Color.WHITE); background = rounded(ContextCompat.getColor(context, R.color.navy), 12); setOnClickListener { profileExpanded = true; profileDraftInitialized = false; renderApp() } }, LinearLayout.LayoutParams(dp(108), dp(48)))
+                })
+            } else {
+                if (!profileDraftInitialized) { profileName = vm.profile?.name ?: "Guest"; profileAge = vm.profile?.age.orEmpty(); profileGender = vm.profile?.gender ?: "prefer_not_to_say"; profileDraftInitialized = true }
+                input("FULL NAME", profileName) { profileName = it }
+                input("AGE", profileAge, InputType.TYPE_CLASS_NUMBER) { profileAge = it.filter(Char::isDigit).take(3) }
+                choices("GENDER", listOf("male", "female", "other", "prefer_not_to_say"), profileGender) { profileGender = it }
+                action("▣  Save Profile") {
+                    val age = profileAge.toIntOrNull()
+                    if (profileName.isNotBlank() && age != null && age in 1..120) { vm.saveProfile(UserProfile(name = profileName.trim(), age = profileAge, gender = profileGender, language = vm.locale)); profileExpanded = false }
+                }
+            }
         }
-        section("Preferences")
-        panel { section(tr(vm.locale, "language")); body(supportedLanguages.firstOrNull { it.code == vm.locale }?.nativeName ?: vm.locale); setOnClickListener { showLanguageDialog() } }
-        panel { section(tr(vm.locale, "terms")); body("Read the service agreement"); setOnClickListener { navigate("terms") } }
-        panel { section(tr(vm.locale, "privacy")); body("How your information is handled"); setOnClickListener { navigate("privacy") } }
+        panel {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            addView(ImageView(context).apply { setImageResource(R.drawable.ic_language); imageTintList = ContextCompat.getColorStateList(context, R.color.brand_violet); background = rounded(ContextCompat.getColor(context, R.color.brand_violet_soft), 12); setPadding(dp(9), dp(9), dp(9), dp(9)) }, LinearLayout.LayoutParams(dp(38), dp(38)))
+            addView(LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), 0, 0, 0); section(tr(vm.locale, "language")).apply { textSize = 15f }; body(supportedLanguages.firstOrNull { it.code == vm.locale }?.name ?: vm.locale).apply { textSize = 12f } }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(TextView(context).apply { text = "›"; textSize = 24f; setTextColor(ContextCompat.getColor(context, R.color.quiet_ink)) })
+            setOnClickListener { showLanguageMenu(headerLanguage) }
+        }
+        panel {
+            section("Legal & Support")
+            gap(12)
+            body("Terms and Conditions\nRead our service agreement        ›", muted = false).apply { contentDescription = "Terms and Conditions"; background = rounded(ContextCompat.getColor(context, R.color.surface_subtle), 12); setPadding(dp(12), dp(10), dp(12), dp(10)); setOnClickListener { navigate("terms") } }
+            gap(10)
+            body("Privacy Policy\nHow we handle your data           ›", muted = false).apply { background = rounded(ContextCompat.getColor(context, R.color.surface_subtle), 12); setPadding(dp(12), dp(10), dp(12), dp(10)); setOnClickListener { navigate("privacy") } }
+        }
         if (AdsRuntime.privacyOptionsRequired) panel { section("Ad privacy choices"); body("Review advertising consent choices"); setOnClickListener { AdsRuntime.showPrivacyOptions(this@MainActivity) } }
         section(tr(vm.locale, "account"))
         if (vm.profile?.uid?.startsWith("guest_") == true) secondaryAction("Login / Sign up") { vm.logout() }
@@ -1058,7 +1220,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 MaterialAlertDialogBuilder(this@MainActivity).setTitle("Delete account?").setMessage("This permanently removes your account and stored health data. This action cannot be undone.").setNegativeButton("Cancel", null).setPositiveButton("Delete permanently") { _, _ -> vm.deleteAccount() }.show()
             }
         }
-        body("Mediseen 1.2")
     }
 
     private fun renderPrivacy() = with(contentScreen(R.layout.screen_legal, R.id.legal_content, screenHost)) {
@@ -1092,8 +1253,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             content.addView(LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                minimumHeight = dp(48)
-                setPadding(dp(10), dp(6), dp(10), dp(6))
+                minimumHeight = dp(40)
+                setPadding(dp(8), dp(4), dp(8), dp(4))
                 background = rounded(if (active) ContextCompat.getColor(context, R.color.navy) else Color.WHITE, 14)
                 contentDescription = "${language.name}${if (active) ", selected" else ""}"
                 isSelected = active
@@ -1101,23 +1262,23 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 if (flag != 0) addView(ImageView(context).apply {
                     setImageResource(flag); scaleType = ImageView.ScaleType.CENTER_CROP
                     contentDescription = null
-                }, LinearLayout.LayoutParams(dp(30), dp(30)))
+                }, LinearLayout.LayoutParams(dp(20), dp(20)))
                 addView(TextView(context).apply {
                     text = language.nativeName
-                    textSize = 15f
+                    textSize = 13f
                     setTypeface(typeface, if (active) Typeface.BOLD else Typeface.NORMAL)
                     setTextColor(if (active) Color.WHITE else ContextCompat.getColor(context, R.color.ink))
                     setPadding(dp(12), 0, dp(8), 0)
                 }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 if (active) addView(TextView(context).apply { text = "•"; textSize = 22f; setTextColor(ContextCompat.getColor(context, R.color.brand_pink)) })
                 setOnClickListener { vm.updateLanguage(language.code); popup.dismiss() }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)).apply { bottomMargin = dp(4) })
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)).apply { bottomMargin = dp(2) })
         }
-        popup = PopupWindow(root, dp(280), dp(480), true).apply {
+        popup = PopupWindow(root, dp(148), dp(430), true).apply {
             setBackgroundDrawable(ColorDrawable(Color.WHITE))
             isOutsideTouchable = true
             elevation = dp(10).toFloat()
-            showAsDropDown(anchor, -dp(224), dp(8))
+            showAsDropDown(anchor, -dp(112), dp(4))
         }
     }
 
@@ -1173,6 +1334,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             route == "diagnose" && diagnoseTab == "activity" -> { diagnoseTab = "scan"; renderApp() }
             route == "diagnose" && diagnoseStep > 1 -> { diagnoseStep--; renderApp() }
             route == "chat" -> navigate(previousRoute.takeIf { it != "chat" } ?: "home")
+            route == "profile" && profileExpanded -> { profileExpanded = false; renderApp() }
             route != "home" -> navigate("home")
             else -> finish()
         }

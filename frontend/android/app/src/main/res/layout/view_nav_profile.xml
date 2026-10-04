@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/nav_profile"
+    style="@style/Widget.Mediseen.NavigationItem"
+    android:contentDescription="Profile">
+    <ImageView style="@style/Widget.Mediseen.NavigationIcon" android:src="@drawable/ic_profile" />
+    <TextView style="@style/Widget.Mediseen.NavigationLabel" android:text="PROFILE" />
+</LinearLayout>

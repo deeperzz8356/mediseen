@@ -4,14 +4,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/app_canvas"
-    android:padding="18dp">
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="8dp">
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="74dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/hero_gradient" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginTop="42dp"
+        android:layout_marginBottom="66dp"
         app:cardBackgroundColor="@android:color/white"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="10dp"
+        app:cardCornerRadius="26dp"
+        app:cardElevation="8dp"
         app:strokeWidth="0dp">
 
     <LinearLayout
@@ -21,42 +31,42 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="86dp"
+        android:layout_height="66dp"
         android:background="@color/brand_violet_soft"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="18dp"
-        android:paddingEnd="14dp">
+        android:paddingEnd="16dp">
 
         <ImageView
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@drawable/brand_action"
             android:contentDescription="@string/cd_open_assistant"
-            android:padding="12dp"
+            android:padding="9dp"
             android:src="@drawable/ic_chat"
             app:tint="@android:color/white" />
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
+                android:layout_marginStart="10dp"
             android:layout_weight="1"
             android:orientation="vertical">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="@string/assistant_name" android:textColor="@color/ink" android:textSize="17sp" android:textStyle="bold" />
+                android:text="@string/assistant_name" android:textColor="@color/ink" android:textSize="15sp" android:textStyle="bold" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="@string/assistant_studio" android:textColor="@color/muted_ink" android:textSize="11sp"
+                android:text="@string/assistant_studio" android:textColor="@color/muted_ink" android:textSize="10sp"
                 android:textStyle="bold" android:letterSpacing="0.1" />
         </LinearLayout>
 
         <ImageButton
             android:id="@+id/chat_close"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:background="@color/surface_subtle"
             android:contentDescription="@string/cd_close_assistant"
-            android:padding="12dp"
+            android:padding="10dp"
             android:src="@drawable/ic_close"
             app:tint="@color/muted_ink" />
     </LinearLayout>
@@ -66,6 +76,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:background="@android:color/white"
         android:clipToPadding="false"
         android:fillViewport="true">
 
@@ -74,7 +85,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="18dp" />
+            android:paddingStart="18dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="12dp" />
     </ScrollView>
 
     <LinearLayout
@@ -84,14 +98,14 @@
         android:gravity="bottom"
         android:orientation="horizontal"
         android:paddingStart="18dp"
-        android:paddingTop="14dp"
+        android:paddingTop="10dp"
         android:paddingEnd="18dp"
-        android:paddingBottom="16dp">
+        android:paddingBottom="12dp">
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Mediseen.TextInput"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:hint="@string/assistant_hint">
 
@@ -107,8 +121,8 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/chat_send"
             style="@style/Widget.Mediseen.Button"
-            android:layout_width="58dp"
-            android:layout_height="58dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:backgroundTint="@color/brand_violet"
             android:contentDescription="@string/cd_send_message"

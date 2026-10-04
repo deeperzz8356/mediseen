@@ -16,16 +16,16 @@
         <LinearLayout
             android:id="@+id/app_header"
             android:layout_width="match_parent"
-            android:layout_height="88dp"
+            android:layout_height="56dp"
             android:background="@android:color/white"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="18dp"
-            android:paddingEnd="14dp">
+            android:paddingStart="14dp"
+            android:paddingEnd="12dp">
 
             <ImageView
-                android:layout_width="54dp"
-                android:layout_height="54dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
                 android:background="@color/brand_pink_soft"
                 android:contentDescription="@string/cd_brand_logo"
                 android:padding="3dp"
@@ -34,7 +34,7 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -43,7 +43,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/brand_name"
                     android:textColor="@color/ink"
-                    android:textSize="22sp"
+                    android:textSize="17sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -52,7 +52,7 @@
                     android:letterSpacing="0.18"
                     android:text="@string/brand_tagline"
                     android:textColor="@color/quiet_ink"
-                    android:textSize="10sp"
+                    android:textSize="9sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
@@ -69,28 +69,24 @@
 
             <ImageButton
                 android:id="@+id/header_language"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:background="@color/surface_subtle"
                 android:contentDescription="@string/cd_choose_language"
-                android:padding="12dp"
+                android:padding="11dp"
                 android:src="@drawable/ic_language"
                 app:tint="@color/ink" />
 
-            <com.google.android.material.button.MaterialButton
+            <ImageButton
                 android:id="@+id/header_profile"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="10dp"
-                android:minWidth="0dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_marginStart="8dp"
                 android:contentDescription="@string/cd_open_profile"
-                android:backgroundTint="@color/navy"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:text="?"
-                android:textColor="@android:color/white"
-                android:textStyle="bold" />
+                android:background="@color/brand_pink_soft"
+                android:padding="3dp"
+                android:scaleType="centerInside"
+                android:src="@mipmap/ic_launcher_foreground" />
         </LinearLayout>
 
         <FrameLayout
@@ -99,22 +95,24 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <com.google.android.material.bottomnavigation.BottomNavigationView
+        <LinearLayout
             android:id="@+id/bottom_navigation"
             android:layout_width="match_parent"
-            android:layout_height="82dp"
+            android:layout_height="66dp"
             android:background="@android:color/white"
-            app:backgroundTint="@android:color/white"
-            app:itemActiveIndicatorStyle="@style/Widget.Mediseen.Navigation.ActiveIndicator"
-            app:itemIconSize="22dp"
-            app:itemIconTint="@color/bottom_nav_colors"
-            app:itemPaddingTop="8dp"
-            app:itemPaddingBottom="8dp"
-            app:itemTextAppearanceActive="@style/TextAppearance.Mediseen.Navigation"
-            app:itemTextAppearanceInactive="@style/TextAppearance.Mediseen.Navigation"
-            app:itemTextColor="@color/bottom_nav_colors"
-            app:labelVisibilityMode="labeled"
-            app:menu="@menu/main_navigation" />
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingStart="3dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="3dp"
+            android:paddingBottom="4dp">
+
+            <include layout="@layout/view_nav_home" />
+            <include layout="@layout/view_nav_diet" />
+            <include layout="@layout/view_nav_scan" />
+            <include layout="@layout/view_nav_library" />
+            <include layout="@layout/view_nav_profile" />
+        </LinearLayout>
     </LinearLayout>
 
     <FrameLayout
@@ -124,11 +122,11 @@
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/assistant_fab"
-        android:layout_width="62dp"
-        android:layout_height="62dp"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
         android:layout_gravity="end|bottom"
-        android:layout_marginEnd="18dp"
-        android:layout_marginBottom="94dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="78dp"
         android:contentDescription="@string/cd_open_assistant"
         android:text=""
         android:textColor="@android:color/white"
