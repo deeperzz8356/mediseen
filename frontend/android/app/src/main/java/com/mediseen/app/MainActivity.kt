@@ -650,13 +650,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private fun renderHome() = with(contentScreen(R.layout.screen_home, R.id.home_content, screenHost)) {
         val hero = panel(Color.TRANSPARENT) {
             background = ContextCompat.getDrawable(context, R.drawable.hero_gradient)
-            setPadding(dp(24), dp(38), dp(24), dp(28))
+            setPadding(dp(24), dp(60), dp(24), dp(22))
             body("✣  EMPOWERING YOUR HEALTH DECISIONS", muted = false).apply {
                 textSize = 10.5f
                 letterSpacing = 0.08f
                 setTextColor(0xFFF4F0FF.toInt())
                 background = rounded(0x22FFFFFF, 18, 0x55FFFFFF)
                 setPadding(dp(12), dp(7), dp(12), dp(7))
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             }
             gap(18)
             heading("${tr(vm.locale, "hello")},", 29f).setTextColor(Color.WHITE)
@@ -674,7 +675,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 }
             }
         }
-        hero.layoutParams = (hero.layoutParams as LinearLayout.LayoutParams).apply { height = dp(364) }
+        hero.layoutParams = (hero.layoutParams as LinearLayout.LayoutParams).apply { height = dp(320) }
         gap(18)
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -766,7 +767,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 setTextColor(if (user) Color.WHITE else ContextCompat.getColor(context, R.color.ink))
                 setPadding(dp(15), dp(12), dp(15), dp(12))
                 background = rounded(if (user) ContextCompat.getColor(context, R.color.brand_violet) else Color.WHITE, 16, if (user) null else ContextCompat.getColor(context, R.color.hairline))
-                maxWidth = dp(320)
+                maxWidth = dp(239)
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { gravity = if (user) Gravity.END else Gravity.START; bottomMargin = dp(10) })
         }
         if (vm.chatBusy) messages.loading("Thinking…")

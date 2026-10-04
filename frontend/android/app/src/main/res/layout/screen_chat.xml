@@ -16,9 +16,8 @@
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="503dp"
         android:layout_marginTop="42dp"
-        android:layout_marginBottom="66dp"
         app:cardBackgroundColor="@android:color/white"
         app:cardCornerRadius="26dp"
         app:cardElevation="8dp"
@@ -39,8 +38,8 @@
         android:paddingEnd="16dp">
 
         <ImageView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:background="@drawable/brand_action"
             android:contentDescription="@string/cd_open_assistant"
             android:padding="9dp"
@@ -62,8 +61,8 @@
 
         <ImageButton
             android:id="@+id/chat_close"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:background="@color/surface_subtle"
             android:contentDescription="@string/cd_close_assistant"
             android:padding="10dp"
