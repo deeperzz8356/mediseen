@@ -1,6 +1,7 @@
 package com.mediseen.app
 
 import android.app.Application
+import android.os.Looper
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -23,6 +24,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 enum class AppStage { WELCOME, LANGUAGE, NOTIFICATION, ONBOARDING, AUTH, PROFILE, MAIN }
 
@@ -31,13 +33,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val auth = FirebaseAuth.getInstance()
     private val api = ApiClient(application.contentResolver)
 
-    private var revision = 0L
-    private val _changes = MutableLiveData(revision)
+    private val revision = AtomicLong(0L)
+    private val _changes = MutableLiveData(0L)
     val changes: LiveData<Long> = _changes
 
     private fun notifyChanged() {
-        revision += 1
-        _changes.value = revision
+        val nextRevision = revision.incrementAndGet()
+        if (Looper.myLooper() == Looper.getMainLooper()) _changes.value = nextRevision
+        else _changes.postValue(nextRevision)
     }
 
     var stage = initialStage()
@@ -76,18 +79,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     val diagnosisHistory = mutableListOf<ScanHistoryItem>()
 
     init {
-        if (stage == AppStage.MAIN && prefs.getBoolean("guest_active", false)) continueAsGuest()
-        else if (stage == AppStage.AUTH && auth.currentUser != null) loadRemoteProfile()
+        if (stage == AppStage.MAIN) enterMainApp()
     }
 
-    private fun initialStage(): AppStage = when {
-        !prefs.getBoolean("welcome_complete", false) -> AppStage.WELCOME
-        !prefs.getBoolean("language_complete", false) -> AppStage.LANGUAGE
-        !prefs.getBoolean("onboarding_complete", false) && !prefs.getBoolean("notification_complete", false) -> AppStage.NOTIFICATION
-        !prefs.getBoolean("onboarding_complete", false) -> AppStage.ONBOARDING
-        prefs.getBoolean("guest_active", false) -> AppStage.MAIN
-        else -> AppStage.AUTH
-    }
+    private fun initialStage(): AppStage = AppEntryPolicy.initialStage(
+        welcomeComplete = prefs.getBoolean("welcome_complete", false),
+        languageComplete = prefs.getBoolean("language_complete", false),
+        notificationComplete = prefs.getBoolean("notification_complete", false),
+        onboardingComplete = prefs.getBoolean("onboarding_complete", false),
+    )
 
     fun finishWelcome() {
         prefs.edit().putBoolean("welcome_complete", true).apply()
@@ -97,7 +97,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun selectLanguage(code: String) {
         locale = code
         prefs.edit().putString("locale", code).putBoolean("language_complete", true).apply()
-        stage = if (prefs.getBoolean("onboarding_complete", false)) currentAuthenticatedStage() else AppStage.NOTIFICATION
+        if (prefs.getBoolean("onboarding_complete", false)) enterMainApp() else stage = AppStage.NOTIFICATION
     }
 
     fun returnToLanguage() { stage = AppStage.LANGUAGE }
@@ -109,7 +109,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun finishOnboarding() {
         prefs.edit().putBoolean("onboarding_complete", true).apply()
-        stage = currentAuthenticatedStage()
+        enterMainApp()
+    }
+
+    fun beginLogin() {
+        authError = null
+        stage = AppStage.AUTH
+    }
+
+    fun cancelLogin() {
+        authBusy = false
+        authError = null
+        continueAsGuest()
     }
 
     fun signIn(email: String, password: String) {
@@ -117,8 +128,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         authBusy = true
         authError = null
         auth.signInWithEmailAndPassword(email.trim(), password).addOnCompleteListener { result ->
+            if (stage != AppStage.AUTH) {
+                if (result.isSuccessful) auth.signOut()
+                return@addOnCompleteListener
+            }
             authBusy = false
-            if (result.isSuccessful) loadRemoteProfile() else updateAuthError(result.exception?.localizedMessage)
+            if (result.isSuccessful) {
+                prefs.edit().putBoolean("guest_active", false).apply()
+                loadRemoteProfile()
+            } else updateAuthError(result.exception?.localizedMessage)
         }
     }
 
@@ -127,8 +145,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         authBusy = true
         authError = null
         auth.createUserWithEmailAndPassword(email.trim(), password).addOnCompleteListener { result ->
+            if (stage != AppStage.AUTH) {
+                if (result.isSuccessful) auth.signOut()
+                return@addOnCompleteListener
+            }
             authBusy = false
             if (result.isSuccessful) {
+                prefs.edit().putBoolean("guest_active", false).apply()
                 profile = UserProfile(uid = auth.currentUser?.uid.orEmpty(), email = email.trim(), language = locale)
                 stage = AppStage.PROFILE
             } else updateAuthError(result.exception?.localizedMessage)
@@ -139,8 +162,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         authBusy = true
         authError = null
         auth.signInWithCredential(GoogleAuthProvider.getCredential(idToken, null)).addOnCompleteListener { result ->
+            if (stage != AppStage.AUTH) {
+                if (result.isSuccessful) auth.signOut()
+                return@addOnCompleteListener
+            }
             authBusy = false
-            if (result.isSuccessful) loadRemoteProfile() else updateAuthError(result.exception?.localizedMessage)
+            if (result.isSuccessful) {
+                prefs.edit().putBoolean("guest_active", false).apply()
+                loadRemoteProfile()
+            } else updateAuthError(result.exception?.localizedMessage)
         }
     }
 
@@ -319,9 +349,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         auth.signOut()
-        prefs.edit().putBoolean("guest_active", false).apply()
         profile = null
-        stage = AppStage.AUTH
+        continueAsGuest()
     }
 
     fun deleteAccount() {
@@ -336,7 +365,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun currentAuthenticatedStage() = if (auth.currentUser == null) AppStage.AUTH else AppStage.PROFILE
+    private fun enterMainApp() {
+        if (auth.currentUser != null && !prefs.getBoolean("guest_active", false)) loadRemoteProfile()
+        else continueAsGuest()
+    }
 
     private fun loadRemoteProfile() {
         val user = auth.currentUser ?: return

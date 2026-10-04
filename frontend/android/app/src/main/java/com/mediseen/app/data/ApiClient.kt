@@ -153,13 +153,12 @@ class ApiClient(private val contentResolver: ContentResolver) {
         .url("$baseUrl$path")
         .apply { if (!token.isNullOrBlank()) header("Authorization", "Bearer $token") }
 
-    private fun executeJson(request: Request): JSONObject = JSONObject(executeText(request))
+    private fun executeJson(request: Request): JSONObject = ApiResponseDecoder.json(executeText(request))
 
     private fun executeText(request: Request): String = client.newCall(request).execute().use { response ->
         val text = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
-            val detail = runCatching { JSONObject(text).optString("detail") }.getOrNull()
-            error(detail?.takeIf(String::isNotBlank) ?: "Request failed (${response.code})")
+            error(ApiResponseDecoder.errorMessage(response.code, text))
         }
         text
     }

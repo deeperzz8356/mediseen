@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.util.Log
+import android.os.Looper
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.google.android.gms.ads.MobileAds
@@ -21,19 +22,27 @@ object AdsRuntime {
     private val _adsReadyChanges = MutableLiveData(false)
     val adsReadyChanges: LiveData<Boolean> = _adsReadyChanges
     var adsReady = false
-        private set(value) { field = value; _adsReadyChanges.value = value }
+        private set(value) {
+            field = value
+            notifyChanged(value)
+        }
 
     var privacyOptionsRequired = false
         private set(value) {
             field = value
-            _adsReadyChanges.value = adsReady
+            notifyChanged(adsReady)
         }
+
+    private fun notifyChanged(value: Boolean) {
+        if (Looper.myLooper() == Looper.getMainLooper()) _adsReadyChanges.value = value
+        else _adsReadyChanges.postValue(value)
+    }
 
     private var consentRequested = false
     private var initializationStarted = false
 
     fun start(context: Context) {
-        if (!BuildConfig.ADS_ENABLED) return
+        if (!BuildConfig.ADS_ENABLED || adsDisabledForInstrumentation(context)) return
         val activity = context.findActivity() ?: return
         if (consentRequested) return
         consentRequested = true
@@ -63,7 +72,7 @@ object AdsRuntime {
     }
 
     fun showPrivacyOptions(context: Context) {
-        if (!BuildConfig.ADS_ENABLED) return
+        if (!BuildConfig.ADS_ENABLED || adsDisabledForInstrumentation(context)) return
         val activity = context.findActivity() ?: return
         UserMessagingPlatform.showPrivacyOptionsForm(activity) {
             val consentInformation = UserMessagingPlatform.getConsentInformation(activity)
@@ -96,6 +105,10 @@ object AdsRuntime {
             adsReady = true
         }
     }
+
+    private fun adsDisabledForInstrumentation(context: Context): Boolean =
+        context.getSharedPreferences("mediseen_test", Context.MODE_PRIVATE)
+            .getBoolean("disable_ads", false)
 }
 internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

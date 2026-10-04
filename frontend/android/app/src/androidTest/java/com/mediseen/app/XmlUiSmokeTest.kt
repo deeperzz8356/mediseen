@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.Espresso.pressBack
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
@@ -28,6 +29,7 @@ class XmlUiSmokeTest {
     @After
     fun resetState() {
         context.getSharedPreferences("mediseen_native", 0).edit().clear().commit()
+        context.getSharedPreferences("mediseen_test", 0).edit().putBoolean("disable_ads", true).commit()
     }
 
     @Test
@@ -56,15 +58,19 @@ class XmlUiSmokeTest {
     }
 
     @Test
-    fun firstRunFlowReachesAuthentication() {
+    fun firstRunFlowEntersAsGuestAndLoginStartsOnlyFromSettings() {
         context.getSharedPreferences("mediseen_native", 0).edit().putBoolean("welcome_complete", true).commit()
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.language_confirm)).perform(click())
             onView(withContentDescription("Top notification skip")).perform(click())
             repeat(3) { onView(withText("Next")).perform(click()) }
             onView(withText("Get Started")).perform(click())
+            onView(withId(R.id.home_scroll)).check(matches(isDisplayed()))
+            onView(withId(R.id.nav_profile)).perform(click())
+            onView(withText("Settings")).check(matches(isDisplayed()))
+            onView(withText("Login")).perform(scrollTo(), click())
             onView(withText("Welcome")).check(matches(isDisplayed()))
-            onView(withText("Continue as guest")).check(matches(isDisplayed()))
+            onView(withText("Cancel")).check(matches(isDisplayed()))
         }
     }
 
@@ -102,6 +108,27 @@ class XmlUiSmokeTest {
             onView(withId(R.id.assistant_fab)).perform(click())
             onView(withId(R.id.chat_close)).check(matches(isDisplayed())).perform(click())
             onView(withId(R.id.home_scroll)).check(matches(isDisplayed()))
+        }
+    }
+
+    @Test
+    fun repeatedNavigationDoesNotCrashOrLoseTheCurrentPage() {
+        context.getSharedPreferences("mediseen_native", 0).edit()
+            .putBoolean("welcome_complete", true)
+            .putBoolean("language_complete", true)
+            .putBoolean("notification_complete", true)
+            .putBoolean("onboarding_complete", true)
+            .commit()
+
+        ActivityScenario.launch(MainActivity::class.java).use {
+            repeat(10) {
+                onView(withId(R.id.nav_diet)).perform(click())
+                onView(withId(R.id.diet_scroll)).check(matches(isDisplayed()))
+                onView(withId(R.id.nav_library)).perform(click())
+                onView(withId(R.id.library_scroll)).check(matches(isDisplayed()))
+                onView(withId(R.id.nav_home)).perform(click())
+                onView(withId(R.id.home_scroll)).check(matches(isDisplayed()))
+            }
         }
     }
 

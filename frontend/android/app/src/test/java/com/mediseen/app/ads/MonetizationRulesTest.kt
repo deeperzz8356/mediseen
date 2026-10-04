@@ -6,6 +6,12 @@ import org.junit.Test
 
 class MonetizationRulesTest {
     @Test
+    fun `short system UI hops are not foreground sessions`() {
+        assertFalse(isRealForegroundTransition(29_999L))
+        assertTrue(isRealForegroundTransition(30_000L))
+    }
+
+    @Test
     fun `app open waits for third foreground`() {
         assertFalse(isAppOpenEligible(2, Long.MAX_VALUE))
         assertTrue(isAppOpenEligible(3, Long.MAX_VALUE))

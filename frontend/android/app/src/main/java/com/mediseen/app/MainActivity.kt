@@ -105,11 +105,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private var route = "home"
     private var previousRoute = "home"
     private var welcomeScheduled = false
+    private var welcomeAdvanceRunnable: Runnable? = null
     private var onboardingPage = 0
     private var selectedLanguage = "en"
     private var adsSessionStarted = false
     private var initialStartHandled = false
     private var rendering = false
+    private var renderPending = false
     private var renderedStage: AppStage? = null
     private var returningFromProfileEdit = false
 
@@ -157,10 +159,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         renderApp()
     }
     private val googleSignIn = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            runCatching { GoogleSignIn.getSignedInAccountFromIntent(result.data).result.idToken }
-                .getOrNull()?.let(vm::signInWithGoogle)
-        }
+        if (result.resultCode != Activity.RESULT_OK || isFinishing || isDestroyed) return@registerForActivityResult
+        val account = runCatching { GoogleSignIn.getSignedInAccountFromIntent(result.data).result }.getOrNull() ?: return@registerForActivityResult
+        val idToken = account.idToken ?: return@registerForActivityResult
+        vm.signInWithGoogle(idToken)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -197,6 +199,19 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         super.onStart()
         if (initialStartHandled && vm.stage == AppStage.MAIN) AppOpenAds.onForeground(this)
         initialStartHandled = true
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (vm.stage == AppStage.MAIN) AppOpenAds.onBackground(this)
+        welcomeAdvanceRunnable?.let { Handler(Looper.getMainLooper()).removeCallbacks(it) }
+        welcomeAdvanceRunnable = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        welcomeAdvanceRunnable?.let { Handler(Looper.getMainLooper()).removeCallbacks(it) }
+        welcomeAdvanceRunnable = null
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -306,7 +321,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun renderApp() {
-        if (rendering) return
+        if (isFinishing || isDestroyed) return
+        if (rendering) {
+            renderPending = true
+            return
+        }
         rendering = true
         try {
             if (vm.stage == AppStage.MAIN) {
@@ -334,6 +353,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         } finally {
             renderedStage = vm.stage
             rendering = false
+            if (renderPending) {
+                renderPending = false
+                stageHost.post { renderApp() }
+            }
         }
     }
 
@@ -354,7 +377,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         stageHost.addView(LayoutInflater.from(this).inflate(R.layout.screen_welcome, stageHost, false))
         if (!welcomeScheduled) {
             welcomeScheduled = true
-            Handler(Looper.getMainLooper()).postDelayed({ if (vm.stage == AppStage.WELCOME) vm.finishWelcome() }, 1450)
+            welcomeAdvanceRunnable = Runnable {
+                if (isFinishing || isDestroyed) return@Runnable
+                if (vm.stage == AppStage.WELCOME) vm.finishWelcome()
+            }
+            Handler(Looper.getMainLooper()).postDelayed(welcomeAdvanceRunnable!!, 1450)
         }
     }
 
@@ -567,7 +594,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).requestIdToken(getString(R.string.default_web_client_id)).requestEmail().build()
             googleSignIn.launch(GoogleSignIn.getClient(this@MainActivity, options).signInIntent)
         }.isEnabled = !vm.authBusy
-        secondaryAction("Continue as guest") { vm.continueAsGuest() }
+        secondaryAction("Cancel") { vm.cancelLogin() }
         addView(topAction(if (createAccount) "Already have an account? Sign in" else "New to MediSeen?  Create Account") {
             createAccount = !createAccount
             authAttempted = false
@@ -632,7 +659,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 "diet" -> tr(vm.locale, "diet")
                 "diagnose" -> "SCAN"
                 "library" -> tr(vm.locale, "library")
-                else -> tr(vm.locale, "profile")
+                else -> "Settings"
             }.uppercase()
         }
         renderRoute()
@@ -1215,6 +1242,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun renderProfile() = with(contentScreen(R.layout.screen_profile, R.id.profile_content, screenHost)) {
+        heading("Settings")
+        body("Manage your profile, language, privacy, and account.")
+        gap(16)
         panel {
             addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -1260,7 +1290,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         if (AdsRuntime.privacyOptionsRequired) panel { section("Ad privacy choices"); body("Review advertising consent choices"); setOnClickListener { AdsRuntime.showPrivacyOptions(this@MainActivity) } }
         section(tr(vm.locale, "account"))
-        if (vm.profile?.uid?.startsWith("guest_") == true) secondaryAction("Login / Sign up") { vm.logout() }
+        if (vm.profile?.uid?.startsWith("guest_") == true) secondaryAction("Login") { vm.beginLogin() }
         else {
             secondaryAction("Sign out") { vm.logout() }
             secondaryAction("Delete account") {
@@ -1371,6 +1401,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 profileDraftInitialized = false
                 vm.cancelProfileEdit()
             }
+            vm.stage == AppStage.AUTH -> vm.cancelLogin()
             vm.stage != AppStage.MAIN -> finish()
             route in setOf("privacy", "terms") -> navigate("profile")
             route == "library" && vm.libraryState is LoadState.Success -> completeLibraryArticle()

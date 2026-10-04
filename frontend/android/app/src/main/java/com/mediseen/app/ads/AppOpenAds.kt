@@ -15,6 +15,8 @@ object AppOpenAds {
     private const val PREFS_NAME = "mediseen_ad_frequency"
     private const val FOREGROUND_COUNT_KEY = "app_open_foreground_count"
     private const val LAST_SHOWN_KEY = "app_open_last_shown"
+    private const val BACKGROUNDED_AT_KEY = "app_open_backgrounded_at"
+    private const val MIN_BACKGROUND_MILLIS = 30_000L
     private const val AD_EXPIRY_MILLIS = 4 * 60 * 60 * 1000L
 
     private var loadedAd: AppOpenAd? = null
@@ -58,8 +60,15 @@ object AppOpenAds {
     /** Called only for later foreground transitions while the main app is visible. */
     fun onForeground(context: Context) {
         if (!AdsRuntime.adsReady || !isOnboardingComplete(context)) return
-        val count = incrementForegroundCount(context)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val backgroundedAt = prefs.getLong(BACKGROUNDED_AT_KEY, 0L)
+        val backgroundDuration = System.currentTimeMillis() - backgroundedAt
+        if (backgroundedAt == 0L || !isRealForegroundTransition(backgroundDuration)) {
+            preload(context)
+            return
+        }
+        prefs.edit { remove(BACKGROUNDED_AT_KEY) }
+        val count = incrementForegroundCount(context)
         val cooldownElapsed = System.currentTimeMillis() - prefs.getLong(LAST_SHOWN_KEY, 0L)
         val ad = loadedAd
         val activity = context.findActivity()
@@ -100,6 +109,14 @@ object AppOpenAds {
         ad.show(activity)
     }
 
+    /** Records a genuine app background transition without treating short system UI hops as new sessions. */
+    fun onBackground(context: Context) {
+        if (!AdsRuntime.adsReady || !isOnboardingComplete(context)) return
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putLong(BACKGROUNDED_AT_KEY, System.currentTimeMillis())
+        }
+    }
+
     private fun incrementForegroundCount(context: Context): Int {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val count = prefs.getInt(FOREGROUND_COUNT_KEY, 0) + 1
@@ -125,3 +142,6 @@ object AppOpenAds {
 
 internal fun isAppOpenEligible(foregroundCount: Int, elapsedSinceLastShowMillis: Long): Boolean =
     foregroundCount >= 3 && elapsedSinceLastShowMillis >= 4 * 60 * 60 * 1000L
+
+internal fun isRealForegroundTransition(backgroundDurationMillis: Long): Boolean =
+    backgroundDurationMillis >= 30_000L
