@@ -1,27 +1,27 @@
 package com.mediseen.app.ads
 
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
-import androidx.core.content.edit
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.firebase.analytics.FirebaseAnalytics
-import com.mediseen.app.BuildConfig
+import com.mediseen.app.R
+import java.lang.ref.WeakReference
 
 object AppOpenAds {
-    private const val PREFS_NAME = "mediseen_ad_frequency"
-    private const val FOREGROUND_COUNT_KEY = "app_open_foreground_count"
-    private const val LAST_SHOWN_KEY = "app_open_last_shown"
-    private const val BACKGROUNDED_AT_KEY = "app_open_backgrounded_at"
-    private const val MIN_BACKGROUND_MILLIS = 30_000L
     private const val AD_EXPIRY_MILLIS = 4 * 60 * 60 * 1000L
 
     private var loadedAd: AppOpenAd? = null
     private var loadTimeMillis = 0L
     private var loading = false
+    private var showing = false
+    private var suppressForegroundUntilMillis = 0L
+    private var pendingShow = false
+    private var pendingActivity: WeakReference<Activity>? = null
 
     @Synchronized
     fun preload(context: Context) {
@@ -31,7 +31,7 @@ object AppOpenAds {
         logEvent(context, "ad_request")
         AppOpenAd.load(
             context.applicationContext,
-            BuildConfig.ADMOB_APP_OPEN_ID,
+            context.getString(R.string.admob_app_open_ad_unit_id),
             AdRequest.Builder().build(),
             object : AppOpenAd.AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
@@ -39,6 +39,7 @@ object AppOpenAds {
                     loadTimeMillis = System.currentTimeMillis()
                     loading = false
                     logEvent(context, "ad_loaded")
+                    showPendingAd(context)
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
@@ -50,43 +51,52 @@ object AppOpenAds {
         )
     }
 
-    /** Called once when the main app first becomes available; it preloads but never shows. */
+    /** Requests an app-open impression whenever the main app becomes available. */
     fun beginMainSession(context: Context) {
-        if (!AdsRuntime.adsReady) return
-        incrementForegroundCount(context)
-        preload(context)
+        requestShow(context)
     }
 
-    /** Called only for later foreground transitions while the main app is visible. */
+    /** Requests another app-open impression whenever the app returns to the foreground. */
     fun onForeground(context: Context) {
         if (!AdsRuntime.adsReady || !isOnboardingComplete(context)) return
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val backgroundedAt = prefs.getLong(BACKGROUNDED_AT_KEY, 0L)
-        val backgroundDuration = System.currentTimeMillis() - backgroundedAt
-        if (backgroundedAt == 0L || !isRealForegroundTransition(backgroundDuration)) {
+        if (showing || System.currentTimeMillis() < suppressForegroundUntilMillis) {
             preload(context)
             return
         }
-        prefs.edit { remove(BACKGROUNDED_AT_KEY) }
-        val count = incrementForegroundCount(context)
-        val cooldownElapsed = System.currentTimeMillis() - prefs.getLong(LAST_SHOWN_KEY, 0L)
+        if (!FullScreenAdGate.isAvailable()) {
+            preload(context)
+            return
+        }
+        requestShow(context)
+    }
+
+    private fun requestShow(context: Context) {
+        if (!AdsRuntime.adsReady || !isOnboardingComplete(context)) return
+        val activity = context.findActivity() ?: return
+        pendingShow = true
+        pendingActivity = WeakReference(activity)
+        if (!showPendingAd(context)) preload(context)
+    }
+
+    private fun showPendingAd(context: Context): Boolean {
+        if (!pendingShow) return false
+        val activity = pendingActivity?.get() ?: return false
         val ad = loadedAd
-        val activity = context.findActivity()
         if (
-            !isAppOpenEligible(count, cooldownElapsed) ||
             ad == null ||
             !hasFreshAd() ||
-            activity == null ||
+            !activity.isReadyForFullScreenAd() ||
             !FullScreenAdGate.tryAcquire()
         ) {
-            preload(context)
-            return
+            return false
         }
 
+        pendingShow = false
+        pendingActivity = null
         loadedAd = null
+        showing = true
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdShowedFullScreenContent() {
-                prefs.edit { putLong(LAST_SHOWN_KEY, System.currentTimeMillis()) }
                 logEvent(context, "ad_shown")
             }
 
@@ -95,33 +105,29 @@ object AppOpenAds {
             override fun onAdClicked() = logEvent(context, "ad_click")
 
             override fun onAdDismissedFullScreenContent() {
+                showing = false
+                suppressForegroundUntilMillis = System.currentTimeMillis() + 2_000L
                 logEvent(context, "ad_dismissed")
-                FullScreenAdGate.release()
+                FullScreenAdGate.release(0L)
                 preload(context)
             }
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
+                showing = false
+                suppressForegroundUntilMillis = System.currentTimeMillis() + 2_000L
                 logEvent(context, "ad_show_failed", error.code)
-                FullScreenAdGate.release()
+                FullScreenAdGate.release(0L)
                 preload(context)
             }
         }
         ad.show(activity)
+        return true
     }
 
-    /** Records a genuine app background transition without treating short system UI hops as new sessions. */
+    /** Cancels a deferred impression if the activity leaves the foreground before loading finishes. */
     fun onBackground(context: Context) {
-        if (!AdsRuntime.adsReady || !isOnboardingComplete(context)) return
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-            putLong(BACKGROUNDED_AT_KEY, System.currentTimeMillis())
-        }
-    }
-
-    private fun incrementForegroundCount(context: Context): Int {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val count = prefs.getInt(FOREGROUND_COUNT_KEY, 0) + 1
-        prefs.edit { putInt(FOREGROUND_COUNT_KEY, count) }
-        return count
+        pendingShow = false
+        pendingActivity = null
     }
 
     private fun isOnboardingComplete(context: Context): Boolean =
@@ -139,9 +145,3 @@ object AppOpenAds {
         })
     }
 }
-
-internal fun isAppOpenEligible(foregroundCount: Int, elapsedSinceLastShowMillis: Long): Boolean =
-    foregroundCount >= 3 && elapsedSinceLastShowMillis >= 4 * 60 * 60 * 1000L
-
-internal fun isRealForegroundTransition(backgroundDurationMillis: Long): Boolean =
-    backgroundDurationMillis >= 30_000L

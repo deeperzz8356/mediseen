@@ -14,7 +14,7 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { onAuthStateChanged, signOut, updateProfile, User } from "firebase/auth"
-import { Ban, LogOut, Languages, ChevronRight } from "lucide-react"
+import { Ban, LogOut, Languages, ChevronRight, Footprints, Activity } from "lucide-react"
 import { auth } from "@/lib/firebase"
 import { API_BASE_URL } from "../config"
 import { useAppStore, type GenderOption } from "../store/useAppStore"
@@ -22,6 +22,7 @@ import { Preferences } from "@capacitor/preferences"
 import ProfileForm from "../components/ProfileForm"
 import { LANGUAGES } from "../components/LanguageSelector"
 import { useLocale } from "../i18n/LocaleContext"
+import { useActivityStore } from "../store/useActivityStore"
 
 const PROFILE_STORAGE_KEY = "mediseen_patient_profile"
 const PROFILE_COMPLETED_KEY = "mediseen_profile_completed"
@@ -47,6 +48,22 @@ export default function ProfilePage() {
   const router = useRouter()
   const { authStatus, language, setLanguage, setOnboardingDone, setLanguageDone, setNotificationPermission, setHasProfile, setProfile, profile } = useAppStore()
   const { locale, t } = useLocale()
+  const {
+    nativeReady,
+    hcAvailable,
+    hcConnected,
+    sensorAvailable,
+    sensorEnabled,
+    connectHealthConnect,
+    enableSensor,
+    openHealthConnectSettings,
+    hydrateLocal,
+    syncActivity,
+  } = useActivityStore()
+
+  useEffect(() => {
+    void hydrateLocal()
+  }, [hydrateLocal])
 
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -310,6 +327,84 @@ export default function ProfilePage() {
           </div>
           <ChevronRight className="w-5 h-5 text-slate-300" />
         </button>
+      </motion.section>
+
+      {/* ── Activity tracking ─────────────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-5"
+      >
+        <div>
+          <h2 className="text-xl font-black text-slate-900">{t.profile.activityTrackingTitle}</h2>
+          <p className="text-slate-400 font-medium text-sm mt-1">{t.profile.activityTrackingSubtitle}</p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+              <Activity className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-slate-800">{t.profile.healthConnectTitle}</p>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                {!nativeReady || !hcAvailable
+                  ? t.profile.healthUnavailable
+                  : hcConnected
+                    ? t.profile.healthConnectConnected
+                    : t.profile.healthConnectDisconnected}
+              </p>
+            </div>
+          </div>
+          {nativeReady && hcAvailable && (
+            <div className="flex flex-wrap gap-2">
+              {!hcConnected ? (
+                <button
+                  type="button"
+                  onClick={() => void connectHealthConnect().then(() => syncActivity())}
+                  className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest"
+                >
+                  {t.profile.healthConnectConnect}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void openHealthConnectSettings()}
+                className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-widest"
+              >
+                {t.profile.healthConnectOpenSettings}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+              <Footprints className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-slate-800">{t.profile.sensorTitle}</p>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">
+                {!nativeReady || !sensorAvailable
+                  ? t.profile.sensorUnavailable
+                  : sensorEnabled
+                    ? t.profile.sensorEnabled
+                    : t.profile.sensorDisabled}
+              </p>
+            </div>
+          </div>
+          {nativeReady && sensorAvailable && !sensorEnabled && (
+            <button
+              type="button"
+              onClick={() => void enableSensor()}
+              className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black uppercase tracking-widest"
+            >
+              {t.profile.sensorEnable}
+            </button>
+          )}
+        </div>
       </motion.section>
 
       {/* ── 3. Legal & Support ──────────────────────────────────────── */}

@@ -8,8 +8,7 @@
     "build:export": "next build",
     "start": "next start",
     "lint": "eslint",
-    "android:sync": "npx cap sync android",
-    "android:build": "npm run build && npx cap sync android"
+    "android:build": "cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.0.0",
@@ -25,6 +24,8 @@
     "@capacitor/local-notifications": "^8.0.2",
     "@capacitor/preferences": "^8.0.1",
     "@capawesome/capacitor-file-picker": "^8.0.2",
+    "@capgo/capacitor-health": "^8.10.0",
+    "@capgo/capacitor-pedometer": "^8.0.38",
     "@lottiefiles/dotlottie-react": "^0.19.1",
     "firebase": "^12.10.0",
     "lucide-react": "^0.577.0",

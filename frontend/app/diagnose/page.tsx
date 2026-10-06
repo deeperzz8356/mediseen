@@ -14,6 +14,8 @@ import { onAuthStateChanged, type User } from "firebase/auth"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { resolveBackendAssetUrl } from "../config"
 import { useAppStore } from "../store/useAppStore"
+import { Capacitor } from "@capacitor/core"
+import { showInterstitial } from "../../lib/admob"
 
 type ScanActivity = {
   id: string
@@ -59,6 +61,13 @@ export default function DiagnosePage() {
       setGuestPromptSource(null)
     }
   }, [authStatus])
+
+  // Fire interstitial ad when results appear (with frequency cap)
+  useEffect(() => {
+    if (!analysisResult) return
+    if (!Capacitor.isNativePlatform()) return
+    showInterstitial()
+  }, [analysisResult])
 
   const requireLoginForHistory = () => {
     // We now allow guests to view their local history

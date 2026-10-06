@@ -26,7 +26,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 
-enum class AppStage { WELCOME, LANGUAGE, NOTIFICATION, ONBOARDING, AUTH, PROFILE, MAIN }
+enum class AppStage { WELCOME, LANGUAGE, ONBOARDING, AUTH, PROFILE, MAIN }
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("mediseen_native", 0)
@@ -85,7 +85,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun initialStage(): AppStage = AppEntryPolicy.initialStage(
         welcomeComplete = prefs.getBoolean("welcome_complete", false),
         languageComplete = prefs.getBoolean("language_complete", false),
-        notificationComplete = prefs.getBoolean("notification_complete", false),
         onboardingComplete = prefs.getBoolean("onboarding_complete", false),
     )
 
@@ -96,15 +95,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectLanguage(code: String) {
         locale = code
-        prefs.edit().putString("locale", code).putBoolean("language_complete", true).apply()
-        if (prefs.getBoolean("onboarding_complete", false)) enterMainApp() else stage = AppStage.NOTIFICATION
-    }
-
-    fun returnToLanguage() { stage = AppStage.LANGUAGE }
-
-    fun finishNotification() {
-        prefs.edit().putBoolean("notification_complete", true).apply()
-        stage = AppStage.ONBOARDING
+        prefs.edit()
+            .putString("locale", code)
+            .putBoolean("language_complete", true)
+            .putBoolean("notification_complete", true)
+            .apply()
+        if (prefs.getBoolean("onboarding_complete", false)) enterMainApp() else stage = AppStage.ONBOARDING
     }
 
     fun finishOnboarding() {

@@ -73,13 +73,13 @@ fun LinearLayout.panel(
     backgroundColor: Int = Color.WHITE,
     block: LinearLayout.() -> Unit,
 ): MaterialCardView = MaterialCardView(context).apply {
-    radius = context.dp(18).toFloat()
+    radius = context.dp(22).toFloat()
     cardElevation = context.dp(1).toFloat()
     strokeWidth = 0
     setCardBackgroundColor(backgroundColor)
     addView(LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(context.dp(18), context.dp(18), context.dp(18), context.dp(18))
+        setPadding(context.dp(20), context.dp(20), context.dp(20), context.dp(20))
         block()
     })
 }.also { addView(it); it.margin(bottom = 12) }
@@ -93,8 +93,8 @@ fun LinearLayout.action(label: String, onClick: () -> Unit): MaterialButton = Ma
     isAllCaps = false
     textSize = 15f
     setTypeface(typeface, Typeface.BOLD)
-    cornerRadius = context.dp(14)
-    minimumHeight = context.dp(52)
+    cornerRadius = context.dp(16)
+    minimumHeight = context.dp(56)
     setTextColor(Color.WHITE)
     backgroundTintList = null
     background = ContextCompat.getDrawable(context, R.drawable.brand_action)

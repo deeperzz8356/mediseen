@@ -5,12 +5,15 @@
  * Uses the shared <LanguageSelector /> component.
  */
 
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSearchParams } from "next/navigation"
 import { Suspense } from "react"
 import { useAppStore } from "../../store/useAppStore"
 import LanguageSelector from "../../components/LanguageSelector"
 import type { AppLanguage } from "../../store/useAppStore"
+import { Capacitor } from "@capacitor/core"
+import { showBanner, hideBanner } from "../../../lib/admob"
 
 export default function LanguagePage() {
   return (
@@ -25,6 +28,13 @@ function LanguagePageContent() {
   const searchParams = useSearchParams()
   const { setLanguageDone } = useAppStore()
   const returnTo = searchParams.get("returnTo")
+
+  // Show banner while user is choosing language
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    showBanner().catch(() => {})
+    return () => { hideBanner().catch(() => {}) }
+  }, [])
 
   const handleConfirm = async (lang: AppLanguage) => {
     // Mark language step as done (separate from full onboarding)

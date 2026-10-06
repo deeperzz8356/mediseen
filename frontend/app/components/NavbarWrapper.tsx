@@ -4,7 +4,7 @@
  * NavbarWrapper – Route-aware + auth-aware navbar visibility
  *
  * RULES:
- *  - Hidden during: splash (/), onboarding/*, login, /login, /register
+ *  - Hidden during: splash (/), home (/home), onboarding/*, login, /login, /register
  *  - Hidden if user is NOT authenticated (Zustand auth state)
  *  - Visible only on authenticated app pages
  */
@@ -18,6 +18,7 @@ import { useAppStore } from "../store/useAppStore"
 // Routes where navbar must NEVER appear (pre-auth / pre-onboarding)
 const PRE_AUTH_ROUTES = [
   "/",
+  "/home",
   "/login",
   "/register",
   "/onboarding",

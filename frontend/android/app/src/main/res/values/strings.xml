@@ -4,6 +4,25 @@
     <string name="title_activity_main">Mediseen AI health assistant</string>
     <string name="package_name">com.mediseen.app</string>
     <string name="custom_url_scheme">com.mediseen.app</string>
+    <!-- Google-provided sample IDs. Replace these before publishing. -->
+    <string name="admob_app_id" translatable="false">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_banner_splash_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_banner_home_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_banner_diet_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_banner_grocery_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_banner_activity_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_banner_main_navigation_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_native_language_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/2247696110</string>
+    <string name="admob_native_onboarding_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/2247696110</string>
+    <string name="admob_native_home_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/2247696110</string>
+    <string name="admob_native_library_feed_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/2247696110</string>
+    <string name="admob_native_library_detail_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/2247696110</string>
+    <string name="admob_native_diet_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/2247696110</string>
+    <string name="admob_interstitial_library_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/1033173712</string>
+    <string name="admob_interstitial_navigation_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/1033173712</string>
+    <string name="admob_app_open_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/9257395921</string>
+    <string name="admob_rewarded_scan_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/5224354917</string>
+    <string name="admob_rewarded_assistant_ad_unit_id" translatable="false">ca-app-pub-3940256099942544/5224354917</string>
     <string name="default_web_client_id">393582020539-idfmudgm0t9745d378b3tn4d88pij67d.apps.googleusercontent.com</string>
     <string name="health_connect_privacy_policy_url">https://sites.google.com/view/sapappsolutionmediseenpolicy/home</string>
     <string name="brand_name">MediSeen</string>
@@ -26,4 +45,5 @@
     <string name="assistant_hint">Ask me anything…</string>
     <string name="choose_language">Choose Language</string>
     <string name="select_language">Select Language</string>
+    <string name="done">Done</string>
 </resources>

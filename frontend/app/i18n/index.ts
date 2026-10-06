@@ -24,10 +24,35 @@ export const LOCALES: { code: Locale; name: string; flag: string; dir?: "rtl" }[
   { code: "zh", name: "Mandarin (Chinese)", flag: "🇨🇳" },
 ]
 
-const translations: Record<Locale, Translations> = { en, ar, fr, es, hi, te, de, ko, ja, zh }
+const translations: Record<Locale, unknown> = { en, ar, fr, es, hi, te, de, ko, ja, zh }
+
+function deepMergeTranslations(base: Translations, override: unknown): Translations {
+  if (!override || typeof override !== "object") return base
+  const result: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(override as Record<string, unknown>)) {
+    const baseValue = (base as Record<string, unknown>)[key]
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      baseValue &&
+      typeof baseValue === "object" &&
+      !Array.isArray(baseValue)
+    ) {
+      result[key] = deepMergeTranslations(
+        baseValue as Translations,
+        value
+      )
+    } else if (value !== undefined) {
+      result[key] = value
+    }
+  }
+  return result as Translations
+}
 
 export function getTranslations(locale: Locale): Translations {
-  return translations[locale] ?? en
+  if (locale === "en") return en
+  return deepMergeTranslations(en, translations[locale])
 }
 
 export const LOCALE_STORAGE_KEY = "mediseen_locale"

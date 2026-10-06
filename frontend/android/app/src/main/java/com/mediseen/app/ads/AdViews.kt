@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.StringRes
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdLoader
 import com.google.android.gms.ads.AdRequest
@@ -23,28 +24,40 @@ import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
 import com.google.firebase.analytics.FirebaseAnalytics
-import com.mediseen.app.BuildConfig
+import com.mediseen.app.R
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
-enum class BannerAdPlacement(val adUnitId: String, val analyticsName: String) {
-    HomeFallback(BuildConfig.ADMOB_BANNER_HOME_ID, "banner_home_fallback"),
-    Onboarding(BuildConfig.ADMOB_BANNER_ONBOARDING_ID, "banner_onboarding_final"),
+enum class BannerAdPlacement(@StringRes val adUnitRes: Int, val analyticsName: String) {
+    Splash(R.string.admob_banner_splash_ad_unit_id, "banner_splash"),
+    HomeFallback(R.string.admob_banner_home_ad_unit_id, "banner_home_fallback"),
+    Onboarding(R.string.admob_banner_home_ad_unit_id, "banner_onboarding_fallback"),
+    DietInput(R.string.admob_banner_diet_ad_unit_id, "banner_diet_input"),
+    GroceryList(R.string.admob_banner_grocery_ad_unit_id, "banner_grocery_list"),
+    Activity(R.string.admob_banner_activity_ad_unit_id, "banner_activity"),
+    MainNavigation(R.string.admob_banner_main_navigation_ad_unit_id, "banner_all"),
 }
 
-enum class NativeAdPlacement(val adUnitId: String, val analyticsName: String) {
-    Home(BuildConfig.ADMOB_NATIVE_HOME_ID, "native_home_content"),
-    LibraryFeed(BuildConfig.ADMOB_NATIVE_LIBRARY_FEED_ID, "native_library_feed"),
-    LibraryDetail(BuildConfig.ADMOB_NATIVE_LIBRARY_DETAIL_ID, "native_library_end"),
-    DietPlan(BuildConfig.ADMOB_NATIVE_DIET_ID, "native_diet_plan_end"),
+enum class NativeAdPlacement(@StringRes val adUnitRes: Int, val analyticsName: String) {
+    Language(R.string.admob_native_language_ad_unit_id, "native_language"),
+    Onboarding(R.string.admob_native_onboarding_ad_unit_id, "native_onboarding"),
+    Home(R.string.admob_native_home_ad_unit_id, "native_home_content"),
+    LibraryFeed(R.string.admob_native_library_feed_ad_unit_id, "native_library_feed"),
+    LibraryDetail(R.string.admob_native_library_detail_ad_unit_id, "native_library_end"),
+    DietPlan(R.string.admob_native_diet_ad_unit_id, "native_diet_plan_end"),
 }
 
-fun loadBannerAd(context: Context, container: ViewGroup, placement: BannerAdPlacement) {
+fun loadBannerAd(
+    context: Context,
+    container: ViewGroup,
+    placement: BannerAdPlacement,
+    maxHeightDp: Int = 60,
+) {
     if (!AdsRuntime.adsReady) return
     val width = (context.resources.displayMetrics.widthPixels / context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
     val view = AdView(context).apply {
-        adUnitId = placement.adUnitId
-        setAdSize(AdSize.getInlineAdaptiveBannerAdSize(width, 100))
+        adUnitId = context.getString(placement.adUnitRes)
+        setAdSize(AdSize.getInlineAdaptiveBannerAdSize(width, maxHeightDp.coerceAtLeast(32)))
         adListener = analyticsListener(context, placement.analyticsName, "banner")
     }
     val owner = context as? LifecycleOwner
@@ -66,12 +79,18 @@ fun loadBannerAd(context: Context, container: ViewGroup, placement: BannerAdPlac
     view.loadAd(AdRequest.Builder().build())
 }
 
-fun loadNativeAd(context: Context, container: ViewGroup, placement: NativeAdPlacement, onFailure: (() -> Unit)? = null) {
+fun loadNativeAd(
+    context: Context,
+    container: ViewGroup,
+    placement: NativeAdPlacement,
+    fillContainer: Boolean = false,
+    onFailure: (() -> Unit)? = null,
+) {
     if (!AdsRuntime.adsReady) return
     logAd(context, "ad_request", placement.analyticsName, "native")
-    AdLoader.Builder(context, placement.adUnitId)
+    AdLoader.Builder(context, context.getString(placement.adUnitRes))
         .forNativeAd { ad ->
-            val view = createNativeAdView(context)
+            val view = createNativeAdView(context, fillContainer)
             bindNativeAd(view, ad)
             view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) = Unit
@@ -110,7 +129,7 @@ private fun bindNativeAd(view: NativeAdView, ad: NativeAd) {
     view.setNativeAd(ad)
 }
 
-private fun createNativeAdView(context: Context): NativeAdView {
+private fun createNativeAdView(context: Context, fillContainer: Boolean): NativeAdView {
     val density = context.resources.displayMetrics.density
     fun dp(value: Int) = (value * density).toInt()
     fun background(fill: Int, stroke: Int? = null) = GradientDrawable().apply {
@@ -123,12 +142,27 @@ private fun createNativeAdView(context: Context): NativeAdView {
     val media = MediaView(context)
     val action = Button(context)
     return NativeAdView(context).apply {
-        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            if (fillContainer) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
         this.background = background(Color.WHITE, 0xFFE3E7F0.toInt())
         setPadding(dp(16), dp(16), dp(16), dp(16))
-        val content = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                if (fillContainer) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT,
+            )
+        }
         content.addView(TextView(context).apply { text = "Sponsored"; textSize = 12f; setTextColor(0xFF536079.toInt()); setTypeface(typeface, Typeface.BOLD) })
-        media.layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(150)).apply { topMargin = dp(10); bottomMargin = dp(12) }
+        media.minimumWidth = dp(120)
+        media.minimumHeight = dp(120)
+        media.layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            if (fillContainer) 0 else dp(150),
+            if (fillContainer) 1f else 0f,
+        ).apply { topMargin = dp(10); bottomMargin = dp(12) }
         content.addView(media)
         val identity = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         identity.addView(icon, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginEnd = dp(12) })

@@ -16,13 +16,17 @@ import {
   ShoppingCart,
   TrendingUp,
   ChevronRight,
-  Info
+  Info,
+  Play,
+  Star
 } from "lucide-react"
 import { API_BASE_URL } from "../config"
 import { auth } from "@/lib/firebase"
 import { useLocale } from "../i18n/LocaleContext"
 import { useAppStore } from "../store/useAppStore"
 import { getTranslations } from "../i18n"
+import { Capacitor } from "@capacitor/core"
+import { showRewarded } from "../../lib/admob"
 
 interface MealItem {
   meal: string
@@ -156,6 +160,8 @@ function SmartDietGenerator() {
   const [error, setError] = useState<string | null>(null)
   const [groceryLoading, setGroceryLoading] = useState(false)
   const [groceryList, setGroceryList] = useState<string[] | null>(null)
+  const [rewardedUnlocked, setRewardedUnlocked] = useState(false)
+  const [rewardedLoading, setRewardedLoading] = useState(false)
 
   const { t } = useLocale()
   const locale = (t as any).locale || "en"
@@ -399,6 +405,39 @@ function SmartDietGenerator() {
               </motion.div>
             )}
           </div>
+
+          {/* REWARDED AD — unlock 7-day plan */}
+          {!rewardedUnlocked && Capacitor.isNativePlatform() && (
+            <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-100 flex flex-col md:flex-row items-center gap-6 shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-violet-600 flex items-center justify-center text-white shrink-0">
+                <Star className="w-7 h-7" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-xs font-black text-violet-400 uppercase tracking-widest">Unlock Premium</p>
+                <h4 className="text-lg font-black text-slate-800">Get your 7-Day Full Meal Plan</h4>
+                <p className="text-sm text-slate-500 font-medium">Watch a short ad to unlock a detailed weekly plan with shopping lists.</p>
+              </div>
+              <button
+                onClick={async () => {
+                  setRewardedLoading(true)
+                  const earned = await showRewarded()
+                  setRewardedLoading(false)
+                  if (earned) setRewardedUnlocked(true)
+                }}
+                disabled={rewardedLoading}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-violet-600 text-white font-black text-sm uppercase tracking-widest shadow-lg hover:bg-violet-700 active:scale-95 transition-all disabled:opacity-60"
+              >
+                {rewardedLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                Watch Ad
+              </button>
+            </div>
+          )}
+          {rewardedUnlocked && (
+            <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-4">
+              <Star className="w-6 h-6 text-emerald-500" />
+              <p className="font-black text-emerald-700">7-Day plan unlocked! Check your email or generate a new plan.</p>
+            </div>
+          )}
 
           {/* Clinical Guardrails */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

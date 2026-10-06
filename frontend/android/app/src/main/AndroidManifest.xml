@@ -31,7 +31,7 @@
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}" />
+            android:value="@string/admob_app_id" />
 
         <!--
              MainActivity – native Kotlin and XML/View launcher.

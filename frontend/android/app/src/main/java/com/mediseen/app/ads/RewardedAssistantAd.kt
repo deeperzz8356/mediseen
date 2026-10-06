@@ -13,50 +13,65 @@ import com.google.firebase.analytics.FirebaseAnalytics
 import com.mediseen.app.R
 import java.time.LocalDate
 
-object ScanAccess {
-    private const val PREFS_NAME = "mediseen_scan_access"
-    private const val FREE_SCAN_DATE_KEY = "free_scan_used_date"
-    private const val REWARDED_CREDITS_KEY = "rewarded_scan_credits"
+private const val FREE_ASSISTANT_QUESTIONS_PER_DAY = 5
+private const val REWARDED_ASSISTANT_QUESTIONS = 5
 
-    fun hasAvailableScan(context: Context): Boolean {
+object AssistantAccess {
+    private const val PREFS_NAME = "mediseen_assistant_access"
+    private const val USAGE_DATE_KEY = "assistant_usage_date"
+    private const val USED_TODAY_KEY = "assistant_used_today"
+    private const val REWARDED_CREDITS_KEY = "assistant_rewarded_credits"
+
+    fun hasAvailableQuestion(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return hasScanAccess(
-            freeScanUsedDate = prefs.getString(FREE_SCAN_DATE_KEY, null),
-            today = LocalDate.now().toString(),
+        val today = LocalDate.now().toString()
+        val usedToday = if (prefs.getString(USAGE_DATE_KEY, null) == today) {
+            prefs.getInt(USED_TODAY_KEY, 0)
+        } else {
+            0
+        }
+        return hasAssistantAccess(
+            usedToday = usedToday,
             rewardedCredits = prefs.getInt(REWARDED_CREDITS_KEY, 0),
         )
     }
 
-    fun consumeScan(context: Context): Boolean {
+    fun consumeQuestion(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val today = LocalDate.now().toString()
-        if (prefs.getString(FREE_SCAN_DATE_KEY, null) != today) {
-            prefs.edit { putString(FREE_SCAN_DATE_KEY, today) }
+        val credits = prefs.getInt(REWARDED_CREDITS_KEY, 0)
+        if (credits > 0) {
+            prefs.edit { putInt(REWARDED_CREDITS_KEY, credits - 1) }
             return true
         }
-        val credits = prefs.getInt(REWARDED_CREDITS_KEY, 0)
-        if (credits <= 0) return false
-        prefs.edit { putInt(REWARDED_CREDITS_KEY, credits - 1) }
+        val usedToday = if (prefs.getString(USAGE_DATE_KEY, null) == today) {
+            prefs.getInt(USED_TODAY_KEY, 0)
+        } else {
+            0
+        }
+        if (usedToday >= FREE_ASSISTANT_QUESTIONS_PER_DAY) return false
+        prefs.edit {
+            putString(USAGE_DATE_KEY, today)
+            putInt(USED_TODAY_KEY, usedToday + 1)
+        }
         return true
     }
 
-    internal fun grantRewardedScan(context: Context) {
+    internal fun grantReward(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val credits = prefs.getInt(REWARDED_CREDITS_KEY, 0)
-        prefs.edit { putInt(REWARDED_CREDITS_KEY, credits + 1) }
+        prefs.edit {
+            putInt(
+                REWARDED_CREDITS_KEY,
+                prefs.getInt(REWARDED_CREDITS_KEY, 0) + REWARDED_ASSISTANT_QUESTIONS,
+            )
+        }
     }
 }
 
-internal fun hasScanAccess(
-    freeScanUsedDate: String?,
-    today: String,
-    rewardedCredits: Int,
-): Boolean = freeScanUsedDate != today || rewardedCredits > 0
+internal fun hasAssistantAccess(usedToday: Int, rewardedCredits: Int): Boolean =
+    usedToday < FREE_ASSISTANT_QUESTIONS_PER_DAY || rewardedCredits > 0
 
-object RewardedScanAd {
-    var isReady = false
-        private set
-
+object RewardedAssistantAd {
     private var loadedAd: RewardedAd? = null
     private var loading = false
 
@@ -67,20 +82,18 @@ object RewardedScanAd {
         logEvent(context, "ad_request")
         RewardedAd.load(
             context.applicationContext,
-            context.getString(R.string.admob_rewarded_scan_ad_unit_id),
+            context.getString(R.string.admob_rewarded_assistant_ad_unit_id),
             AdRequest.Builder().build(),
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {
                     loadedAd = ad
                     loading = false
-                    isReady = true
                     logEvent(context, "ad_loaded")
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     loadedAd = null
                     loading = false
-                    isReady = false
                     logEvent(context, "ad_load_failed", error.code)
                 }
             },
@@ -101,33 +114,35 @@ object RewardedScanAd {
         }
 
         loadedAd = null
-        isReady = false
         var rewardEarned = false
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdShowedFullScreenContent() = logEvent(context, "ad_shown")
-
             override fun onAdImpression() = logEvent(context, "ad_impression")
-
             override fun onAdClicked() = logEvent(context, "ad_click")
 
             override fun onAdDismissedFullScreenContent() {
-                logEvent(context, "ad_dismissed")
                 FullScreenAdGate.release(60_000L)
+                logEvent(context, "ad_dismissed")
                 onClosed(rewardEarned)
                 preload(context)
             }
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
-                logEvent(context, "ad_show_failed", error.code)
                 FullScreenAdGate.release(60_000L)
+                logEvent(context, "ad_show_failed", errorCode = error.code)
                 onClosed(false)
                 preload(context)
             }
         }
         ad.show(activity) { reward ->
             rewardEarned = true
-            ScanAccess.grantRewardedScan(context)
-            logEvent(context, "ad_reward_earned", rewardAmount = reward.amount, rewardType = reward.type)
+            AssistantAccess.grantReward(context)
+            logEvent(
+                context,
+                "ad_reward_earned",
+                rewardAmount = reward.amount,
+                rewardType = reward.type,
+            )
         }
     }
 
@@ -139,7 +154,7 @@ object RewardedScanAd {
         rewardType: String? = null,
     ) {
         FirebaseAnalytics.getInstance(context).logEvent(event, Bundle().apply {
-            putString("placement", "rewarded_scan_unlock")
+            putString("placement", "reward_assistant_bonus")
             putString("format", "rewarded")
             errorCode?.let { putLong("error_code", it.toLong()) }
             rewardAmount?.let { putLong("reward_amount", it.toLong()) }

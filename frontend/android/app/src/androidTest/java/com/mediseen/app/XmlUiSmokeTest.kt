@@ -1,6 +1,8 @@
 package com.mediseen.app
 
+import android.Manifest
 import android.content.Context
+import android.os.Build
 import android.view.LayoutInflater
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -14,6 +16,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -30,6 +33,12 @@ class XmlUiSmokeTest {
     fun resetState() {
         context.getSharedPreferences("mediseen_native", 0).edit().clear().commit()
         context.getSharedPreferences("mediseen_test", 0).edit().putBoolean("disable_ads", true).commit()
+        if (Build.VERSION.SDK_INT >= 33) {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
+                context.packageName,
+                Manifest.permission.POST_NOTIFICATIONS,
+            )
+        }
     }
 
     @Test
@@ -40,7 +49,6 @@ class XmlUiSmokeTest {
                 listOf(
                     R.layout.screen_welcome,
                     R.layout.screen_language,
-                    R.layout.screen_notification,
                     R.layout.screen_onboarding,
                     R.layout.screen_auth,
                     R.layout.screen_profile_form,
@@ -62,7 +70,6 @@ class XmlUiSmokeTest {
         context.getSharedPreferences("mediseen_native", 0).edit().putBoolean("welcome_complete", true).commit()
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.language_confirm)).perform(click())
-            onView(withContentDescription("Top notification skip")).perform(click())
             repeat(3) { onView(withText("Next")).perform(click()) }
             onView(withText("Get Started")).perform(click())
             onView(withId(R.id.home_scroll)).check(matches(isDisplayed()))
@@ -86,8 +93,11 @@ class XmlUiSmokeTest {
 
         ActivityScenario.launch(MainActivity::class.java).use {
             onView(withId(R.id.home_scroll)).check(matches(isDisplayed()))
+            onView(withId(R.id.header_title)).check(matches(withText("Home")))
+            onView(withId(R.id.header_profile)).check(matches(withText("G")))
             onView(withId(R.id.nav_diagnose)).perform(click())
             onView(withId(R.id.diagnose_scroll)).check(matches(isDisplayed()))
+            onView(withId(R.id.header_title)).check(matches(withText("Diagnose")))
             onView(withText("Activity")).perform(click())
             onView(withText("Today's activity")).check(matches(isDisplayed()))
             pressBack()
@@ -97,8 +107,9 @@ class XmlUiSmokeTest {
             onView(withId(R.id.diet_scroll)).check(matches(isDisplayed()))
             onView(withId(R.id.nav_library)).perform(click())
             onView(withId(R.id.library_scroll)).check(matches(isDisplayed()))
-            onView(withId(R.id.nav_profile)).perform(click())
+            onView(withId(R.id.header_profile)).perform(click())
             onView(withId(R.id.profile_scroll)).check(matches(isDisplayed()))
+            onView(withId(R.id.header_title)).check(matches(withText("Profile")))
             onView(withContentDescription("Terms and Conditions")).perform(click())
             onView(withId(R.id.legal_scroll)).check(matches(isDisplayed()))
             pressBack()

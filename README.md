@@ -27,7 +27,7 @@ Current AI health analysis models often operate as "Black Boxes", providing accu
 3. **Personalized Diet & Nutrition:** Generates custom diet plans, supports grocery list generation, food swapping, and diet feedback recalibration.
 4. **Health Data Tracking:** Syncs and stores user health data (steps, calories, sleep) to Firestore.
 5. **Medical Library:** A centralized repository for medical context, conditions, and educational materials.
-6. **Cross-Platform Support:** Web app built with Next.js and a native Android app powered by Capacitor.
+6. **Cross-Platform Support:** A Next.js web client and a fully native Android client built with Kotlin and Jetpack Compose.
 7. **Secure User Profiles:** Full authentication and profile management using Firebase Auth, including a "delete account" compliance feature.
 
 ## 👥 Team Members & Roles
@@ -37,7 +37,8 @@ Current AI health analysis models often operate as "Black Boxes", providing accu
 * **Kalpesh Dandekar** – Backend Developer ([GitHub](https://github.com/Kalpesh-Dandekar))
 
 ## 🛠️ Tech Stack
-- **Frontend:** Next.js (App Router), React.js, Tailwind CSS, Framer Motion, Lucide Icons, Capacitor (for Android)
+- **Web frontend:** Next.js (App Router), React.js, Tailwind CSS, Framer Motion, Lucide Icons
+- **Android frontend:** Kotlin, Jetpack Compose, Material 3, Firebase Auth, OkHttp, and Coil
 - **Backend:** FastAPI (Python), Uvicorn, LangGraph
 - **AI/ML:** TensorFlow/Keras, OpenCV, NumPy, Pillow, OpenRouter (LLM chat)
 - **Database & Auth:** Firebase Auth, Firestore

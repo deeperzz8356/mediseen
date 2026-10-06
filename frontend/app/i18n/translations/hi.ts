@@ -1,6 +1,6 @@
-import en, { type Translations } from "./en"
+import en from "./en"
 
-const hi: Translations = {
+const hi = {
   splash: { tagline: "स्वास्थ्य स्टूडियो" },
   getStarted: {
     badge: "स्वास्थ्य निर्णयों को सशक्त बनाना",

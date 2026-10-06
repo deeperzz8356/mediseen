@@ -28,23 +28,34 @@ The production API URL is defined by `BuildConfig.API_BASE_URL` in `app/build.gr
 
 ## AdMob configuration
 
-Ads are currently disabled in all Android variants (`ADS_ENABLED = false`). The app does not initialize the Mobile Ads SDK, request consent, show ad placements, or require rewarded ads to use scans. Existing AdMob IDs and test-mode configuration are retained for a future opt-in; enabling ads requires explicitly setting `ADS_ENABLED` to `true` in `app/build.gradle` and reviewing the consent and placement behavior below.
+Ads are enabled with Google's sample AdMob IDs in `app/src/main/res/values/strings.xml`. These IDs return test ads and are safe during development; they must be replaced before publishing.
 
-Before a production release, provide these values either as Gradle properties or environment variables:
+Before a production release, replace these XML resources with the IDs created for the MediSeen AdMob account:
 
-- `ADMOB_APP_ID`
-- `ADMOB_NATIVE_HOME_ID`
-- `ADMOB_NATIVE_LIBRARY_FEED_ID`
-- `ADMOB_NATIVE_LIBRARY_DETAIL_ID`
-- `ADMOB_NATIVE_DIET_ID`
-- `ADMOB_BANNER_HOME_ID`
-- `ADMOB_INTERSTITIAL_LIBRARY_ID`
-- `ADMOB_BANNER_ONBOARDING_ID`
-- `ADMOB_APP_OPEN_ID`
-- `ADMOB_REWARDED_SCAN_ID`
+- `admob_app_id`
+- `admob_banner_splash_ad_unit_id`
+- `admob_banner_home_ad_unit_id`
+- `admob_banner_diet_ad_unit_id`
+- `admob_banner_grocery_ad_unit_id`
+- `admob_banner_activity_ad_unit_id`
+- `admob_banner_main_navigation_ad_unit_id`
+- `admob_native_language_ad_unit_id`
+- `admob_native_home_ad_unit_id`
+- `admob_native_library_feed_ad_unit_id`
+- `admob_native_library_detail_ad_unit_id`
+- `admob_native_diet_ad_unit_id`
+- `admob_interstitial_library_ad_unit_id`
+- `admob_interstitial_navigation_ad_unit_id`
+- `admob_app_open_ad_unit_id`
+- `admob_rewarded_scan_ad_unit_id`
+- `admob_rewarded_assistant_ad_unit_id`
 
-When ads are re-enabled, create and publish the required privacy message in the AdMob Privacy & messaging console. The app's existing flow requests consent on launch, waits until ads may be requested, and exposes an **Ad privacy choices** entry in Profile whenever Google requires it.
+Before release, also set `ADMOB_TEST_MODE` to `false` and create and publish the required privacy message in the AdMob Privacy & messaging console. The app requests consent on launch, waits until ads may be requested, and exposes an **Ad privacy choices** entry in Profile whenever Google requires it.
 
 Phase 2 uses the Home banner only when the Home native placement fails to load. The Library completion interstitial is preloaded while an article is open and is eligible after three completed articles, with a ten-minute cooldown and a maximum of two impressions per day.
 
-The onboarding banner appears only on the final onboarding page after consent allows ad requests. App-open ads are preloaded in the main app and become eligible after several foreground sessions, never during first-run onboarding. Users receive one free scan per day; an optional rewarded ad grants one additional scan only after Google's reward callback fires.
+The shared Home banner appears on every onboarding page after consent allows ad requests. App-open ads are preloaded in the main app and become eligible after several foreground sessions, never during first-run onboarding. Users receive one free scan per day; an optional rewarded ad grants one additional scan only after Google's reward callback fires.
+
+The timed navigation interstitial becomes eligible after 30 seconds of active use, but the timer never opens an ad by itself. It can show only at a logical transition among Home, Diet, and Library, never on Back, exit, Scan, Assistant, Profile, authentication, or legal screens. It has a 30-second cooldown and a maximum of two impressions per day.
+
+The assistant includes five free questions per day. An optional rewarded ad grants five more questions and never blocks urgent guidance or existing conversation history.

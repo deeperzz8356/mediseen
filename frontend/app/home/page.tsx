@@ -1,13 +1,12 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import Link from "next/link"
 
 import {
   Plus,
   MessageCircle,
-  Sparkles,
   ChevronRight,
   Activity,
   Heart,
@@ -16,7 +15,8 @@ import {
   X,
 } from "lucide-react"
 
-import { MedicalAssistanceIllustration } from "../components/Illustrations"
+import DailyActivityStrip from "../components/DailyActivityStrip"
+import MobileTopHeader from "../components/MobileTopHeader"
 import { useLocale } from "../i18n/LocaleContext"
 
 import { useAppStore } from "../store/useAppStore"
@@ -24,6 +24,7 @@ import { useAppStore } from "../store/useAppStore"
 export default function Home() {
   const { t } = useLocale()
   const { authStatus, user, profile } = useAppStore()
+  const reduceMotion = useReducedMotion()
 
   const username = useMemo(() => {
     if (authStatus !== "authenticated" || !user) return ""
@@ -97,14 +98,33 @@ export default function Home() {
     },
   ]
 
+  const pageTransition = reduceMotion
+    ? { duration: 0 }
+    : { type: "spring" as const, duration: 0.45, bounce: 0 }
+
+  const revealInitial = reduceMotion
+    ? false
+    : { opacity: 0, y: 12, filter: "blur(4px)" }
+
+  const revealAnimate = reduceMotion
+    ? { opacity: 1, y: 0, filter: "blur(0px)" }
+    : { opacity: 1, y: 0, filter: "blur(0px)" }
+
   return (
-    <div className="max-w-6xl mx-auto px-4 md:px-6 pt-20 md:pt-28 pb-28 md:pb-32 space-y-10 md:space-y-16 mobile-safe">
+    <motion.div
+      initial={revealInitial}
+      animate={revealAnimate}
+      transition={pageTransition}
+      className="relative max-w-6xl mx-auto px-4 md:px-6 pt-0 pb-28 md:pb-32 space-y-8 md:space-y-12 mobile-safe"
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.10),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(244,114,182,0.08),transparent_30%)]" />
 
       {showSetupBanner && (
         <motion.div 
-          initial={{ opacity: 0, y: 50, scale: 0.95 }} 
-          animate={{ opacity: 1, y: 0, scale: 1 }} 
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.98, filter: "blur(4px)" }}
+          animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.98, filter: "blur(4px)" }}
+          transition={pageTransition}
           className="fixed bottom-24 right-4 md:right-8 z-50 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl p-6 shadow-2xl shadow-blue-900/10 w-[calc(100%-2rem)] md:w-96 flex flex-col gap-4"
         >
           <button 
@@ -128,70 +148,35 @@ export default function Home() {
         </motion.div>
       )}
 
-      {/* HERO */}
-      <section className="relative overflow-hidden rounded-[2.5rem] p-8 md:p-16 lg:p-20 bg-gradient-to-br from-slate-900 via-slate-800 to-violet-900 min-h-[350px] md:min-h-[450px] flex flex-col justify-center shadow-2xl shadow-violet-900/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-pink-400/20 rounded-full blur-3xl -mr-32 -mt-32"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/20 rounded-full blur-3xl -ml-32 -mb-32"></div>
+      {/* Mobile Top Header */}
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
+        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ ...pageTransition, delay: reduceMotion ? 0 : 0.03 }}
+        className="-mx-4 md:-mx-6"
+      >
+        <MobileTopHeader 
+          greeting={t.home.greeting}
+          title="Home"
+          userName={username || t.home.badge}
+        />
+      </motion.div>
 
-        <div className="relative z-10 max-w-3xl space-y-6 md:space-y-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-[10px] md:text-xs font-black text-white uppercase tracking-widest backdrop-blur-md w-fit"
-          >
-            <Sparkles className="w-4 h-4 text-pastel-pink" />
-            {t.home.badge}
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-[1.05] tracking-tight text-balance"
-          >
-            {t.home.greeting}
-            {username ? (
-              <>
-                <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-pastel-pink to-pastel-violet">
-                  {username}
-                </span>
-              </>
-            ) : null}
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="text-base md:text-xl lg:text-2xl text-white/70 font-bold max-w-xl leading-relaxed text-balance"
-          >
-            {t.home.subtitle}
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="pt-4 flex flex-wrap gap-4"
-          >
-            <Link
-              href="/diagnose"
-              className="px-8 py-4 rounded-xl bg-white text-slate-900 font-black text-xs md:text-sm uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
-            >
-              {t.home.quickActions.startDiagnosis}
-              <ChevronRight className="w-5 h-5" />
-            </Link>
-          </motion.div>
-        </div>
-
-        <div className="absolute right-10 bottom-10 hidden lg:block opacity-40 rotate-6 scale-125">
-          <MedicalAssistanceIllustration className="w-64 h-64" bgColor="#FFFFFF" />
-        </div>
-      </section>
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
+        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ ...pageTransition, delay: reduceMotion ? 0 : 0.08 }}
+      >
+        <DailyActivityStrip />
+      </motion.div>
 
       {/* QUICK ACTIONS */}
-      <section className="space-y-5 md:space-y-8">
+      <motion.section
+        initial={reduceMotion ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
+        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ ...pageTransition, delay: reduceMotion ? 0 : 0.12 }}
+        className="space-y-5 md:space-y-8"
+      >
         <div className="flex items-end justify-between px-1 md:px-3">
           <div className="space-y-1">
             <h2 className="text-2xl md:text-3xl font-black text-slate-800">{t.home.whatDoYouNeed}</h2>
@@ -213,11 +198,12 @@ export default function Home() {
           {quickActions.map((item, i) => (
             <Link key={item.title} href={item.link}>
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 14, filter: "blur(4px)" }}
+                whileInView={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="flo-card p-5 md:p-8 h-full flex flex-col justify-between cursor-pointer"
+                transition={{ ...pageTransition, delay: reduceMotion ? 0 : i * 0.08 }}
+                whileHover={reduceMotion ? undefined : { y: -4, scale: 1.01 }}
+                className="flo-card p-5 md:p-8 h-full flex flex-col justify-between cursor-pointer shadow-sm hover:shadow-xl"
               >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${item.color} flex items-center justify-center text-white shadow-inner mb-4 md:mb-6`}>
                   <div className="scale-110">{item.icon}</div>
@@ -230,9 +216,16 @@ export default function Home() {
             </Link>
           ))}
         </div>
-      </section>
+      </motion.section>
 
-      <section id="all-tools" className="space-y-5 md:space-y-8">
+      <motion.section
+        id="all-tools"
+        initial={reduceMotion ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
+        whileInView={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
+        viewport={{ once: true }}
+        transition={{ ...pageTransition, delay: reduceMotion ? 0 : 0.1 }}
+        className="space-y-5 md:space-y-8"
+      >
         <div className="flex items-end justify-between px-1 md:px-3">
           <div className="space-y-1">
             <h2 className="text-2xl md:text-3xl font-black text-slate-800">{t.home.toolsTitle}</h2>
@@ -244,11 +237,12 @@ export default function Home() {
           {allTools.map((item, i) => (
             <Link key={item.title} href={item.link}>
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 14, filter: "blur(4px)" }}
+                whileInView={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-                className="flo-card p-5 md:p-7 h-full flex flex-col justify-between cursor-pointer"
+                transition={{ ...pageTransition, delay: reduceMotion ? 0 : i * 0.06 }}
+                whileHover={reduceMotion ? undefined : { y: -4, scale: 1.01 }}
+                className="flo-card p-5 md:p-7 h-full flex flex-col justify-between cursor-pointer shadow-sm hover:shadow-xl"
               >
                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl ${item.color} flex items-center justify-center text-white shadow-inner mb-4 md:mb-6`}>
                   <div className="scale-110">{item.icon}</div>
@@ -261,8 +255,8 @@ export default function Home() {
             </Link>
           ))}
         </div>
-      </section>
+      </motion.section>
 
-    </div>
+    </motion.div>
   )
 }

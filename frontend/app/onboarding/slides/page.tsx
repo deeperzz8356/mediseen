@@ -4,13 +4,15 @@
  * /onboarding/slides – 4-page interactive onboarding
  */
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronRight, ScanLine, Salad, Activity, BrainCircuit } from "lucide-react"
 import { useAppStore } from "../../store/useAppStore"
 import OnboardingCard from "../../components/OnboardingCard"
 import { useLocale } from "../../i18n/LocaleContext"
+import { Capacitor } from "@capacitor/core"
+import { showBanner, hideBanner } from "../../../lib/admob"
 
 type Direction = 1 | -1
 
@@ -93,10 +95,22 @@ export default function OnboardingSlidesPage() {
 
   const finish = async () => {
     await setOnboardingDone(true)
+    hideBanner().catch(() => {})
     router.replace("/home")
   }
 
   const handleNext = () => (isLast ? finish() : navigate(currentIndex + 1))
+
+  // Show banner ad on last slide only
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    if (isLast) {
+      showBanner().catch(() => {})
+    } else {
+      hideBanner().catch(() => {})
+    }
+    return () => { hideBanner().catch(() => {}) }
+  }, [isLast])
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX

@@ -32,26 +32,6 @@ def resolveSigningValue = { String... values ->
     values.find { it?.trim() && !it.trim().startsWith('${') }?.trim() ?: ''
 }
 
-def resolveAdValue = { String propertyName, String environmentName, String fallback ->
-    resolveSigningValue(
-        System.getenv(environmentName),
-        project.findProperty(propertyName)?.toString(),
-        fallback,
-    )
-}
-
-def quoteBuildConfig = { String value ->
-    '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
-}
-
-def sampleAdMobAppId = 'ca-app-pub-3940256099942544~3347511713'
-def sampleNativeAdUnitId = 'ca-app-pub-3940256099942544/2247696110'
-def sampleBannerAdUnitId = 'ca-app-pub-3940256099942544/9214589741'
-def sampleInterstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712'
-def sampleAppOpenAdUnitId = 'ca-app-pub-3940256099942544/9257395921'
-def sampleRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917'
-def adMobAppId = resolveAdValue('ADMOB_APP_ID', 'ADMOB_APP_ID', sampleAdMobAppId)
-
 def localStorePassword = readCredential(signingCredentialsFile, 'Keystore Password')
 def localKeyPassword = readCredential(signingCredentialsFile, 'Key Password')
 
@@ -65,19 +45,9 @@ android {
         versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "API_BASE_URL", '"https://mediseen.onrender.com"'
-        // Keep the complete AdMob integration available, but make ad delivery an
-        // explicit build-time switch while the product UI is being refined.
-        buildConfigField "boolean", "ADS_ENABLED", "false"
-        buildConfigField "String", "ADMOB_NATIVE_HOME_ID", quoteBuildConfig(resolveAdValue('ADMOB_NATIVE_HOME_ID', 'ADMOB_NATIVE_HOME_ID', sampleNativeAdUnitId))
-        buildConfigField "String", "ADMOB_NATIVE_LIBRARY_FEED_ID", quoteBuildConfig(resolveAdValue('ADMOB_NATIVE_LIBRARY_FEED_ID', 'ADMOB_NATIVE_LIBRARY_FEED_ID', sampleNativeAdUnitId))
-        buildConfigField "String", "ADMOB_NATIVE_LIBRARY_DETAIL_ID", quoteBuildConfig(resolveAdValue('ADMOB_NATIVE_LIBRARY_DETAIL_ID', 'ADMOB_NATIVE_LIBRARY_DETAIL_ID', sampleNativeAdUnitId))
-        buildConfigField "String", "ADMOB_NATIVE_DIET_ID", quoteBuildConfig(resolveAdValue('ADMOB_NATIVE_DIET_ID', 'ADMOB_NATIVE_DIET_ID', sampleNativeAdUnitId))
-        buildConfigField "String", "ADMOB_BANNER_HOME_ID", quoteBuildConfig(resolveAdValue('ADMOB_BANNER_HOME_ID', 'ADMOB_BANNER_HOME_ID', sampleBannerAdUnitId))
-        buildConfigField "String", "ADMOB_INTERSTITIAL_LIBRARY_ID", quoteBuildConfig(resolveAdValue('ADMOB_INTERSTITIAL_LIBRARY_ID', 'ADMOB_INTERSTITIAL_LIBRARY_ID', sampleInterstitialAdUnitId))
-        buildConfigField "String", "ADMOB_BANNER_ONBOARDING_ID", quoteBuildConfig(resolveAdValue('ADMOB_BANNER_ONBOARDING_ID', 'ADMOB_BANNER_ONBOARDING_ID', sampleBannerAdUnitId))
-        buildConfigField "String", "ADMOB_APP_OPEN_ID", quoteBuildConfig(resolveAdValue('ADMOB_APP_OPEN_ID', 'ADMOB_APP_OPEN_ID', sampleAppOpenAdUnitId))
-        buildConfigField "String", "ADMOB_REWARDED_SCAN_ID", quoteBuildConfig(resolveAdValue('ADMOB_REWARDED_SCAN_ID', 'ADMOB_REWARDED_SCAN_ID', sampleRewardedAdUnitId))
-        manifestPlaceholders = [admobAppId: adMobAppId]
+        buildConfigField "boolean", "ADS_ENABLED", "true"
+        // XML resources contain Google's sample IDs, so every variant is test-only.
+        buildConfigField "boolean", "ADMOB_TEST_MODE", "true"
     }
     flavorDimensions += "distribution"
     productFlavors {
@@ -85,24 +55,10 @@ android {
             dimension = "distribution"
             applicationId = "com.mediseen.health"
             versionNameSuffix = "-debug"
-            // Development builds must never request live inventory, even when
-            // production AdMob values are present in the shell or Gradle properties.
-            manifestPlaceholders = [admobAppId: sampleAdMobAppId]
-            buildConfigField "boolean", "ADMOB_TEST_MODE", "true"
-            buildConfigField "String", "ADMOB_NATIVE_HOME_ID", quoteBuildConfig(sampleNativeAdUnitId)
-            buildConfigField "String", "ADMOB_NATIVE_LIBRARY_FEED_ID", quoteBuildConfig(sampleNativeAdUnitId)
-            buildConfigField "String", "ADMOB_NATIVE_LIBRARY_DETAIL_ID", quoteBuildConfig(sampleNativeAdUnitId)
-            buildConfigField "String", "ADMOB_NATIVE_DIET_ID", quoteBuildConfig(sampleNativeAdUnitId)
-            buildConfigField "String", "ADMOB_BANNER_HOME_ID", quoteBuildConfig(sampleBannerAdUnitId)
-            buildConfigField "String", "ADMOB_INTERSTITIAL_LIBRARY_ID", quoteBuildConfig(sampleInterstitialAdUnitId)
-            buildConfigField "String", "ADMOB_BANNER_ONBOARDING_ID", quoteBuildConfig(sampleBannerAdUnitId)
-            buildConfigField "String", "ADMOB_APP_OPEN_ID", quoteBuildConfig(sampleAppOpenAdUnitId)
-            buildConfigField "String", "ADMOB_REWARDED_SCAN_ID", quoteBuildConfig(sampleRewardedAdUnitId)
         }
         production {
             dimension = "distribution"
             applicationId = "com.mediseen.app"
-            buildConfigField "boolean", "ADMOB_TEST_MODE", "false"
         }
     }
     signingConfigs {

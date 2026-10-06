@@ -100,8 +100,8 @@ object AdsRuntime {
             .build()
 
         MobileAds.setRequestConfiguration(requestConfiguration)
-        MobileAds.putPublisherFirstPartyIdEnabled(false)
         MobileAds.initialize(context.applicationContext) {
+            MobileAds.putPublisherFirstPartyIdEnabled(false)
             adsReady = true
         }
     }

@@ -1,6 +1,6 @@
-import en, { type Translations } from "./en"
+import en from "./en"
 
-const ar: Translations = {
+const ar = {
   splash: {
     tagline: "الاستوديو الصحي",
   },
